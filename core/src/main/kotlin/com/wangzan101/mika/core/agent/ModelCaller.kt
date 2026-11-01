@@ -9,6 +9,7 @@ import com.wangzan101.mika.core.model.Part
 import com.wangzan101.mika.core.model.Role
 import com.wangzan101.mika.core.model.StreamingChatModel
 import com.wangzan101.mika.core.model.ToolSpec
+import com.wangzan101.mika.core.model.Usage
 import com.wangzan101.mika.core.record.Redactor
 import com.wangzan101.mika.core.record.RunEvent
 import com.wangzan101.mika.core.tool.ToolDispatcher
@@ -39,7 +40,8 @@ internal class ModelCaller(
     /** 每个模型一份压缩状态:各自的上下文、各自发出的那份历史,轻量模型那次压缩不连累主模型的请求前缀。 */
     private val compressors = java.util.IdentityHashMap<ChatModel, ContextCompressor>()
     private fun compressorFor(m: ChatModel) =
-        compressors.getOrPut(m) { ContextCompressor(tools.index, structured = flags.structuredCompaction, diffScreens = tools.inlineScreen) }
+        compressors.getOrPut(m) { ContextCompressor(tools.index, structured = flags.structuredCompaction,
+            diffScreens = tools.inlineScreen, triggerOverride = m.capabilities.compactionTriggerTokens) }
     private val compactions = java.util.IdentityHashMap<ChatModel, CompactionState>()
     /** 本任务里已为重试等过的时间(对着 [RetryPolicy.taskWaitBudgetMs])。 */
     private var taskRetryWaitMs = 0L
@@ -54,18 +56,31 @@ internal class ModelCaller(
     /** 本任务里轻量模型给出、已进历史的回复;换模型时按它去掉别家模型的私有数据。 */
     private val lightReplies: MutableSet<Message> = java.util.Collections.newSetFromMap(java.util.IdentityHashMap())
 
+    /** 带真实用量的回复(按消息身份)和给出它的模型,是量请求大小的锚点([UsageMeter]);压缩改写前缀后清空。 */
+    private val anchors = java.util.IdentityHashMap<Message, Pair<ChatModel, UsageMeter.Anchor>>()
+    /** 每个模型最近一次请求的固定开销估算;回复进历史时和用量一起记进锚点。 */
+    private val lastOverhead = java.util.IdentityHashMap<ChatModel, Int>()
+
     fun reset(prompt: String) {
         systemPrompt = prompt
         compactions.clear()
         taskRetryWaitMs = 0
         compressors.values.forEach { it.forget() }
         lightReplies.clear()
+        anchors.clear()
+        lastOverhead.clear()
     }
 
-    /** 回复进了历史:是轻量模型给的就记下。 */
-    fun noteReply(m: Message, used: ChatModel) {
+    /** 回复进了历史:是轻量模型给的就记下;有真实 usage 的记成上下文大小的锚点。 */
+    fun noteReply(m: Message, used: ChatModel, usage: Usage?) {
         if (router?.isLight(used) == true) lightReplies += m
+        val overhead = lastOverhead[used]
+        if (usage != null && overhead != null) anchors[m] = used to UsageMeter.Anchor(usage, overhead)
     }
+
+    /** 发给 [using] 的整份请求有多大:最近一条它给的、带真实用量的回复作锚点,没有就全量估算(见 [UsageMeter])。 */
+    private fun requestTokens(messages: List<Message>, using: ChatModel, overhead: Int, scale: Double): Int =
+        UsageMeter.of(messages, overhead, scale) { m -> anchors[m]?.takeIf { it.first === using }?.second }
 
     /** 本任务里分工是否在起作用:开关打开、轻量模型能接手机步、没因不可恢复的错误停用。 */
     private val routing: Boolean get() = flags.lightSteps && router?.active == true
@@ -96,6 +111,8 @@ internal class ModelCaller(
         } catch (e: Exception) {
             // Key、额度、模型名、请求本身不对,重试也没用:本任务余下的步都用主模型
             if (e is ModelError.Auth || e is ModelError.QuotaExceeded || e is ModelError.ModelNotFound ||
+                e is ModelError.ModelNotAvailable || e is ModelError.ToolsUnsupported ||
+                e is ModelError.ChatGptLimitReached || e is ModelError.ChatGptNotEligible || e is ModelError.SignInExpired || e is ModelError.AccountPlanNotAllowed ||
                 (e is ModelError.Server && e.status in 400..499)) r.disable()
             null
         }
@@ -153,7 +170,10 @@ internal class ModelCaller(
         var compaction = compactions[using] ?: CompactionState()
         var overflowRetried = false
         while (true) {
-            val raw = compressor.compress(history, contextTokens, compaction.aggressive, overhead, using.capabilities.maxImages)
+            val current = ContextRecovery.ensure(history, compressor.current(history, contextTokens))
+            val currentTokens = requestTokens(current, using, overhead, compressor.scale)
+            val raw = compressor.compress(history, contextTokens, currentTokens, compaction.aggressive, overhead, using.capabilities.maxImages)
+            if (raw.rewritten) anchors.clear()
             val restored = ContextRecovery.ensure(history, raw.messages)
             val sent = if (restored === raw.messages) raw else raw.copy(messages = restored, estimate = TokenEstimate.of(restored))
             val (next, report) = CompactionPolicy.sent(compaction, sent.foldedSteps)
@@ -172,6 +192,7 @@ internal class ModelCaller(
                             .takeIf(String::isNotEmpty)?.let(onText)
                     }
                 return reply.also { r ->
+                    lastOverhead[using] = overhead
                     r.usage?.let { compressor.calibrate(sent.estimate + overhead, it.inputTokens) }
                 }
             } catch (e: ModelError.ContextTooLong) {
@@ -182,6 +203,7 @@ internal class ModelCaller(
                 compaction = after
                 compactions[using] = compaction
                 overflowRetried = true
+                if (again) anchors.clear()
                 if (!again) throw e
             } catch (e: ModelError) {
                 onText?.invoke("")

@@ -70,7 +70,7 @@ object DeviceSupport {
     private fun rebindAccessibility() {
         if (ScreenAccessibility.instance.value != null) return
         val key = "enabled_accessibility_services"
-        val mika = "com.wangzan101.mika/${MikaAccessibilityService::class.java.name}"
+        val mika = "${InstrumentationRegistry.getInstrumentation().targetContext.packageName}/${MikaAccessibilityService::class.java.name}"
         val enabled = sh("settings get secure $key").trim().split(':')
         if (mika !in enabled) return
         try {
@@ -89,9 +89,9 @@ object DeviceSupport {
         return ParcelFileDescriptor.AutoCloseInputStream(pfd).bufferedReader().use { it.readText() }
     }
 
-    /** 在虚拟屏上打开测试包里的页面。 */
-    fun startTestActivity(displayId: Int, name: String) {
-        sh("am start --display $displayId -n $TEST_PACKAGE/com.wangzan101.mika.a11y.$name")
+    /** 在虚拟屏上打开测试包里的页面(按类给,类名和清单里登记的一致)。 */
+    fun startTestActivity(displayId: Int, activity: Class<out android.app.Activity>) {
+        sh("am start --display $displayId -n $TEST_PACKAGE/${activity.name}")
     }
 
     /**

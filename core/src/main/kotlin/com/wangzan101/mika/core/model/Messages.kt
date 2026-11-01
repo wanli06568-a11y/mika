@@ -27,7 +27,11 @@ sealed interface Part {
      * [reads]:这次结果里读到、记进证据账本的观察(编号与形态);只在 Mika 内部用(裁剪按观察的形态定怎么缩短,缩短后指回编号),不发给服务商。
      */
     @Serializable data class ToolResult(val callId: String, val content: String, val isError: Boolean, val reads: List<ReadTag> = emptyList()) : Part
-    @Serializable data class Thinking(val text: String) : Part
+    /**
+     * [opaque]:和 [ToolCall.opaque] 一样是适配器私有的,记下这段思考从哪来(例如兼容接口里收到它的地址和字段),
+     * 回放时只有认得它的那个适配器用;别的适配器不看。旧的历史和不需要回放的为 null。
+     */
+    @Serializable data class Thinking(val text: String, val opaque: String? = null) : Part
 }
 
 @Serializable
@@ -48,7 +52,10 @@ data class ToolSpec(val name: String, val description: String, val parametersJso
 
 enum class StopReason { EndTurn, ToolUse, MaxTokens, Other }
 
-/** [inputTokens] 是总输入 token(含缓存命中部分,OpenAI prompt_tokens 口径)。 */
-data class Usage(val inputTokens: Int, val outputTokens: Int, val cachedInputTokens: Int = 0)
+/**
+ * [inputTokens] 是总输入 token(含缓存命中部分,OpenAI prompt_tokens 口径)。[outputTokens] 含思考;
+ * [reasoningTokens] 是其中服务商单独报出的思考 token(没单独报的为 0,如 Anthropic)。
+ */
+data class Usage(val inputTokens: Int, val outputTokens: Int, val cachedInputTokens: Int = 0, val reasoningTokens: Int = 0)
 
 data class ModelReply(val parts: List<Part>, val stopReason: StopReason, val usage: Usage?)

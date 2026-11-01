@@ -1,5 +1,6 @@
 package com.wangzan101.mika.capsule
 
+import com.wangzan101.mika.i18n.tr
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.unit.Density
@@ -86,6 +88,10 @@ private const val FLASH_ALPHA = 0.8f
 private const val FLASH_MS = 320
 /** 一颗展开成胶囊、缩回一颗的时长。 */
 private const val MORPH_MS = 260
+/** 长按说话时放大多少、外圈多粗、变过去多久。 */
+private const val HOLD_SCALE = 0.06f
+private val HoldRing = 3.dp
+private const val HOLD_MS = 180
 /** 干活中的圈转一周的时长。 */
 private const val SPIN_MS = 1_200
 private val CapsuleText = TextStyle(fontSize = 13.5.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium)
@@ -94,18 +100,18 @@ private val CountText = TextStyle(fontSize = 10.sp, lineHeight = 12.sp, fontWeig
 
 /** 胶囊上的固定说法。 */
 object CapsuleCopy {
-    const val STOP = "不做了"
-    const val EXPAND = "展开看这件事"
-    const val TALK = "和 Mika 说话"
-    const val SWAP_SIDE = "移到屏幕另一边"
+    val STOP: String get() = tr(R.string.capsule_stop)
+    val EXPAND: String get() = tr(R.string.capsule_expand)
+    val TALK: String get() = tr(R.string.capsule_talk)
+    val SWAP_SIDE: String get() = tr(R.string.capsule_swap_side)
     const val IDLE = "Mika"
 
     /** 读屏时一颗图标的说法:在做什么、要不要你处理、结果;好几件时的件数已在 [CapsuleView.Shown.text] 里。 */
     fun describe(view: CapsuleView.Shown): String = when {
         view.kind == CapsuleKind.Idle -> IDLE
-        view.kind.needsYou -> "${view.text}，点开处理"
-        view.kind == CapsuleKind.Running -> "Mika 在干活：${view.text}，点开看详情"
-        view.kind == CapsuleKind.Held || view.kind == CapsuleKind.Cancelled -> "Mika ${view.text}，点开看详情"
+        view.kind.needsYou -> tr(R.string.capsule_desc_needs, view.text)
+        view.kind == CapsuleKind.Running -> tr(R.string.capsule_desc_running, view.text)
+        view.kind == CapsuleKind.Held || view.kind == CapsuleKind.Cancelled -> tr(R.string.capsule_desc_other, view.text)
         else -> "Mika ${view.text}"
     }
 }
@@ -120,6 +126,8 @@ object CapsuleCopy {
  * [onSwapSide] 给了时读屏软件多一个「移到屏幕另一边」,代替拖动。[alpha] 只淡底和图标,外圈和角标保持实色。
  * 双击由调用方从两次 [onTap] 认出来;读屏软件的双击就是点按,所以 [onSendScreen] 给了时另有一个「把此刻的屏幕发给 Mika」。
  * [flash] 每加一,一颗上闪一下(截到了屏幕)。
+ * [holding] 时是长按说话中:胶囊稍微放大、外面一圈蓝边。[onTalk] 给了时读屏软件多一个说话的操作([talkLabel]),代替长按:
+ * 点一下开始、再点一下发出。
  */
 @Composable
 fun CapsuleContent(
@@ -134,6 +142,9 @@ fun CapsuleContent(
     alpha: Float = 1f,
     onSendScreen: (() -> Unit)? = null,
     flash: Int = 0,
+    holding: Boolean = false,
+    onTalk: (() -> Unit)? = null,
+    talkLabel: String = "",
 ) {
     // 淡下去、恢复都慢慢来;关了动画时直接换
     val shown = if (MikaTheme.reduceMotion) alpha else animateFloatAsState(alpha, tween(FADE_MS), label = "fade").value
@@ -141,18 +152,22 @@ fun CapsuleContent(
         customActions = listOfNotNull(
             onSwapSide?.let { f -> CustomAccessibilityAction(CapsuleCopy.SWAP_SIDE) { f(); true } },
             onSendScreen?.let { f -> CustomAccessibilityAction(ScreenCopy.SEND_SCREEN) { f(); true } },
+            onTalk?.let { f -> CustomAccessibilityAction(talkLabel) { f(); true } },
         )
     }
     Box(modifier.padding(CapsuleShadowRoom)) {
         if (view.kind == CapsuleKind.HandedOver) TakeoverBar(view, onStop, onHandBack)
-        else Capsule(view, side == DockSide.Right, onTap, tapLabel, a11y, shown, flash)
+        else Capsule(view, side == DockSide.Right, onTap, tapLabel, a11y, shown, flash, holding)
     }
 }
 
 /** 一颗或展开的胶囊:同一块玻璃底,看得见的宽度在两者之间慢慢变(只在画的时候变,见 [Morph]);[end] 时贴右边(图标在右)。 */
 @Composable
-private fun Capsule(view: CapsuleView.Shown, end: Boolean, onTap: () -> Unit, tapLabel: String, a11y: Modifier, alpha: Float, flash: Int) {
+private fun Capsule(view: CapsuleView.Shown, end: Boolean, onTap: () -> Unit, tapLabel: String, a11y: Modifier, alpha: Float, flash: Int, holding: Boolean) {
     val c = MikaTheme.colors
+    // 长按说话中:放大一点、外面一圈蓝边(画在阴影边里,窗口大小不变)
+    val press = if (MikaTheme.reduceMotion) (if (holding) 1f else 0f)
+        else animateFloatAsState(if (holding) 1f else 0f, tween(HOLD_MS), label = "hold").value
     val need = view.kind.needsYou || view.needCount > 0
     // 截到屏幕:白光从亮到无,和截图时屏幕闪一下一个意思;关了动画时不闪
     val glow = remember { Animatable(0f) }
@@ -163,7 +178,20 @@ private fun Capsule(view: CapsuleView.Shown, end: Boolean, onTap: () -> Unit, ta
         glow.snapTo(FLASH_ALPHA)
         glow.animateTo(0f, tween(FLASH_MS))
     }
-    Box {
+    Box(
+        Modifier.graphicsLayer {
+            scaleX = 1f + HOLD_SCALE * press
+            scaleY = 1f + HOLD_SCALE * press
+        }.drawBehind {
+            if (press <= 0f) return@drawBehind
+            val ring = HoldRing.toPx()
+            val r = size.height / 2 + ring / 2
+            drawRoundRect(
+                c.accent.copy(alpha = press), Offset(-ring / 2, -ring / 2), Size(size.width + ring, size.height + ring),
+                CornerRadius(r, r), style = Stroke(ring),
+            )
+        }.then(if (holding) Modifier.testTag("capsule-holding") else Modifier),
+    ) {
         Box(
             Modifier.testTag(if (view.pill) "capsule" else "capsule-ball")
                 .morphGlass(morph, end, c, need, alpha)
@@ -210,7 +238,7 @@ private fun PillRow(view: CapsuleView.Shown, end: Boolean, need: Boolean) {
     }
 }
 
-/** 文字前面的状态标记:要你处理是呼吸点,办好了是勾,没办成是叹号,已停止是停止。 */
+/** 文字前面的状态标记:要你处理是呼吸点,办好了是勾,没办成是叹号,已停止是停止,后台网页运行中是绿点。 */
 @Composable
 private fun Leading(kind: CapsuleKind) {
     val c = MikaTheme.colors
@@ -219,7 +247,17 @@ private fun Leading(kind: CapsuleKind) {
         kind == CapsuleKind.Done -> Icon(MikaIcons.Check, null, Modifier.size(16.dp), tint = c.ok)
         kind == CapsuleKind.Failed -> Icon(MikaIcons.Exclaim, null, Modifier.size(16.dp), tint = c.ink3)
         kind == CapsuleKind.Cancelled -> Icon(MikaIcons.Stop, null, Modifier.size(16.dp), tint = c.ink3)
+        kind == CapsuleKind.KeptPage -> LiveDot(c)
         else -> Unit
+    }
+}
+
+/** 后台网页运行中:绿色圆点,外面一圈淡绿。 */
+@Composable
+private fun LiveDot(c: MikaColors) {
+    Box(Modifier.size(14.dp).testTag("capsule-live-dot"), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(14.dp).background(c.okSoft, MikaShapes.Pill))
+        Box(Modifier.size(8.dp).background(c.ok, MikaShapes.Pill))
     }
 }
 

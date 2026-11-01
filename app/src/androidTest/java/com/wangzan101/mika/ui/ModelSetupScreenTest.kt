@@ -1,5 +1,6 @@
 package com.wangzan101.mika.ui
 
+import com.wangzan101.mika.ChineseUi
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.assertTextContains
@@ -13,31 +14,43 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.wangzan101.mika.core.model.Capabilities
 import com.wangzan101.mika.core.model.ListedModel
 import com.wangzan101.mika.core.model.ModelRole
 import com.wangzan101.mika.settings.Provider
+import com.wangzan101.mika.settings.AesGcmKeyCipher
+import com.wangzan101.mika.settings.ModelContextSettings
+import com.wangzan101.mika.settings.ProviderStore
 import com.wangzan101.mika.settings.ProviderConfig
 import com.wangzan101.mika.settings.ProviderPresets
 import com.wangzan101.mika.settings.RoleChoice
 import com.wangzan101.mika.settings.RoleChoices
 import com.wangzan101.mika.ui.theme.MikaTheme
 import org.junit.Assert.assertEquals
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.rules.TemporaryFolder
 
 /** 欢迎页、配置模型一页(上手和设置共用)、选用途页、服务商详情、全部模型和「用作」面板(只用假数据,不联网)。 */
 @RunWith(AndroidJUnit4::class)
 class ModelSetupScreenTest {
+    @get:Rule(order = Int.MIN_VALUE) val chinese = ChineseUi()
+
     @get:Rule val compose = createComposeRule()
+    @get:Rule val tmp = TemporaryFolder()
     private val calls = mutableListOf<String>()
     private val caps = Capabilities(toolCalls = true, vision = false, contextTokens = 64_000, reasoning = false)
 
     private val actions = ModelSetupActions(
         selectPreset = { calls += "preset $it" }, testAndSave = { calls += "test" }, openForm = { calls += "open form" },
         openProvider = { calls += "provider $it" }, pickRole = { calls += "role $it" }, next = { calls += "next" },
+        openSignIn = { calls += "signin $it" },
     )
 
     private val form = AddForm.of(ProviderPresets.all.first()).copy(apiKey = "sk")
@@ -65,13 +78,15 @@ class ModelSetupScreenTest {
     @Test fun firstVisitShowsFormAndNextIsDisabled() {
         show(ModelSetupUi(form))
         compose.onNodeWithTag("setup-next").assertIsNotEnabled()
-        compose.onNodeWithTag("setup-test").assertIsEnabled().performClick()
-        compose.onNodeWithTag("preset-Kimi").performClick()
+        // 上面多了「用账号登录」一组,按钮可能在屏幕外:先滚到再点
+        compose.onNodeWithTag("setup-test").performScrollTo().assertIsEnabled().performClick()
+        compose.onNodeWithTag("preset-Kimi").performScrollTo().performClick()
         assertEquals(listOf("test", "preset Kimi"), calls)
     }
 
     @Test fun connectedProvidersAreListedAndNextEnables() {
         show(connected())
+        compose.onNodeWithTag("context-main").assertDoesNotExist()
         compose.onNodeWithText(ModelsCopy.PROVIDERS).assertIsDisplayed()
         compose.onNodeWithText("已连接 · 2 个模型 · 主模型、轻量模型在用").assertIsDisplayed()
         // 轻量卡「用主模型」下面也写着主模型名,所以只在主模型卡里找
@@ -95,6 +110,47 @@ class ModelSetupScreenTest {
         compose.onNodeWithText(ModelsCopy.SAME_AS_MAIN).assertIsDisplayed()
         compose.onNodeWithTag("role-light").performClick()
         assertEquals(listOf("role Light"), calls)
+    }
+
+    @Test fun contextFormValidatesPreviewsAndSavesTheModelUsedForNewTasks() {
+        val store = ProviderStore(tmp.root, AesGcmKeyCipher { error("Fixture has no API key") })
+        val provider = store.connect("Test", deepseek.kind, "https://example.test/v1", null, listOf(ListedModel("m")))
+        store.use(ModelRole.Main, provider.id, "m", caps.copy(contextTokens = 32_000))
+        compose.setContent { MikaTheme { ModelSetupScreen(store, onboarding = false, onBack = {}, onDone = {}) } }
+        val open = compose.onNodeWithTag("context-main")
+        val window = compose.onNodeWithTag("context-window")
+        val trigger = compose.onNodeWithTag("context-trigger")
+        val save = compose.onNodeWithTag("context-save")
+        val preview = compose.onNodeWithTag("context-effective")
+        compose.onNodeWithTag("context-light").assertDoesNotExist()
+        open.performScrollTo().performClick()
+        preview.assertTextContains("18000", substring = true)
+        for (invalid in listOf("0", "-1", "1e6", "2147483648")) {
+            window.performTextReplacement(invalid)
+            save.assertIsNotEnabled()
+        }
+        window.performTextReplacement("1000000")
+        preview.assertTextContains("967000", substring = true)
+        for (invalid in listOf("499999", "980001", "+600000")) {
+            trigger.performTextReplacement(invalid)
+            save.assertIsNotEnabled()
+        }
+        trigger.performTextReplacement("600000")
+        save.assertIsEnabled().performClick()
+        compose.runOnIdle {
+            assertEquals(1_000_000, store.modelFor(ModelRole.Main)!!.capabilities.contextTokens)
+            assertEquals(600_000, store.modelFor(ModelRole.Light)!!.capabilities.compactionTriggerTokens)
+        }
+        open.performScrollTo().performClick()
+        trigger.assertTextContains("600000")
+        compose.onNodeWithText("重置").performScrollTo().performClick()
+        preview.assertTextContains("18000", substring = true)
+        compose.onNodeWithText("取消").performClick()
+        assertEquals(ModelContextSettings(1_000_000, 600_000), store.provider(provider.id)!!.contextSettings["m"])
+        open.performScrollTo().performClick()
+        compose.onNodeWithText("重置").performScrollTo().performClick()
+        save.performClick()
+        compose.runOnIdle { assertEquals(null, store.provider(provider.id)!!.contextSettings["m"]) }
     }
 
     @Test fun visionPickerOffersSameAsMainAndOffAndListsEveryModel() {
@@ -208,5 +264,71 @@ class ModelSetupScreenTest {
         compose.setContent { MikaTheme { AllModelsContent(running, qwen, ProviderDetailActions(), onBack = {}) } }
         compose.onNodeWithText(ModelsCopy.LISTING).assertIsDisplayed()
         compose.onNodeWithContentDescription(ModelsCopy.REFRESH).assertIsNotEnabled()
+    }
+
+    // ---------- 用账号登录 ----------
+
+    private val grok = Provider("p3", "xAI / Grok", ProviderConfig.Kind.Xai, "https://api.x.ai/v1", listOf(ListedModel("grok-4"), ListedModel("grok-4-fast")))
+
+    @Test fun addFormListsAccountSignInsAboveApiKeys() {
+        show(ModelSetupUi(form))
+        compose.onNodeWithText(ModelsCopy.SIGN_IN_GROUP).assertIsDisplayed()
+        compose.onNodeWithText(ModelsCopy.KEY_GROUP).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("signin-chatgpt").performScrollTo().performClick()
+        compose.onNodeWithTag("signin-xai").performScrollTo().performClick()
+        compose.onNodeWithTag("signin-openrouter").performScrollTo().performClick()
+        assertEquals(listOf("signin ChatGpt", "signin Xai", "signin OpenRouter"), calls)
+    }
+
+    @Test fun signedInAccountRowOpensTheProvider() {
+        show(ModelSetupUi(form, formOpen = true, providers = listOf(grok), xaiAccount = SubscriptionAccount("me@example.com", signedIn = true)))
+        compose.onNodeWithTag("signin-xai-signed-in", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag("signin-openrouter-signed-in", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithTag("signin-xai").performScrollTo().performClick()
+        assertEquals(listOf("provider p3"), calls)
+    }
+
+    @Test fun xaiSheetWarnsFirstThenShowsTheCode() {
+        val started = mutableListOf<String>()
+        val actions = SignInSheetActions(start = { started += "start $it" }, cancel = { started += "cancel $it" }, useApiKey = { started += "key $it" })
+        var ui by mutableStateOf(ModelSetupUi(form))
+        compose.setContent { MikaTheme { SignInSheetBody(ui, SignInKind.Xai, actions) } }
+        compose.onNodeWithText(ModelsCopy.signInTitle(SignInKind.Xai)).assertIsDisplayed()
+        compose.onNodeWithTag("signin-risk").assertIsDisplayed()
+        compose.onNodeWithTag("signin-start").performClick()
+        compose.onNodeWithTag("signin-use-key").performClick()
+        ui = ui.copy(accountSignIn = AccountSignInUi(AccountProvider.Xai, running = true, userCode = "KQ7M-P2XD", openUrl = "https://accounts.x.ai/device",
+            expiresAtMs = System.currentTimeMillis() + 600_000))
+        compose.onNodeWithTag("signin-code").assertTextContains("KQ7M-P2XD")
+        compose.onNodeWithText(ModelsCopy.XAI_CODE_COPY_REOPEN).assertIsDisplayed()
+        compose.onNodeWithTag("signin-cancel").performClick()
+        assertEquals(listOf("start Xai", "key Xai", "cancel Xai"), started)
+    }
+
+    @Test fun openRouterSheetShowsFailureAndCanRetry() {
+        val started = mutableListOf<String>()
+        val ui = ModelSetupUi(form, accountSignIn = AccountSignInUi(AccountProvider.OpenRouter, failure = "已取消登录。"))
+        compose.setContent { MikaTheme { SignInSheetBody(ui, SignInKind.OpenRouter, SignInSheetActions(start = { started += "$it" })) } }
+        compose.onNodeWithText(ModelsCopy.signInStart(SignInKind.OpenRouter)).assertIsDisplayed()
+        compose.onNodeWithTag("signin-risk").assertDoesNotExist()
+        compose.onNodeWithTag("signin-failed").assertTextContains("已取消登录。")
+        compose.onNodeWithTag("signin-start").performClick()
+        assertEquals(listOf("OpenRouter"), started)
+    }
+
+    @Test fun signedInXaiDetailShowsAccountSetMainAndThe403Note() {
+        val got = mutableListOf<String>()
+        val ui = ModelSetupUi(form, providers = listOf(deepseek, grok), configs = listOf(main), roles = RoleChoices(main = "c1"),
+            xaiAccount = SubscriptionAccount("me@example.com", signedIn = true))
+        compose.setContent {
+            MikaTheme {
+                ProviderDetailContent(ui, grok, ProviderDetailActions(useAsMain = { got += "main" }, signOut = { got += "out" }), onBack = {})
+            }
+        }
+        compose.onNodeWithText("me@example.com").assertIsDisplayed()
+        compose.onNodeWithTag("account-403-note").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(ModelsCopy.SET_MAIN).performScrollTo().performClick()
+        compose.onNodeWithText(ModelsCopy.CHATGPT_SIGN_OUT).performScrollTo().performClick()
+        assertEquals(listOf("main", "out"), got)
     }
 }

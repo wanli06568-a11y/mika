@@ -1,5 +1,7 @@
 package com.wangzan101.mika.ui
 
+import com.wangzan101.mika.R
+import com.wangzan101.mika.i18n.tr
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ClipData
@@ -8,10 +10,13 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
-import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.runtime.rememberCoroutineScope
+import com.wangzan101.mika.browser.PageAskMode
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
@@ -47,6 +52,9 @@ import com.wangzan101.mika.ui.components.PageBackground
 /**
  * 浏览器页(侧栏「浏览器」):没有打开的网页时是起始页([BrowserStart]:搜索框、常用网站、最近打开),
  * 打开了是网页([BrowserPageBar] + 网页 + [BrowserToolbar],「更多」是 [BrowserMoreSheet])。
+ * 网页底下是「问问 Mika」([PageAskBar]):对着这一页问,这一页借给那个任务当它的当前网页标签;干活时网页下半截盖一块对话面板
+ * ([PagePanel]),页面四周亮一圈光边([PageGlow]);你一摸页面 Mika 就暂停,面板收成小卡片([PageCard]),顶上一条「继续」([PausedBanner])。
+ * 选中网页上的文字时,文字选择菜单里多一项「问 Mika」,选中的字带进去。状态在 [PageChat]。
  * 系统返回键先在网页里后退,退不了回到起始页,起始页上再按回到进来的地方。
  * 网页视图放在进程里([UserBrowser]),转屏时接着用;离开这一页(不是转屏、也没有别处的浏览器页)时关掉。
  */
@@ -67,6 +75,11 @@ fun BrowserScreen(browser: UserBrowser, onBack: () -> Unit) {
     val favorites = remember(edits, registry) { BrowserFavorites.combine(edits, registry) }
     val recent = remember(recentPages, looks) { StartPageModel.recentRows(recentPages) { face(it).name } }
     val toast: (String) -> Unit = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+    val scope = rememberCoroutineScope()
+    val chat = remember(browser) { PageChat(context.applicationContext, browser, scope) }
+    // 换了一页(还没在这一页上问过时)重新找接着的对话;关了网页回到什么都没有
+    val pageUrl = page?.url
+    LaunchedEffect(pageUrl) { chat.onPage(pageUrl) }
 
     // 这一处浏览器页:进来时登记,回到前台时把网页视图要过来(界面有两个实例时挂在看得见的那个上),
     // 离开时交还;最后一处离开(不是转屏)才关网页
@@ -101,7 +114,7 @@ fun BrowserScreen(browser: UserBrowser, onBack: () -> Unit) {
                 onOpenSite = { site -> browser.openFavorite(site)?.let(toast) },
                 onRemoveSite = { site ->
                     browser.favorites.remove(site.host)
-                    toast("已移除「${face(site.host).name}」")
+                    toast(tr(R.string.browser_removed, face(site.host).name))
                 },
                 onAddHint = { toast(BROWSER_ADD_HINT) },
                 onClearRecent = browser.recent::clear,
@@ -117,12 +130,24 @@ fun BrowserScreen(browser: UserBrowser, onBack: () -> Unit) {
                     onReload = browser::reload, onStop = browser::stop,
                 )
                 if (loginBanner) LoginBanner(desktop = p.desktop, onDone = browser::confirmLogin)
-                // 网页视图由 UserBrowser 放进这个容器(换了标签也放进同一个)
-                AndroidView(
-                    factory = { ctx -> FrameLayout(ctx).also { browser.setContainer(place, it) } },
-                    modifier = Modifier.weight(1f).fillMaxWidth().testTag("browser-page"),
-                    onRelease = { browser.setContainer(place, null) },
-                )
+                val mode = chat.mode
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    // 网页视图由 UserBrowser 放进这个容器(换了标签也放进同一个);手指按下告诉借着页面的任务,选中文字时菜单里有「问 Mika」
+                    AndroidView(
+                        factory = { ctx ->
+                            PageFrame(ctx, onTouch = chat::touched, onAsk = { done ->
+                                browser.readSelection { text ->
+                                    done()
+                                    text?.let(chat::askAbout)
+                                }
+                            }).also { browser.setContainer(place, it) }
+                        },
+                        modifier = Modifier.fillMaxSize().testTag("browser-page"),
+                        onRelease = { browser.setContainer(place, null) },
+                    )
+                    PageAskOverlay(chat, site = host?.let { face(it).name } ?: p.url, pageTitle = p.title)
+                }
+                if (mode == PageAskMode.Bar && p.loginFor == null) PageAskBar(chat, Modifier.imePadding())
                 BrowserToolbar(
                     p, onBackPage = browser::back, onForward = browser::forward, onHome = browser::closePage,
                     onShare = { share(context, p.url, p.title)?.let(toast) },
@@ -137,22 +162,22 @@ fun BrowserScreen(browser: UserBrowser, onBack: () -> Unit) {
                     onReload = browser::reload,
                     onCopy = {
                         context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(p.title.ifBlank { p.url }, p.url))
-                        toast("链接已复制")
+                        toast(tr(R.string.browser_link_copied))
                     },
                     onOpenOutside = { openOutside(context, p.url)?.let(toast) },
                     onToggleFavorite = {
                         if (host == null) return@BrowserMoreSheet
                         if (favorite) {
                             browser.favorites.remove(host)
-                            toast("已从常用网站移除")
+                            toast(tr(R.string.browser_unfavorited))
                         } else {
                             browser.favorites.add(host)
-                            toast("已加入常用网站")
+                            toast(tr(R.string.browser_favorited))
                         }
                     },
                     onToggleDesktop = {
                         browser.setDesktop(!p.desktop)
-                        toast(if (p.desktop) "已换回手机版，这个网站下次也用手机版" else "已换成电脑版，这个网站下次也用电脑版")
+                        toast(if (p.desktop) tr(R.string.browser_switched_mobile) else tr(R.string.browser_switched_desktop))
                     },
                 )
             }
@@ -170,7 +195,7 @@ private fun share(context: Context, url: String, title: String): String? {
         context.startActivity(Intent.createChooser(send, null))
         null
     } catch (e: ActivityNotFoundException) {
-        "没有能分享的 App"
+        tr(R.string.browser_no_share_app)
     }
 }
 
@@ -179,7 +204,7 @@ private fun openOutside(context: Context, url: String): String? = try {
     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE))
     null
 } catch (e: ActivityNotFoundException) {
-    "没有别的浏览器能打开这个网页"
+    tr(R.string.browser_no_other_browser)
 }
 
 /** 页面弹框:提示只有「好」;确认和离开页面有「取消」;输入框弹框带一个输入框。 */
@@ -189,18 +214,18 @@ private fun PageDialogBox(d: PageDialog, answer: (Boolean, String?) -> Unit) {
     val leave = d.kind == PageDialog.BEFORE_UNLOAD
     AlertDialog(
         onDismissRequest = { answer(false, null) },
-        title = { Text(if (leave) "离开这个网页？" else "网页上的提示") },
+        title = { Text(if (leave) tr(R.string.browser_leave_q) else tr(R.string.browser_page_says)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (d.message.isNotBlank()) Text(d.message)
-                if (leave && d.message.isBlank()) Text("你在这个网页上做的修改可能不会保存。")
+                if (leave && d.message.isBlank()) Text(tr(R.string.browser_leave_body))
                 if (d.kind == PageDialog.PROMPT) TextField(input, { input = it }, singleLine = true)
             }
         },
         confirmButton = {
-            TextButton({ answer(true, if (d.kind == PageDialog.PROMPT) input else null) }) { Text(if (leave) "离开" else "好") }
+            TextButton({ answer(true, if (d.kind == PageDialog.PROMPT) input else null) }) { Text(if (leave) tr(R.string.browser_leave) else tr(R.string.ok_yes)) }
         },
-        dismissButton = if (d.kind == PageDialog.ALERT) null else ({ TextButton({ answer(false, null) }) { Text("取消") } }),
+        dismissButton = if (d.kind == PageDialog.ALERT) null else ({ TextButton({ answer(false, null) }) { Text(tr(R.string.cancel)) } }),
     )
 }
 

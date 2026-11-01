@@ -1,5 +1,7 @@
 package com.wangzan101.mika.task
 
+import org.junit.Rule
+import com.wangzan101.mika.i18n.ChineseTexts
 import com.wangzan101.mika.core.agent.TaskState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +16,8 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TaskGateTest {
+    @get:Rule val texts = ChineseTexts()
+
     private val locked = MutableStateFlow(false)
     private val shellUp = MutableStateFlow(true)
     private var moveBackCalls = 0
@@ -29,17 +33,17 @@ class TaskGateTest {
 
     @Test
     fun nonInteractiveWaitsForUnlockThenResumesByItself() = runTest {
-        locked.value = DeviceStateWatcher.isLocked(interactive = false, keyguardLocked = false)
+        locked.value = LockState.Reading(interactive = false, keyguardLocked = false).locked
         var passed = false
         launch { gate.pass { reported += it }; passed = true }
         runCurrent()
         assertFalse(passed)
         assertEquals(TaskState.Held(TaskGate.LOCKED), reported.last())
 
-        locked.value = DeviceStateWatcher.isLocked(interactive = true, keyguardLocked = true) // 亮屏但还在锁屏界面
+        locked.value = LockState.Reading(interactive = true, keyguardLocked = true).locked // 亮屏但还在锁屏界面
         runCurrent()
         assertFalse(passed)
-        locked.value = DeviceStateWatcher.isLocked(interactive = true, keyguardLocked = false)
+        locked.value = LockState.Reading(interactive = true, keyguardLocked = false).locked
         runCurrent()
         assertTrue(passed)
         assertEquals(null, reported.last())
@@ -62,6 +66,29 @@ class TaskGateTest {
         assertEquals(1, moveBackCalls)
 
         // 挪回来之后不再暂停
+        reported.clear()
+        gate.pass { reported += it }
+        assertEquals(listOf<TaskState?>(null), reported)
+    }
+
+    /** 用户在借出的页面上动手:不论哪种屏都停下,点「继续」当场放行;之前的「继续」不算,也不挪任何东西。 */
+    @Test
+    fun userOnPagePausesAnyStepUntilContinue() = runTest {
+        gate.onUserOnPage()
+        assertTrue(gate.userOnPagePending)
+        var passed = false
+        launch { gate.pass({ false }) { reported += it }; passed = true }
+        runCurrent()
+        assertFalse(passed)
+        assertEquals(TaskState.Held(TaskGate.paused(TaskGate.USER_ON_PAGE)), reported.last())
+        gate.resume()
+        runCurrent()
+        assertTrue(passed)
+        assertFalse(gate.userOnPagePending)
+        assertEquals(0, moveBackCalls)
+        // 还没走到关卡就点了继续:不再停
+        gate.onUserOnPage()
+        gate.resume()
         reported.clear()
         gate.pass { reported += it }
         assertEquals(listOf<TaskState?>(null), reported)

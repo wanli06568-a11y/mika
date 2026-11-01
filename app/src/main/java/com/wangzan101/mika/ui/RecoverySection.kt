@@ -1,5 +1,7 @@
 package com.wangzan101.mika.ui
 
+import com.wangzan101.mika.R
+import com.wangzan101.mika.i18n.tr
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
@@ -17,6 +19,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.wangzan101.mika.core.shell.AutoOnBlock
 import com.wangzan101.mika.core.shell.BuiltinShellStatus
+import com.wangzan101.mika.core.shell.HelperRestart
 import com.wangzan101.mika.core.shell.PermissionResult
 import com.wangzan101.mika.core.shell.RecoveryCapability
 import com.wangzan101.mika.core.shell.RecoveryConsent
@@ -43,36 +46,30 @@ object RecoveryCopy {
 
     fun switch(c: RecoveryCapability): SwitchCopy = when (c) {
         RecoveryCapability.Accessibility -> SwitchCopy(
-            "替我打开无障碍",
-            "默认打开",
-            "Mika 要用「无障碍」读屏幕上的文字和按钮。打开后,Mika 会替你在系统里打开它自己的无障碍服务," +
-                "你已经开着的其他无障碍服务不受影响。关掉这里,Mika 会把自己的无障碍服务关掉。",
+            tr(R.string.rec_a11y),
+            tr(R.string.rec_default_on),
+            tr(R.string.rec_a11y_body),
         )
         RecoveryCapability.BatteryWhitelist -> SwitchCopy(
-            "不受省电限制",
-            "默认打开",
-            "打开后,Mika 会把自己加进系统的「电池优化」例外名单,系统省电时就不会在后台停掉它,手机操作更不容易断开;" +
-                "可能会多用一点电。关掉这里就恢复系统默认的省电管理。",
+            tr(R.string.rec_battery),
+            tr(R.string.rec_default_on),
+            tr(R.string.rec_battery_body),
         )
         RecoveryCapability.RestoreAfterReboot -> SwitchCopy(
-            "重启后自动恢复",
-            "默认打开",
-            "手机重启后「无线调试」会自己关掉。打开后,Mika 会在开机时替你重新打开无线调试并自动连上。" +
-                "为此 Mika 需要「修改系统设置」的授权,只用来打开无线调试。只在你信任过的 Wi-Fi 上有效。" +
-                "关掉这里或解除配对,Mika 都会交还这项授权。",
+            tr(R.string.rec_boot),
+            tr(R.string.rec_default_on),
+            tr(R.string.rec_boot_body),
         )
         RecoveryCapability.AutoWirelessDebugging -> SwitchCopy(
-            "自动打开无线调试",
-            "默认打开",
-            "断开 Wi-Fi 或重启手机后,系统会把「无线调试」关掉。手机操作平时用不着它,只在重新启动时(比如 Mika 更新之后)要它开着。" +
-                "打开后,遇到这种时候、又连着 Wi-Fi,Mika 会替你打开无线调试并自动连上,但不会替你关掉它。" +
-                "这和「重启后自动恢复」用同一项「修改系统设置」的授权,只在你允许过的 Wi-Fi 上有效。关掉这里,Mika 就不再替你打开。",
+            tr(R.string.rec_auto_wireless),
+            tr(R.string.rec_default_on),
+            tr(R.string.rec_auto_wireless_body),
         )
     }
 
-    const val NEED_SETUP = "需要先完成手机操作设置"
-    const val FAILED = "没能完成,请确认手机操作已就绪后再试"
-    const val WORKING = "正在处理…"
+    val NEED_SETUP: String get() = tr(R.string.rec_need_setup)
+    val FAILED: String get() = tr(R.string.rec_failed)
+    val WORKING: String get() = tr(R.string.rec_working)
 
     /** 开关拨动后的一行反馈;成功时不多说。 */
     fun result(r: PermissionResult): String? = when (r) {
@@ -81,12 +78,21 @@ object RecoveryCopy {
         is PermissionResult.Failed -> FAILED
     }
 
+    /** 要靠配对过的无线调试才起作用的几项:只用 USB 启动命令起过助手时用不上。 */
+    private val NEEDS_PAIRING = setOf(RecoveryCapability.RestoreAfterReboot, RecoveryCapability.AutoWirelessDebugging)
+
     /**
      * 默认打开、还没生效的那一项下面说一句:没配好手机操作就提示先完成设置(配好后自动打开),
      * 自动打开没成功就照实说;生效了或用户关掉了不多说。
+     * 助手只用 USB 启动命令起过([HelperRestart.UsbCommand])时,靠无线调试重起助手的两项说清用不上、重启后要再运行命令。
      */
-    fun pending(c: RecoveryCapability, consent: RecoveryConsent, paired: Boolean, autoFailed: Set<RecoveryCapability>): String? = when {
-        !consent.wants(c) || consent.isApplied(c) -> null
+    fun pending(
+        c: RecoveryCapability, consent: RecoveryConsent, paired: Boolean, autoFailed: Set<RecoveryCapability>,
+        restart: HelperRestart = HelperRestart.None,
+    ): String? = when {
+        !consent.wants(c) -> null
+        restart == HelperRestart.UsbCommand && c in NEEDS_PAIRING -> tr(R.string.rec_needs_pairing)
+        consent.isApplied(c) -> null
         !paired -> NEED_SETUP
         c in autoFailed -> FAILED
         else -> null
@@ -94,24 +100,24 @@ object RecoveryCopy {
 
     /** 「替我打开无障碍」下面,上次自动重启无障碍服务成功的时间;没成功时不说,界面顶上的提示照旧给手动处理的办法。 */
     fun restarted(o: RepairOutcome?, zone: ZoneId = ZoneId.systemDefault()): String? =
-        o?.takeIf { it.restarted }?.let { "上次在 ${HH_MM.format(Instant.ofEpochMilli(it.atMillis).atZone(zone))} 自动重启过无障碍服务。" }
+        o?.takeIf { it.restarted }?.let { tr(R.string.rec_restarted_at, HH_MM.format(Instant.ofEpochMilli(it.atMillis).atZone(zone))) }
 
     private val HH_MM = DateTimeFormatter.ofPattern("HH:mm")
 
     /** 「自动打开无线调试」下面,替你打开没成功、先停下的原因;没停下不多说。 */
     fun autoOnBlocked(b: AutoOnBlock?): String? = when (b) {
         null -> null
-        AutoOnBlock.NotAllowedHere -> "这个 Wi-Fi 还没允许无线调试,Mika 打不开它。请亲手打开一次,系统问时勾选「始终允许使用此网络」,以后 Mika 就能自己打开。"
-        AutoOnBlock.Refused -> "这台手机不让 Mika 打开无线调试。需要时请手动打开,Mika 会自己连上。"
-        AutoOnBlock.GaveUp -> "替你打开了几次无线调试,手机操作还是没能启动,先停下了。换个 Wi-Fi 或在手机操作里点重试,Mika 会再试。"
+        AutoOnBlock.NotAllowedHere -> tr(R.string.rec_not_allowed_here)
+        AutoOnBlock.Refused -> tr(R.string.rec_refused)
+        AutoOnBlock.GaveUp -> tr(R.string.rec_gave_up)
     }
 
     /** 「重启后自动恢复」下面,上次开机的结果;正常恢复了不多说。 */
     fun lastRestore(o: RestoreOutcome?): String? = when (o) {
         null, RestoreOutcome.Restored -> null
-        RestoreOutcome.PermissionMissing -> "上次开机时授权已经不在了,没能自动恢复。请关掉再打开这个开关。"
-        RestoreOutcome.SettingUnavailable -> "这台手机不允许 Mika 在开机时打开无线调试。重启后请手动打开,Mika 会自己连上。"
-        RestoreOutcome.NotRecovered -> "上次开机没能自动连上。确认连着信任过的 Wi-Fi、无线调试开着,Mika 会自己连上。"
+        RestoreOutcome.PermissionMissing -> tr(R.string.rec_permission_missing)
+        RestoreOutcome.SettingUnavailable -> tr(R.string.rec_setting_unavailable)
+        RestoreOutcome.NotRecovered -> tr(R.string.rec_not_recovered)
     }
 }
 
@@ -131,7 +137,9 @@ fun RecoverySwitches() {
     var message by remember { mutableStateOf<Pair<RecoveryCapability, String>?>(null) }
     val notes = RecoveryCapability.entries.mapNotNull { cap ->
         val m = message
-        (if (m?.first == cap) m.second else RecoveryCopy.pending(cap, consent, shell != BuiltinShellStatus.NotPaired, autoFailed))
+        (if (m?.first == cap) m.second else RecoveryCopy.pending(
+            cap, consent, shell == BuiltinShellStatus.Running || phone.shellControl.paired, autoFailed, phone.shellControl.restart,
+        ))
             ?.let { cap to it }
     }.toMap()
     RecoverySection(

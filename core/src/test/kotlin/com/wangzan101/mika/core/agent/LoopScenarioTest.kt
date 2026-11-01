@@ -7,6 +7,11 @@ import com.wangzan101.mika.core.model.Role
 import com.wangzan101.mika.core.cap.sandbox.FakeSandbox
 import com.wangzan101.mika.core.uistate.ActionResult
 import com.wangzan101.mika.core.testing.FakeChatModel
+import com.wangzan101.mika.core.testing.InterruptibleStream
+import com.wangzan101.mika.core.run.RunId
+import com.wangzan101.mika.core.run.RunInbox
+import com.wangzan101.mika.core.run.RunInput
+import com.wangzan101.mika.core.run.RunSpec
 import com.wangzan101.mika.core.testing.LoopSnapshot
 import com.wangzan101.mika.core.testing.Screen
 import com.wangzan101.mika.core.testing.ScriptedScreen
@@ -18,6 +23,7 @@ import com.wangzan101.mika.core.tool.FakeScreen
 import com.wangzan101.mika.core.tool.ScriptWebPort
 import com.wangzan101.mika.core.tool.ToolDispatcher
 import com.wangzan101.mika.core.verify.Verifier
+import com.wangzan101.mika.core.cap.web.AttachedPage
 import com.wangzan101.mika.core.cap.web.FakeWebPort
 import com.wangzan101.mika.core.cap.web.PageText
 import com.wangzan101.mika.core.cap.web.ScriptRun
@@ -30,6 +36,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneOffset
@@ -61,6 +68,10 @@ class LoopScenarioTest {
         models.forEach { (role, m) -> assertEquals("$role 的剧本没有用完", 0, m.remaining) }
         LoopSnapshot.check(name, LoopSnapshot.render(end.toString(), models.toList()))
     }
+
+    /** 这次请求里最后一段运行时状态的全文。 */
+    private fun List<com.wangzan101.mika.core.model.Message>.runtimeState(): String =
+        flatMap { it.parts }.filterIsInstance<Part.Text>().last { ContextBuilder.kindOf(it.text) == ContextKind.RuntimeState }.text
 
     private fun FakeChatModel.lastResult(i: Int): String =
         requests[i].messages.last { it.role == Role.Tool }.parts.filterIsInstance<Part.ToolResult>().first().content
@@ -311,7 +322,213 @@ class LoopScenarioTest {
         snapshot("m_irreversible_verified", end, "main" to main, "verifier" to checker)
     }
 
+    // (n) 英文问、回答漂成中文:交出前退回一次,让模型整段改写成用户的语言;改写好的英文回答照常交出
+    @Test fun answerInOtherLanguageIsNudgedOnce() = runTest {
+        val screen = ScriptedScreen(listOf(Screen(SETTINGS, listOf(label("@e1", "关于手机", 80), label("@e2", "Android 版本 14", 300),
+            label("@e3", "已使用 250.53 GB / 512 GB", 400)))))
+        val main = fakeModel("main") {
+            call("phone_observe")
+            answer(CHINESE_ANSWER)
+            answer("Android version: 14 (Android 版本). Storage: 250.53 GB of 512 GB is used (已使用), as shown on About phone (关于手机).")
+        }
+        val end = loop(main, toolDispatcher(screen)).run("What Android version is this phone on, and how much storage is used?")
+        end as TaskState.Succeeded
+        assertTrue(end.answer, end.answer.startsWith("Android version: 14"))
+        val notice = main.requests[2].messages.withoutRuntime().last()
+        assertEquals(ContextKind.Notice, ContextBuilder.kindOf(notice))
+        assertTrue("translation (original)" in (notice.parts.single() as Part.Text).text)
+        snapshot("n_answer_language_nudge", end, "main" to main)
+    }
+
+    // 改写后还是别的语言:不再退回,照样交出
+    @Test fun answerLanguageIsNudgedOnlyOnce() = runTest {
+        val screen = ScriptedScreen(listOf(Screen(SETTINGS, listOf(label("@e1", "关于手机", 80), label("@e2", "Android 版本 14", 300),
+            label("@e3", "已使用 250.53 GB / 512 GB", 400)))))
+        val main = fakeModel("main") {
+            call("phone_observe")
+            answer(CHINESE_ANSWER)
+            answer(CHINESE_ANSWER)
+        }
+        val end = loop(main, toolDispatcher(screen)).run("What Android version is this phone on, and how much storage is used?")
+        assertEquals(CHINESE_ANSWER, (end as TaskState.Succeeded).answer)
+        assertEquals(0, main.remaining)
+        assertEquals(3, main.requests.size)
+    }
+
+    // 浏览器页上问:那句话以页面说明(固定的英文)开头,语言提示和回答的语言检查只看用户打的字,中文回答不退回
+    @Test fun browserPageAnswerFollowsTheUserWords() = runTest {
+        val attached = AttachedPage.Page("https://shop.example.com/s?k=降噪耳机", "降噪耳机 - 搜索结果")
+        val web = FakeWebPort().apply {
+            title = attached.title
+            page = pageText(attached.url, attached.title, "入耳式降噪耳机 B2 Pro 649 元\n头戴式降噪耳机 C3 Max 899 元")
+        }
+        val answer = "这页里 700 元以内的只有入耳式降噪耳机 B2 Pro,价格 649 元;头戴式的 C3 Max 要 899 元,超出了预算,所以选 B2 Pro。"
+        val main = fakeModel("main") {
+            call("web_read_page")
+            answer(answer)
+        }
+        val end = loop(main, toolDispatcher(FakeScreen(), web = web)).run(AttachedPage.compose(attached, "这页里 700 以内的挑一个"))
+        assertEquals(answer, (end as TaskState.Succeeded).answer)
+        assertEquals(2, main.requests.size)
+        val hint = main.requests[0].messages.runtimeState()
+        assertTrue(hint, "latest message: \"这页里 700 以内的挑一个\"" in hint)
+    }
+
+    // 浏览器页上插话带着新选中的字:语言提示引插话里打的字,中文回答不退回
+    @Test fun browserPageSteerFollowsTheUserWords() = runTest {
+        browserPageSteer("就看选中的这个", quoted = "就看选中的这个")
+    }
+
+    // 插话只选了字、没打字:语言提示沿用开局那句,中文回答不退回
+    @Test fun selectionOnlySteerKeepsTheOpeningWords() = runTest {
+        browserPageSteer("", quoted = "这页里 700 以内的挑一个")
+    }
+
+    /** 在英文标题的页面上用中文开局,插话带着新选中的字和 [words];模型直接给中文回答。 */
+    private suspend fun browserPageSteer(words: String, quoted: String) {
+        val attached = AttachedPage.Page("https://shop.example.com/s?k=headphones", "Noise Cancelling Headphones - Search Results")
+        val web = FakeWebPort().apply {
+            title = attached.title
+            page = pageText(attached.url, attached.title, "入耳式降噪耳机 B2 Pro 649 元\n头戴式降噪耳机 C3 Max 899 元")
+        }
+        val answer = "选中的是入耳式降噪耳机 B2 Pro,价格 649 元,在 700 元以内;头戴式的 C3 Max 要 899 元,超出了预算,所以选 B2 Pro。"
+        val main = fakeModel("main") { answer(answer) }
+        val inbox = RunInbox().apply { send(RunInput.Steer("m1", AttachedPage.compose(attached.copy(selection = "B2 Pro 649"), words))) }
+        val end = loop(main, toolDispatcher(FakeScreen(), web = web))
+            .run(RunSpec(RunId("r1"), AttachedPage.compose(attached, "这页里 700 以内的挑一个"), "thread-1"), inbox)
+        assertEquals(answer, (end as TaskState.Succeeded).answer)
+        assertEquals(1, main.requests.size)
+        val hint = main.requests[0].messages.runtimeState()
+        assertTrue(hint, "latest message: \"$quoted\"" in hint)
+    }
+
+    // 引了 Mika 之前的一段英文回答、再打一句短中文:按整句算会判成换了语言;引的那段不算用户的话,语言提示引打的字,中文回答不退回
+    @Test fun quotedReplyFollowsTheUserWords() = runTest {
+        val goal = QuoteMessage.compose(QuoteMessage.Quote(QuoteMessage.From.Mika, ENGLISH_REPLY), "那哪个更值")
+        assertNotNull(ReplyLanguage.mismatch(goal, HEADPHONES_ANSWER))
+        val main = fakeModel("main") { answer(HEADPHONES_ANSWER) }
+        val end = loop(main, toolDispatcher(FakeScreen())).run(goal)
+        assertEquals(HEADPHONES_ANSWER, (end as TaskState.Succeeded).answer)
+        assertEquals(1, main.requests.size)
+        val hint = main.requests[0].messages.runtimeState()
+        assertTrue(hint, "latest message: \"那哪个更值\"" in hint)
+    }
+
+    // 插话里引了那段英文回答:一样只看插话里打的字
+    @Test fun quotedSteerFollowsTheUserWords() = runTest {
+        val steer = QuoteMessage.compose(QuoteMessage.Quote(QuoteMessage.From.Mika, ENGLISH_REPLY), "那哪个更值")
+        assertNotNull(ReplyLanguage.mismatch(steer, HEADPHONES_ANSWER))
+        val main = fakeModel("main") { answer(HEADPHONES_ANSWER) }
+        val inbox = RunInbox().apply { send(RunInput.Steer("m1", steer)) }
+        val end = loop(main, toolDispatcher(FakeScreen())).run(RunSpec(RunId("r1"), "帮我比较一下这两款降噪耳机", "thread-1"), inbox)
+        assertEquals(HEADPHONES_ANSWER, (end as TaskState.Succeeded).answer)
+        assertEquals(1, main.requests.size)
+        val hint = main.requests[0].messages.runtimeState()
+        assertTrue(hint, "latest message: \"那哪个更值\"" in hint)
+    }
+
+    // 话很短、附件名是长英文:按整句算会判成换了语言;附件那几行不算用户的话,中文回答不退回
+    @Test fun attachedFileFollowsTheUserWords() = runTest {
+        val goal = AttachmentLines.compose("总结一下", listOf("/workspace/inbox/Quarterly_Financial_Report_Final_v2.pdf" to "2 KB"))
+        assertNotNull(ReplyLanguage.mismatch(goal, REPORT_ANSWER))
+        val main = fakeModel("main") { answer(REPORT_ANSWER) }
+        val end = loop(main, toolDispatcher(FakeScreen())).run(goal)
+        assertEquals(REPORT_ANSWER, (end as TaskState.Succeeded).answer)
+        assertEquals(1, main.requests.size)
+        val hint = main.requests[0].messages.runtimeState()
+        assertTrue(hint, "latest message: \"总结一下\"" in hint)
+    }
+
+    // (o) 工具调用漏成了文字(服务端没解析成调用):不当回答,退回一次;模型经工具接口重新调用后照常做完
+    @Test fun toolCallLeakedAsTextIsNudgedOnce() = runTest {
+        val screen = ScriptedScreen(listOf(Screen(SETTINGS, listOf(label("@e1", "关于手机", 80), label("@e2", "Android 版本 14", 300)))))
+        val main = fakeModel("main") {
+            answer(LEAKED_OBSERVE)
+            call("phone_observe")
+            answer(ANDROID_14)
+        }
+        val end = loop(main, toolDispatcher(screen)).run("这台手机是安卓几?")
+        assertEquals(ANDROID_14, (end as TaskState.Succeeded).answer)
+        val notice = main.requests[1].messages.withoutRuntime().last()
+        assertEquals(ContextKind.Notice, ContextBuilder.kindOf(notice))
+        assertTrue("`phone_observe`" in (notice.parts.single() as Part.Text).text)
+        snapshot("o_tool_call_as_text_nudge", end, "main" to main)
+    }
+
+    // 退回后又漏成文字:结束,不把原样的标记交给用户
+    @Test fun toolCallLeakedTwiceEndsTheTask() = runTest {
+        val screen = ScriptedScreen(listOf(Screen(SETTINGS, listOf(label("@e1", "关于手机", 80)))))
+        val main = fakeModel("main") {
+            answer(LEAKED_OBSERVE)
+            answer(LEAKED_OBSERVE)
+        }
+        val end = loop(main, toolDispatcher(screen)).run("这台手机是安卓几?")
+        end as TaskState.Failed
+        assertEquals(FailKind.Model, end.kind)
+        assertFalse(end.reason, "<tool_call>" in end.reason)
+        assertEquals(2, main.requests.size)
+    }
+
+    // 正常调过工具之后又漏一次:每次都还能退回一次(偶发的服务端问题,长任务里不止出一次)
+    @Test fun toolCallLeakAfterARealCallIsNudgedAgain() = runTest {
+        val screen = ScriptedScreen(listOf(Screen(SETTINGS, listOf(label("@e1", "关于手机", 80), label("@e2", "Android 版本 14", 300)))))
+        val main = fakeModel("main") {
+            answer(LEAKED_OBSERVE)
+            call("phone_observe")
+            answer(LEAKED_OBSERVE)
+            answer(ANDROID_14)
+        }
+        val end = loop(main, toolDispatcher(screen)).run("这台手机是安卓几?")
+        assertEquals(ANDROID_14, (end as TaskState.Succeeded).answer)
+        assertEquals(0, main.remaining)
+    }
+
+    // 回答里讲的就是这种格式,但没提到这次的任何工具:正常交出
+    @Test fun answerAboutToolCallMarkupIsDelivered() = runTest {
+        val screen = ScriptedScreen(listOf(Screen(SETTINGS, listOf(label("@e1", "设置", 80)))))
+        val explanation = "有的模型写工具调用时用 <tool_call> 包起来,里面是 <function=工具名> 和若干 <parameter=参数名>。"
+        val main = fakeModel("main") { answer(explanation) }
+        val end = loop(main, toolDispatcher(screen)).run("模型的工具调用格式是什么样的?")
+        assertEquals(explanation, (end as TaskState.Succeeded).answer)
+        assertEquals(1, main.requests.size)
+    }
+
+    // (p) 插话打断正在流式输出的回复:用户看到的那段字作为只有文字的回复记进历史,插话接在它后面,模型带着两者重问
+    @Test fun steerKeepsTheInterruptedReply() = runTest {
+        val screen = ScriptedScreen(listOf(Screen(SETTINGS, listOf(label("@e1", "蓝牙", 80), label("@e2", "已开启", 300)))))
+        val main = fakeModel("main") {
+            call("phone_observe")
+            answer("蓝牙已开启:蓝牙页显示「已开启」。")
+        }
+        val model = InterruptibleStream(main, listOf("我先看看", "我先看看 WLAN 开没开"))
+        val inbox = RunInbox()
+        val running = async {
+            AgentLoop(model, toolDispatcher(screen), SystemPrompt.identity(), clock = { CLOCK }, zone = ZoneOffset.UTC, streamReplies = true)
+                .run(RunSpec(RunId("r1"), "看看 WLAN 开没开", "thread-1"), inbox)
+        }
+        model.entered.await()
+        inbox.send(RunInput.Steer("m1", "不是 WLAN,是蓝牙"))
+        val end = running.await()
+        assertTrue(model.cancelled)
+        assertEquals("蓝牙已开启:蓝牙页显示「已开启」。", (end as TaskState.Succeeded).answer)
+        val seen = main.requests[0].messages
+        val kept = seen.indexOfFirst { it.role == Role.Assistant }
+        assertEquals(listOf(Part.Text("我先看看 WLAN 开没开")), seen[kept].parts)
+        assertTrue((seen[kept + 1].parts.first() as Part.Text).text.startsWith(AgentLoop.STEER_MARKER))
+        // 语言提示引的是插话里用户打的字,不带插话标记
+        val hint = seen.runtimeState()
+        assertTrue(hint, "latest message: \"不是 WLAN,是蓝牙\"" in hint)
+        snapshot("p_steer_keeps_interrupted_reply", end, "main" to main)
+    }
+
     private companion object {
+        const val LEAKED_OBSERVE = "<tool_call>\n<function=phone_observe>\n</function>\n</tool_call>"
+        const val ANDROID_14 = "这台手机的安卓版本是 14,是在关于手机页面上看到的。"
+        const val ENGLISH_REPLY = "The first pair costs 399 dollars and has the best noise cancelling. " +
+            "The second pair costs 429 dollars and is more comfortable on long flights."
+        const val HEADPHONES_ANSWER = "看你更在意什么:第一副便宜 30 美元,降噪更好;第二副戴久了更舒服,适合长途飞行。只看性价比的话选第一副。"
+        const val REPORT_ANSWER = "这份季度报告的要点有三条:收入比上个季度略有增长,成本控制得不错,下个季度的重点是扩大海外市场。"
+        const val CHINESE_ANSWER = "我打开了关于手机页面看过了：这台手机的安卓版本是 14，存储已使用 250.53 GB，总共 512 GB，两个数字都是页面上显示的。"
         const val CLOCK = 1_761_300_000_000L
         const val SETTINGS = "com.android.settings"
         const val CHAT = "com.chat"

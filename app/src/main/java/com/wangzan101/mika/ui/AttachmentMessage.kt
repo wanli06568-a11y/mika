@@ -1,18 +1,17 @@
 package com.wangzan101.mika.ui
 
+import com.wangzan101.mika.R
+import com.wangzan101.mika.core.agent.AttachmentLines
+import com.wangzan101.mika.i18n.tr
+import com.wangzan101.mika.i18n.trPlural
 import com.wangzan101.mika.ui.viewer.ViewerKind
 import com.wangzan101.mika.ui.viewer.ViewerKinds
 
 /**
- * 用户的话里带的附件:消息末尾每个附件一行「附件:/workspace/inbox/<名字>(<大小>)」,这几行原样存进对话、交给任务;
- * 对话页据此把附件画成照片格子和文件卡片,路径那几行不给用户看。旧对话里的消息也是这个写法。
+ * 用户的话里带的附件(消息末尾每个附件一行,写法见 [AttachmentLines]):对话页据此把附件画成照片格子和文件卡片,
+ * 路径那几行不给用户看。
  */
 object AttachmentMessage {
-    private const val PREFIX = "附件:"
-
-    /** 名字里可以有括号(「报表 (1).csv」):大小只认最后那对括号里的「数字 + B/KB/MB」;路径在沙箱的 /workspace 下。 */
-    private val LINE = Regex("^附件:(/workspace/.+)\\((\\d+(?:\\.\\d+)? (?:B|KB|MB))\\)$")
-
     /** 一个附件:工作区里的路径和写在消息里的大小(「2 KB」)。 */
     data class Item(val path: String, val size: String) {
         val name: String get() = path.substringAfterLast('/')
@@ -25,21 +24,10 @@ object AttachmentMessage {
         val hasAttachments: Boolean get() = photos.isNotEmpty() || files.isNotEmpty()
     }
 
-    fun line(path: String, size: String): String = "$PREFIX$path($size)"
-
-    /** 话在前,每个附件一行在后;话为空时只有附件行。 */
-    fun compose(text: String, files: List<Pair<String, String>>): String =
-        (listOf(text).filter { it.isNotEmpty() } + files.map { (p, s) -> line(p, s) }).joinToString("\n")
-
     fun parse(text: String): Parsed {
-        val items = mutableListOf<Item>()
-        val rest = mutableListOf<String>()
-        for (l in text.lines()) {
-            val m = LINE.matchEntire(l.trim())
-            if (m != null) items += Item(m.groupValues[1], m.groupValues[2]) else rest += l
-        }
-        if (items.isEmpty()) return Parsed(emptyList(), emptyList(), text.trim())
-        return Parsed(items.filter { it.photo }, items.filterNot { it.photo }, rest.joinToString("\n").trim())
+        val p = AttachmentLines.parse(text)
+        val items = p.files.map { (path, size) -> Item(path, size) }
+        return Parsed(items.filter { it.photo }, items.filterNot { it.photo }, p.words)
     }
 
     /** 去掉附件行后的话;只发了附件时是一句称呼([label])。标题、侧栏用它。 */
@@ -50,11 +38,11 @@ object AttachmentMessage {
 
     /** 只发了附件时怎么称呼:「照片」「3 张照片」「合同.pdf」「合同.pdf 等 2 个文件」「照片和文件」。 */
     fun label(p: Parsed): String = when {
-        p.photos.isNotEmpty() && p.files.isNotEmpty() -> "照片和文件"
-        p.photos.size == 1 -> "照片"
-        p.photos.isNotEmpty() -> "${p.photos.size} 张照片"
+        p.photos.isNotEmpty() && p.files.isNotEmpty() -> tr(R.string.attach_photos_and_files)
+        p.photos.size == 1 -> tr(R.string.attach_photo)
+        p.photos.isNotEmpty() -> trPlural(R.plurals.attach_n_photos, p.photos.size)
         p.files.size == 1 -> p.files[0].name
-        p.files.isNotEmpty() -> "${p.files[0].name} 等 ${p.files.size} 个文件"
+        p.files.isNotEmpty() -> tr(R.string.attach_file_and_more, p.files[0].name, p.files.size)
         else -> ""
     }
 
@@ -76,7 +64,7 @@ object PhotoGrid {
 object FileBadge {
     enum class Kind { Pdf, Sheet, Doc, Slides, Archive, Other }
 
-    fun text(name: String): String = ext(name).uppercase().take(4).ifEmpty { "文件" }
+    fun text(name: String): String = ext(name).uppercase().take(4).ifEmpty { tr(R.string.attach_files) }
 
     fun kind(name: String): Kind = when (ext(name)) {
         "pdf" -> Kind.Pdf

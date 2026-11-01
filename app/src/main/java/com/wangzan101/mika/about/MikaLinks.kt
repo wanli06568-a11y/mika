@@ -1,8 +1,10 @@
 package com.wangzan101.mika.about
 
+import com.wangzan101.mika.R
+import com.wangzan101.mika.i18n.tr
 import java.net.URLEncoder
 
-/** Mika 对外的地址都在这里:仓库、问题、作者、检查更新用的两个来源。换地址只改这一处。 */
+/** Mika 对外的地址都在这里:仓库、问题、作者、X 群聊、检查更新用的两个来源。换地址只改这一处。 */
 object MikaLinks {
     const val REPO = "https://github.com/wangzan101/Mika"
     const val REPO_LABEL = "github.com/wangzan101/Mika"
@@ -11,6 +13,9 @@ object MikaLinks {
     const val NEW_ISSUE = "$REPO/issues/new"
     const val X = "https://x.com/wangzan101"
     const val X_HANDLE = "@wangzan101"
+
+    /** X 上的 Mika 交流群:点开即申请加入(不用微信的走这里)。 */
+    const val X_GROUP = "https://x.com/i/chat/group_join/g2116500883139862983/xP74Qyff3X"
 
     /** 检查更新只问 GitHub 发布页(不登录,每小时有次数限制)。 */
     const val LATEST_RELEASE_API = "https://api.github.com/repos/wangzan101/Mika/releases/latest"
@@ -29,12 +34,7 @@ object MikaLinks {
     fun issueBody(d: Device): String {
         val model = if (d.model.startsWith(d.manufacturer, ignoreCase = true)) d.model else "${d.manufacturer} ${d.model}"
         return buildString {
-            append("- 机型：").append(model.trim()).append('\n')
-            append("- 安卓版本：").append(d.androidRelease).append("（SDK ").append(d.sdk).append("）\n")
-            append("- Mika 版本：").append(d.versionName).append("（构建 ").append(d.build).append("）\n")
-            append("\n### 遇到了什么问题\n\n\n")
-            append("### 做了哪几步\n\n\n")
-            append("### 期望是什么样\n\n")
+            append(tr(R.string.issue_body, model.trim(), d.androidRelease, d.sdk, d.versionName, d.build))
         }
     }
 

@@ -1,12 +1,17 @@
 package com.wangzan101.mika.cap.phone.a11y
 
 import com.wangzan101.mika.core.uistate.ActionResult
+import com.wangzan101.mika.core.uistate.AfterTaskMarks
+import com.wangzan101.mika.core.uistate.AppCopy
 import com.wangzan101.mika.core.uistate.ScreenCheck
 import com.wangzan101.mika.core.uistate.ScreenPort
 import com.wangzan101.mika.core.uistate.ScreenSnapshot
 import com.wangzan101.mika.core.uistate.ScreenEvent
 import com.wangzan101.mika.core.uistate.VisibleTextLine
 import com.wangzan101.mika.core.uistate.SystemCommandResult
+import com.wangzan101.mika.core.uistate.SystemAction
+import com.wangzan101.mika.core.uistate.SystemActionResult
+import com.wangzan101.mika.core.uistate.WheelOutcome
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -15,19 +20,23 @@ import kotlinx.coroutines.sync.withLock
 class PhoneUnavailable(val hint: String) : Exception(hint)
 
 /**
- * 用到时才接上的手机端口:第一次 launch_app / open_link 时才调 [acquire](连内置助手、等无障碍、备好虚拟屏);
+ * 用到时才接上的手机端口:第一次 launch_app / open_link,或系统命令、事件工具时才调 [acquire](连内置助手、等无障碍、备好虚拟屏;屏在这些动作用到时才建);
  * 只用网页或沙箱的任务从头到尾不需要内置助手和无障碍。没接上之前读屏是一块空屏、其余动作报 no_app_open,
  * 和接上后还没打开 App 时一样。接不上时这次动作报 phone_unavailable(附怎么弄好),下次再试。
- * 装了哪些 App 只问包管理器([listApps]),不用接上。
+ * 装了哪些 App 只问包管理器([listApps]),不用接上;另一份用户里的 App 没接上时问 [appCopies](内置助手已连着才有,不为它去接)。
  */
 class LazyPhoneScreen(
     private val width: Int,
     private val height: Int,
     private val listApps: suspend () -> List<Pair<String, String>>,
+    private val appCopies: suspend () -> List<AppCopy> = { emptyList() },
     private val acquire: suspend () -> ScreenPort,
 ) : ScreenPort {
     private val lock = Mutex()
     @Volatile private var port: ScreenPort? = null
+
+    /** 模型标下的任务结束时各 App 的去留;收尾时由任务交给内置助手执行(没接上过手机就没有可处理的)。 */
+    override val afterTask = AfterTaskMarks()
 
     /** 本任务用过手机(已接上)。 */
     val acquired: Boolean get() = port != null
@@ -48,9 +57,14 @@ class LazyPhoneScreen(
     private fun unavailable() = ActionResult.Failed(PHONE_UNAVAILABLE, lastProblem)
 
     override suspend fun openApp(packageName: String, cold: Boolean): ActionResult = built()?.openApp(packageName, cold) ?: unavailable()
+    override suspend fun openAppCopy(packageName: String, userId: Int, cold: Boolean): ActionResult =
+        built()?.openAppCopy(packageName, userId, cold) ?: unavailable()
     override suspend fun openLink(action: String?, uri: String?, packageName: String?): ActionResult =
         built()?.openLink(action, uri, packageName) ?: unavailable()
     override suspend fun shareText(packageName: String, text: String): ActionResult = built()?.shareText(packageName, text) ?: unavailable()
+    override suspend fun systemAction(action: SystemAction): SystemActionResult = built()?.systemAction(action) ?: SystemActionResult(unavailable())
+    override suspend fun setWheel(ref: String, snapshotId: String, value: String): WheelOutcome =
+        port?.setWheel(ref, snapshotId, value) ?: WheelOutcome(false, null, null, 0, "none", error = "no_app_open")
 
     // ---------- 没接上之前:还没有打开的 App ----------
 
@@ -68,6 +82,7 @@ class LazyPhoneScreen(
     override suspend fun clearAt(x: Int, y: Int) = port?.clearAt(x, y) ?: NO_APP_OPEN
     override suspend fun scroll(ref: String?, snapshotId: String?, down: Boolean) = port?.scroll(ref, snapshotId, down) ?: NO_APP_OPEN
     override suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long) = port?.swipe(x1, y1, x2, y2, durationMs) ?: NO_APP_OPEN
+    override suspend fun idleScroll(fraction: Double): Boolean = port?.idleScroll(fraction) ?: false
     override suspend fun gesture(paths: List<List<Pair<Int, Int>>>, durationMs: Long) = port?.gesture(paths, durationMs) ?: NO_APP_OPEN
     override suspend fun back() = port?.back() ?: NO_APP_OPEN
     override suspend fun pressKey(keyCode: Int) = port?.pressKey(keyCode) ?: NO_APP_OPEN
@@ -92,6 +107,7 @@ class LazyPhoneScreen(
     override suspend fun listApps(): List<Pair<String, String>> = port?.listApps() ?: listApps.invoke()
     // 要问内置助手:没接上之前不为它去接(接不上会请用户设置),打开过 App 之后才有
     override suspend fun otherProfiles(): Map<String, List<String>> = port?.otherProfiles() ?: emptyMap()
+    override suspend fun appCopies(): List<AppCopy> = port?.appCopies() ?: appCopies.invoke()
     override suspend fun checkScreen(): ScreenCheck? = port?.checkScreen()
     override suspend fun isProtected() = port?.isProtected() ?: false
     override suspend fun frameGrid() = port?.frameGrid()

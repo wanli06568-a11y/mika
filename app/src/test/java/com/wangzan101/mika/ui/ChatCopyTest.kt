@@ -1,5 +1,7 @@
 package com.wangzan101.mika.ui
 
+import org.junit.Rule
+import com.wangzan101.mika.i18n.ChineseTexts
 import com.wangzan101.mika.chat.ConversationSummary
 import com.wangzan101.mika.core.shell.BuiltinShellStatus
 import com.wangzan101.mika.settings.AccessibilityState
@@ -13,6 +15,8 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 class ChatCopyTest {
+    @get:Rule val texts = ChineseTexts()
+
     @Test fun greetingFollowsTheTimeOfDay() {
         assertEquals("早上好", ChatCopy.greeting(7))
         assertEquals("中午好", ChatCopy.greeting(12))
@@ -25,6 +29,8 @@ class ChatCopyTest {
     @Test fun sixDistinctNonBlankExamples() {
         assertEquals(6, ChatCopy.examples.size)
         assertEquals(6, ChatCopy.examples.map { it.text }.filter { it.isNotBlank() }.toSet().size)
+        assertEquals("打开微信，给王赞发消息，让他拉我进Mika内测体验群", ChatCopy.examples.first().text)
+        assertEquals("帮我订明天早上9:40、9:50、10:00 的闹钟", ChatCopy.examples[4].text)
     }
 
     @Test fun titleIsTheFirstLineOfTheFirstMessage() {
@@ -35,6 +41,9 @@ class ChatCopyTest {
         assertEquals("照片", ChatCopy.title(listOf(first.copy(goal = "附件:/workspace/inbox/a.jpg(1 KB)"))))
         assertEquals("a.pdf", ChatCopy.plainTitle("附件:/workspace/inbox/a.pdf(1 KB)"))
         assertEquals(ScreenCopy.TAG, ChatCopy.plainTitle("[[screen:s1]]"))
+        // 在浏览器页上对着一页问的:页面说明不当标题
+        val paged = com.wangzan101.mika.core.cap.web.AttachedPage.compose(com.wangzan101.mika.core.cap.web.AttachedPage.Page("https://a.example/", "页"), "挑一个\n第二行")
+        assertEquals("挑一个", ChatCopy.plainTitle(paged))
     }
 
     @Test fun subtitleSaysWhatIsGoingOn() {
@@ -72,6 +81,12 @@ class ChatCopyTest {
         assertEquals("补充或改要求…", ChatCopy.placeholder(ComposerMode.Busy, hasHistory = true))
     }
 
+    @Test fun voicePlaceholderSaysHoldToTalk() {
+        assertEquals("按住说话，点一下打字", ChatCopy.voicePlaceholder(ComposerMode.Idle))
+        assertEquals("按住说话插话，点一下打字", ChatCopy.voicePlaceholder(ComposerMode.Busy))
+        assertEquals("按住说话回答，点一下打字", ChatCopy.voicePlaceholder(ComposerMode.Answer))
+    }
+
     private val zone = ZoneId.of("Asia/Shanghai")
     private fun at(y: Int, mo: Int, d: Int, h: Int = 12, mi: Int = 0) =
         LocalDateTime.of(y, mo, d, h, mi).atZone(zone).toInstant().toEpochMilli()
@@ -107,6 +122,37 @@ class ChatCopyTest {
         assertEquals("", s.recent.single().subtitle)
         // 当前对话在列表里时,时间也写在标题右边
         assertEquals("14:00", s.running.first().time)
+    }
+
+    /** 置顶的对话在「置顶」一段,最近置顶的在前,不在「最近」里重复;有任务在跑的只列在进行中(带图钉)。 */
+    @Test fun drawerListsPinnedAboveRecent() {
+        val all = listOf(
+            ConversationSummary("a", "一", 40L),
+            ConversationSummary("b", "二", 30L, pinnedAt = 100L),
+            ConversationSummary("c", "三", 20L),
+            ConversationSummary("d", "四", 10L, pinnedAt = 200L),
+            ConversationSummary("e", "五", 5L, pinnedAt = 300L),
+        )
+        val s = drawerSections(all, CurrentConversation("a", false, "一", ""), others = listOf("e"), { null }, canSwitch = true, now = 0L, zone = zone)
+        assertEquals(listOf("e"), s.running.map { it.id })
+        assertTrue(s.running.single().pinned)
+        assertEquals(listOf("d", "b"), s.pinned.map { it.id })
+        assertTrue(s.pinned.all { it.pinned })
+        assertEquals(listOf("a", "c"), s.recent.map { it.id })
+        assertTrue(s.recent.none { it.pinned })
+        // 取消置顶:回到「最近」里按改动时间排的位置
+        val unpinned = drawerSections(all.map { if (it.id == "b") it.copy(pinnedAt = null) else it }, CurrentConversation("a", false, "一", ""), emptyList(), { null }, true, 0L, zone)
+        assertEquals(listOf("e", "d"), unpinned.pinned.map { it.id })
+        assertEquals(listOf("a", "b", "c"), unpinned.recent.map { it.id })
+    }
+
+    /** 在浏览器页上对着一页开始的对话:侧栏那一条带着网站(画成「网页」小标签和网站名),进行中、最近两段都是。 */
+    @Test fun drawerMarksConversationsStartedFromAPage() {
+        val page = com.wangzan101.mika.chat.PageOrigin("https://shop.example.com/s?k=1", "shop.example.com", "搜索")
+        val all = listOf(ConversationSummary("a", "一", 0L, page = page), ConversationSummary("b", "二", 0L), ConversationSummary("c", "三", 0L, page = page))
+        val s = drawerSections(all, CurrentConversation("x", false, "", ""), others = listOf("c"), { null }, canSwitch = true, now = 0L, zone = zone)
+        assertEquals(listOf("shop.example.com", null), s.recent.map { it.site })
+        assertEquals("shop.example.com", s.running.single().site)
     }
 
     /** 任务进行中、没开并行:只有当前对话能点。 */

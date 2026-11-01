@@ -1,6 +1,7 @@
 package com.wangzan101.mika.core.knowledge
 
 import com.wangzan101.mika.core.agent.KNOWLEDGE_BODY_LIMIT
+import com.wangzan101.mika.core.agent.TokenEstimate
 import com.wangzan101.mika.core.agent.KNOWLEDGE_TRUNCATED_HINT
 import com.wangzan101.mika.core.agent.clipKnowledge
 import org.junit.Assert.assertEquals
@@ -22,7 +23,7 @@ class BundledKnowledgeTest {
     @Test fun bundledTreesPassValidationAndIndexIsCurrent() {
         val r = KnowledgeIndex.build(resources)
         assertTrue(r.errors.joinToString("\n"), r.errors.isEmpty())
-        assertEquals(mapOf("app" to 18, "site" to 12, "skill" to 4), r.entries.groupingBy { it.kind }.eachCount())
+        assertEquals(mapOf("app" to 23, "site" to 18, "skill" to 5), r.entries.groupingBy { it.kind }.eachCount())
         // 类路径上的索引就是按当前文件生成的那份
         assertEquals(r.entries, catalog.rows)
     }
@@ -32,8 +33,20 @@ class BundledKnowledgeTest {
         assertEquals(null, catalog.sitePace("example.com"))
     }
 
+    // App 的 pace 按包名查 App 知识:限制浏览快慢的那几个内置 App 是 careful,别的没有说法
+    @Test fun appPaceFollowsTheAppKnowledgeByPackage() {
+        val careful = listOf("xiaohongshu", "wechat", "douyin", "kuaishou", "weibo", "boss-zhipin", "xianyu")
+        val apps = catalog.rows.filter { it.kind == KnowledgeIndex.APP }
+        for (name in careful) {
+            val row = apps.single { it.name == name }
+            row.packages.forEach { assertEquals(name, "careful", catalog.appPace(it)) }
+        }
+        apps.filter { it.name !in careful }.flatMap { it.packages }.forEach { assertEquals(it, null, catalog.appPace(it)) }
+        assertEquals(null, catalog.appPace("com.example.unknown"))
+    }
+
     @Test fun everyEntryHasABody() {
-        assertEquals(30, bundled.size)
+        assertEquals(41, bundled.size)
         assertTrue(bundled.all { !it.body.isNullOrBlank() && it.body!!.length <= KnowledgeIndex.BODY_LIMIT })
         assertTrue(bundled.map { it.name }.containsAll(listOf("wechat", "xianyu", "android-settings", "zhihu.com", "weixin.sogou.com")))
     }
@@ -53,10 +66,11 @@ class BundledKnowledgeTest {
     }
 
     @Test fun longBodyTruncatedWithHint() {
-        val clipped = clipKnowledge("字".repeat(KNOWLEDGE_BODY_LIMIT + 500))
+        // 上限按 token:截后连同截断说明不超过上限,且几乎用满
+        val clipped = clipKnowledge("字".repeat(KNOWLEDGE_BODY_LIMIT * 2))
         assertTrue(clipped.startsWith("字".repeat(KNOWLEDGE_BODY_LIMIT)))
-        assertTrue(clipped.endsWith(KNOWLEDGE_TRUNCATED_HINT))
-        assertEquals(KNOWLEDGE_BODY_LIMIT + 1 + KNOWLEDGE_TRUNCATED_HINT.length, clipped.length)
+        assertTrue(clipped.endsWith("\n" + KNOWLEDGE_TRUNCATED_HINT))
+        assertTrue("${TokenEstimate.of(clipped)}", TokenEstimate.of(clipped) in KNOWLEDGE_BODY_LIMIT - 5..KNOWLEDGE_BODY_LIMIT)
         assertEquals("短", clipKnowledge("短"))
     }
 
@@ -65,8 +79,8 @@ class BundledKnowledgeTest {
         assertTrue(hits.size <= 10)
         assertTrue(hits.any { it.kind == "skill" && it.name == "messaging" })
         assertTrue(catalog.find("微信", kind = "app").all { it.kind == "app" })
-        assertTrue(catalog.linkedSkills("wechat").any { it.name == "messaging" })
-        assertTrue(catalog.linkedSkills("zhihu.com").any { it.name == "info-research" })
+        assertTrue("wechat" in catalog.items.single { it.kind == "skill" && it.name == "messaging" }.apps)
+        assertTrue("zhihu.com" in catalog.items.single { it.kind == "skill" && it.name == "info-research" }.sites)
     }
 
     @Test fun skillViewReturnsAttachment() {
@@ -88,7 +102,7 @@ class BundledKnowledgeTest {
         assertEquals(setOf("app", "site", "skill"), catalog.rows.map { it.kind }.toSet())
         val defs = toolDispatcher(FakeScreen(), skills = catalog, sandbox = FakeSandbox()).definitions().joinToString("\n")
         val index = File(GuideCatalog::class.java.classLoader.getResource(KnowledgeIndex.RESOURCE)!!.toURI()).readText()
-        val lines = GuideRecommender.recommend(catalog, "帮我回消息,顺便查下天气").let { r -> listOfNotNull(r.index, r.personal?.let { it.head + it.body }).joinToString("\n") }
+        val lines = GuideRecommender.index(catalog, "帮我回消息,顺便查下天气").orEmpty()
         for (text in listOf(defs, index, lines)) for (old in listOf("domain:", "domains/", "domain/", "\"domain\"", "device:", "devices/", "\"base\"")) {
             assertFalse("found $old", text.contains(old))
         }

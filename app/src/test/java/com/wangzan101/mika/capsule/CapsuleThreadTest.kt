@@ -1,5 +1,7 @@
 package com.wangzan101.mika.capsule
 
+import org.junit.Rule
+import com.wangzan101.mika.i18n.ChineseTexts
 import com.wangzan101.mika.core.agent.FailKind
 import com.wangzan101.mika.core.agent.TaskState
 import com.wangzan101.mika.core.agent.Turn
@@ -13,6 +15,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CapsuleThreadTest {
+    @get:Rule val texts = ChineseTexts()
+
     private fun turn(user: String, outcome: String, status: String = "succeeded", runId: String? = null, steers: List<String> = emptyList()) =
         Turn(user, outcome, status, runId = runId, steers = steers)
 
@@ -26,7 +30,7 @@ class CapsuleThreadTest {
         when (it) {
             is ThreadItem.User -> "你:${it.text}"
             is ThreadItem.Note -> "注:${it.text}"
-            is ThreadItem.Answer -> "答:${it.text}"
+            is ThreadItem.Answer -> if (it.cut) "断:${it.text}" else "答:${it.text}"
         }
     }
 
@@ -171,5 +175,48 @@ class CapsuleThreadTest {
         assertEquals(listOf(null, "已加入当前任务", "已收到，下一步处理"), users.map { it.note })
         assertEquals("你:顺便订午饭", texts(t)[t.anchor])
         assertEquals(t.items.size, t.items.map { it.key }.toSet().size)
+    }
+
+    @Test fun withdrawnSteersAreNotShown() {
+        val base = live("a", TaskState.Running(1, "n"), CapsuleKind.Running)
+        val run = base.copy(run = base.run.copy(steers = listOf(
+            SteerNote("s1", "已撤回的话", SteerState.Withdrawn),
+            SteerNote("s2", "留下的话", SteerState.Received),
+        )))
+        val t = CapsuleThreads.build(emptyList(), 10, listOf(run))
+        assertEquals(listOf("问题a", "留下的话"), t.items.filterIsInstance<ThreadItem.User>().map { it.text })
+    }
+
+    // 插话打断的那段回复排在那句插话前面(和对话页一样);记下的一轮和进行中的一件同样排,key 不重复
+    @Test fun interruptedReplySitsAboveItsSteer() {
+        val past = listOf(PastTurn(Turn("查天气", "明天多云", "succeeded", runId = "r1",
+            steers = listOf("改成查明天", "顺便看看后天"), interruptedReplies = listOf("今天晴,最高", ""))))
+        assertEquals(listOf("你:查天气", "断:今天晴,最高", "你:改成查明天", "你:顺便看看后天", "答:明天多云"),
+            texts(CapsuleThreads.build(past, 10, emptyList())))
+
+        val base = live("a", TaskState.Running(2, "n"), CapsuleKind.Running, draft = "明天")
+        val run = base.copy(run = base.run.copy(steers = listOf(SteerNote("s1", "改成查明天", SteerState.Joined, interrupted = "今天晴,最高"))))
+        val t = CapsuleThreads.build(emptyList(), 10, listOf(run))
+        assertEquals(listOf("你:问题a", "断:今天晴,最高", "你:改成查明天", "答:明天"), texts(t))
+        assertEquals(t.items.size, t.items.map { it.key }.toSet().size)
+        assertEquals("你:改成查明天", texts(t)[t.anchor])
+    }
+
+    // 插话之前已经说完的回复排在那句插话前面,照回答的样子;还没交给模型的插话排在正在写的回答后面
+    @Test fun finishedReplyAndWaitingSteerOrder() {
+        val past = listOf(PastTurn(Turn("查天气", "明天多云", "succeeded", runId = "r1",
+            steers = listOf("改成查明天"), finishedReplies = listOf("今天晴,最高 25 度。"))))
+        assertEquals(listOf("你:查天气", "答:今天晴,最高 25 度。", "你:改成查明天", "答:明天多云"),
+            texts(CapsuleThreads.build(past, 10, emptyList())))
+
+        val base = live("a", TaskState.Running(2, "n"), CapsuleKind.Running, draft = "明天多")
+        val run = base.copy(run = base.run.copy(steers = listOf(
+            SteerNote("s1", "改成查明天", SteerState.Joined, finished = "今天晴"),
+            SteerNote("s2", "简短点", SteerState.Received),
+        )))
+        val t = CapsuleThreads.build(emptyList(), 10, listOf(run))
+        assertEquals(listOf("你:问题a", "答:今天晴", "你:改成查明天", "答:明天多", "你:简短点"), texts(t))
+        assertEquals(t.items.size, t.items.map { it.key }.toSet().size)
+        assertEquals("你:简短点", texts(t)[t.anchor])
     }
 }

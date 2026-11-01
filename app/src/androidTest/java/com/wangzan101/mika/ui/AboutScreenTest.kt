@@ -1,7 +1,9 @@
 package com.wangzan101.mika.ui
 
+import com.wangzan101.mika.ChineseUi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -12,6 +14,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import android.content.ClipboardManager
 import com.wangzan101.mika.about.CheckStatus
 import com.wangzan101.mika.about.MikaLinks
 import com.wangzan101.mika.about.ReleaseInfo
@@ -29,11 +33,13 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AboutScreenTest {
+    @get:Rule(order = Int.MIN_VALUE) val chinese = ChineseUi()
+
     @get:Rule val compose = createComposeRule()
 
     private val r020 = ReleaseInfo(
         "0.2.0", "Mika 0.2.0", "### 新增\n- 附件面板", "2026-11-05",
-        "https://github.com/wangzan101/Mika/releases/tag/v0.2.0", "https://github.com/x/mika-0.2.0.apk", "https://pan.example.cn/s/abc",
+        "https://github.com/wangzan101/Mika/releases/tag/v0.2.0", "https://github.com/x/mika-0.2.0.apk",
     )
 
     private class Calls {
@@ -43,6 +49,8 @@ class AboutScreenTest {
         var licenses = 0
     }
 
+    private val sampleDiagnostics = "Mika 诊断信息 / Mika diagnostics\n\n[App]\nversion: 0.1.0 (build abc1234)\n"
+
     private fun about(update: UpdateState = UpdateState()): Calls {
         val calls = Calls()
         compose.setContent {
@@ -51,6 +59,7 @@ class AboutScreenTest {
                     versionName = "0.1.0", build = "abc1234", beta = true, update = update, issueUrl = "issue://prefilled",
                     onCheck = { calls.checks++ }, onOpenUrl = { calls.urls += it },
                     onSaveQr = { calls.saves++; true }, onOpenLicense = { calls.licenses++ }, onBack = {},
+                    diagnostics = { sampleDiagnostics },
                 )
             }
         }
@@ -70,7 +79,7 @@ class AboutScreenTest {
         compose.onNodeWithText("版本 0.1.0").assertIsDisplayed()
         compose.onNodeWithText("Beta").assertIsDisplayed()
         compose.onNodeWithText("· 构建 abc1234").assertIsDisplayed()
-        for (t in listOf("检查更新", "更新记录", "反馈问题", "加入内测群", "关注作者", "开源仓库", "使用说明与参与方式", AboutCopy.DATA_NOTE, AboutCopy.AUTHOR)) {
+        for (t in listOf("检查更新", "更新记录", "联系作者", "反馈问题", "关注作者", "开源仓库", "使用说明与参与方式", AboutCopy.DATA_NOTE, AboutCopy.AUTHOR)) {
             scrollTo(t)
             compose.onNodeWithText(t).assertIsDisplayed()
         }
@@ -101,32 +110,72 @@ class AboutScreenTest {
         compose.onNodeWithText("反馈问题").performClick()
         compose.awaitOne(AboutCopy.FEEDBACK_SHEET_SUB)
         compose.onAllNodesWithTag("feedback-option").assertCountEquals(3)
-        compose.onNodeWithText(AboutCopy.FEEDBACK_WECHAT).assertIsDisplayed()
-        compose.onNodeWithText(AboutCopy.FEEDBACK_X).assertIsDisplayed()
+        compose.onNodeWithText("复制诊断信息").assertIsDisplayed()
+        compose.onNodeWithText("在微信或 X 群聊里说").assertIsDisplayed()
         compose.onNodeWithText(AboutCopy.FEEDBACK_GITHUB).performClick()
         compose.waitForIdle()
         assertEquals(listOf("issue://prefilled"), calls.urls)
     }
 
+    /** 「复制诊断信息」先打开预览:整段文字看得见,点「复制」才进剪贴板。 */
     @Test
-    fun feedbackWeChatOpensQrSheet() {
+    fun feedbackDiagnosticsPreviewsThenCopies() {
+        about()
+        compose.onNodeWithText("反馈问题").performClick()
+        compose.awaitOne("复制诊断信息").performClick()
+        compose.awaitOne("不包含 API Key、聊天内容和屏幕内容")
+        compose.waitUntil(5_000) { compose.onAllNodesWithText(sampleDiagnostics).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("diagnostics-text").assertIsDisplayed()
+        compose.onNodeWithTag("diagnostics-share").assertExists()
+        compose.onNodeWithTag("diagnostics-copy").performClick()
+        compose.waitForIdle()
+        var clip: String? = null
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val cm = InstrumentationRegistry.getInstrumentation().targetContext.getSystemService(ClipboardManager::class.java)
+            clip = cm.primaryClip?.getItemAt(0)?.text?.toString()
+        }
+        assertEquals(sampleDiagnostics, clip)
+    }
+
+    @Test
+    fun feedbackGroupOpensGroupSheet() {
         val calls = about()
         compose.onNodeWithText("反馈问题").performClick()
-        compose.awaitOne(AboutCopy.FEEDBACK_WECHAT).performClick()
-        compose.awaitOne(AboutCopy.GROUP_SHEET_TITLE)
+        compose.awaitOne("在微信或 X 群聊里说").performClick()
+        compose.awaitOne(AboutCopy.GROUP_SHEET_SUB)
         compose.onNodeWithTag("wechat-qr").assertExists()
         compose.onNodeWithText(AboutCopy.SAVE_QR).performClick()
         assertEquals(1, calls.saves)
     }
 
+    /** 联系作者面板:作者微信码、保存按钮,下面「不用微信？」接 X 群聊。 */
     @Test
-    fun groupRowOpensQrSheet() {
-        about()
-        compose.onNodeWithText("加入内测群").performClick()
+    fun groupRowOpensGroupSheet() {
+        val calls = about()
+        compose.onNodeWithText("联系作者").performClick()
         compose.awaitOne(AboutCopy.GROUP_SHEET_SUB).assertIsDisplayed()
         compose.onNodeWithTag("wechat-qr").assertExists()
         compose.onNodeWithText(AboutCopy.GROUP_HINT).assertExists()
+        compose.onNodeWithText(AboutCopy.SAVE_QR).assertExists()
+        compose.onNodeWithText("不用微信？").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("group-join-x").performScrollTo().assertIsDisplayed()
+        // 中文界面微信在前
+        assertTrue(top("wechat-qr") < top("group-join-x"))
+        compose.onNodeWithTag("group-join-x").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(MikaLinks.X_GROUP), calls.urls)
     }
+
+    /** 英文界面([GroupSheet] 的 xFirst):X 群聊按钮在微信码上面,不再写「不用微信？」。 */
+    @Test
+    fun groupSheetPutsXFirstWhenAsked() {
+        compose.setContent { MikaTheme { GroupSheet(xFirst = true, onSave = {}, onJoinX = {}, onDismiss = {}) } }
+        compose.awaitOne(AboutCopy.GROUP_SHEET_SUB)
+        assertTrue(top("group-join-x") < top("wechat-qr"))
+        compose.onAllNodesWithText("不用微信？").assertCountEquals(0)
+    }
+
+    private fun top(tag: String) = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot().top
 
     @Test
     fun checkRowStartsCheckWhenNoUpdate() {
@@ -134,7 +183,7 @@ class AboutScreenTest {
         compose.onNodeWithText(AboutCopy.UP_TO_DATE).assertIsDisplayed()
         compose.onNodeWithText("检查更新").performClick()
         assertEquals(1, calls.checks)
-        compose.onAllNodesWithTag("update-dot").assertCountEquals(0)
+        compose.onAllNodesWithTag("update-dot", useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test
@@ -153,25 +202,73 @@ class AboutScreenTest {
     fun updateRowOpensUpdateSheet() {
         val calls = about(UpdateState(latest = r020, update = r020, status = CheckStatus.Done))
         compose.onNodeWithText("0.2.0 可更新").assertIsDisplayed()
-        compose.onNodeWithTag("update-dot").assertExists()
+        compose.onNodeWithTag("update-dot", useUnmergedTree = true).assertExists()
         compose.onNodeWithText("检查更新").performClick()
         compose.awaitOne("发现新版本 0.2.0")
         compose.onNodeWithText("当前 0.1.0 Beta · 2026-11-05 发布").assertExists()
-        compose.onNodeWithText("国内备用下载").assertExists()
         compose.onNodeWithText("以后再说").assertExists()
-        compose.onNodeWithText("从 GitHub 下载").performClick()
+        compose.onNodeWithText("下载更新").assertExists()
         compose.waitForIdle()
         assertEquals(0, calls.checks)
-        assertEquals(listOf("https://github.com/x/mika-0.2.0.apk"), calls.urls)
+        assertTrue(calls.urls.isEmpty())
     }
 
     @Test
-    fun updateSheetHidesMirrorWhenNone() {
-        val r = r020.copy(mirrorUrl = null)
-        about(UpdateState(latest = r, update = r))
+    fun updateWithoutApkStillOpensReleasePage() {
+        val r = r020.copy(apkUrl = null)
+        val calls = about(UpdateState(latest = r, update = r))
         compose.onNodeWithText("检查更新").performClick()
-        compose.awaitOne("发现新版本 0.2.0")
-        compose.onAllNodesWithText("国内备用下载").assertCountEquals(0)
+        compose.awaitOne("从 GitHub 下载").performClick()
+        assertEquals(listOf(r.pageUrl), calls.urls)
+    }
+
+    @Test
+    fun downloadedUpdateOffersInstallAndDelete() {
+        var installs = 0
+        var deletes = 0
+        compose.setContent {
+            MikaTheme {
+                androidx.compose.foundation.layout.Column {
+                    UpdateDownloadActions(com.wangzan101.mika.about.ApkDownloadState(com.wangzan101.mika.about.DownloadPhase.Ready),
+                        false, null, {}, { installs++ }, { deletes++ })
+                }
+            }
+        }
+        compose.onNodeWithText("安装更新").performClick()
+        compose.onNodeWithText("删除下载").performClick()
+        assertEquals(1, installs)
+        assertEquals(1, deletes)
+    }
+
+    @Test
+    fun downloadingShowsProgressAndCanBeCancelled() {
+        var deletes = 0
+        compose.setContent {
+            MikaTheme {
+                androidx.compose.foundation.layout.Column {
+                    UpdateDownloadActions(com.wangzan101.mika.about.ApkDownloadState(com.wangzan101.mika.about.DownloadPhase.Downloading, 50, 100),
+                        false, null, {}, {}, { deletes++ })
+                }
+            }
+        }
+        compose.onNodeWithText("正在下载 50%").assertIsNotEnabled()
+        compose.onNodeWithText("删除下载").performClick()
+        assertEquals(1, deletes)
+    }
+
+    @Test
+    fun failedDownloadCanBeRetried() {
+        var retries = 0
+        compose.setContent {
+            MikaTheme {
+                androidx.compose.foundation.layout.Column {
+                    UpdateDownloadActions(com.wangzan101.mika.about.ApkDownloadState(com.wangzan101.mika.about.DownloadPhase.Failed),
+                        false, null, { retries++ }, {}, {})
+                }
+            }
+        }
+        compose.onNodeWithText("重新下载").performClick()
+        assertEquals(1, retries)
     }
 
     @Test
@@ -201,11 +298,12 @@ class AboutScreenTest {
         }
         compose.onNodeWithText("设置").assertIsDisplayed()
         compose.onNodeWithText("关于 Mika").assertIsDisplayed()
-        compose.onNodeWithTag("update-dot").assertExists()
+        compose.onNodeWithTag("update-dot", useUnmergedTree = true).assertExists()
         val footer = compose.onNodeWithTag("drawer-footer").getUnclippedBoundsInRoot()
-        val settings = compose.onNodeWithText("设置").getUnclippedBoundsInRoot()
-        val about = compose.onNodeWithText("关于 Mika").getUnclippedBoundsInRoot()
-        val dot = compose.onNodeWithTag("update-dot").getUnclippedBoundsInRoot()
+        // 量文字本身(未合并的树):合并后的可点行节点比文字宽,量它判断不了左右半边
+        val settings = compose.onNodeWithText("设置", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val about = compose.onNodeWithText("关于 Mika", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val dot = compose.onNodeWithTag("update-dot", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val mid = (footer.left + footer.right) / 2
         assertTrue(settings.right < mid)
         assertTrue(about.left > mid)
@@ -227,7 +325,7 @@ class AboutScreenTest {
             }
         }
         compose.onNodeWithText("关于 Mika").assertIsDisplayed()
-        compose.onAllNodesWithTag("update-dot").assertCountEquals(0)
+        compose.onAllNodesWithTag("update-dot", useUnmergedTree = true).assertCountEquals(0)
     }
 
     /** 设置首页「关于 Mika」一行:有新版写「x 可更新」带红点。 */
@@ -244,6 +342,6 @@ class AboutScreenTest {
         }
         scrollTo("0.2.0 可更新")
         compose.onNodeWithText("0.2.0 可更新").assertIsDisplayed()
-        compose.onNodeWithTag("update-dot").assertExists()
+        compose.onNodeWithTag("update-dot", useUnmergedTree = true).assertExists()
     }
 }

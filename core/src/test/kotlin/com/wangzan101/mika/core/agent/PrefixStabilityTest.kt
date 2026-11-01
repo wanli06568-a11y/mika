@@ -60,7 +60,7 @@ class PrefixStabilityTest {
                     val msgs = body["messages"]!!.jsonArray.map { it.jsonObject }
                     val step = STEP.findAll(msgs.last().toString()).last().groupValues[1].toInt()
                     if (step in fail && tried.add(step)) return MockResponse().setResponseCode(429).setHeader("retry-after", "0")
-                    return MockResponse().setBody(reply(step, msgs).toString())
+                    return MockResponse().setBody(reply(step, msgs, TokenEstimate.of(body.toString())).toString())
                 }
             }
             start()
@@ -70,7 +70,8 @@ class PrefixStabilityTest {
             OpenAiCompatModel(server.url("/v1").toString().trimEnd('/'), "k", "m", Capabilities(true, vision, contextTokens, false), OkHttpClient())
     }
 
-    private fun reply(step: Int, msgs: List<JsonObject>): JsonObject {
+    /** [promptTokens]:像真服务商一样按这次请求的大小报输入用量(压缩时机按真实用量算,见 [UsageMeter])。 */
+    private fun reply(step: Int, msgs: List<JsonObject>, promptTokens: Int): JsonObject {
         // 最后一步不带调用,只回文字:就是最终回答
         if (step > STEPS) return buildJsonObject {
             putJsonArray("choices") {
@@ -79,7 +80,7 @@ class PrefixStabilityTest {
                     putJsonObject("message") { put("content", "看完了") }
                 })
             }
-            putJsonObject("usage") { put("prompt_tokens", 1000); put("completion_tokens", 10) }
+            putJsonObject("usage") { put("prompt_tokens", promptTokens); put("completion_tokens", 10) }
         }
         val (name, args) = when {
             step % 3 == 1 -> "phone_observe" to buildJsonObject {}
@@ -101,7 +102,7 @@ class PrefixStabilityTest {
                     }
                 })
             }
-            putJsonObject("usage") { put("prompt_tokens", 1000); put("completion_tokens", 10) }
+            putJsonObject("usage") { put("prompt_tokens", promptTokens); put("completion_tokens", 10) }
         }
     }
 
@@ -150,7 +151,7 @@ class PrefixStabilityTest {
     private fun nameOf(tool: String) = Json.parseToJsonElement(tool).jsonObject["function"]!!.jsonObject.str("name")
 
     /** 收着时也给的入口工具:展开时第一个变的工具只能是它们之一(或排在最后的新工具)。 */
-    private val entries = setOf("phone_launch_app", "phone_list_apps", "web_navigate", "web_read_page", "run_command")
+    private val entries = setOf("phone_launch_app", "phone_list_apps", "phone_set_alarm", "phone_set_timer", "phone_add_calendar_event", "web_navigate", "web_read_page", "run_command")
 
     private val markers = listOf(HistoryPruner.OMITTED, HistoryPruner.OMITTED_READ, "(更早的画面已省略", HistoryPruner.OMITTED_IMAGE, ContextCompressor.HEADER)
 
@@ -233,16 +234,17 @@ class PrefixStabilityTest {
     }
 
     @Test fun compaction() {
-        val bodies = run(Setup(contextTokens = 40_000)).single()
+        val bodies = run(Setup(contextTokens = 80_000)).single()
         val r = check(bodies, "compaction", appendOnly = false)
         assertTrue(bodies.any { ContextCompressor.HEADER in it.toString() })
-        // 越过触发点的那一次压缩一次(改写一次),之后只追加,再越过时才再压:30 步里只改写两次
-        assertEquals(listOf(15, 27), r.changed)
+        // 越过触发点的那一次压缩一次(改写一次),之后只追加,再长一个余量越过时才再压:30 步里只改写三次
+        // (80K 窗口:提示词和展开的工具约 20K,触发点 47K,压到 30K 以下)
+        assertEquals(listOf(12, 21, 30), r.changed)
         assertTrue("${r.share}", r.share > 0.85)
     }
 
     private companion object {
         const val STEPS = 30
-        val STEP = Regex("第 (\\d+) 步,上限")
+        val STEP = Regex("Step: (\\d+) of at most")
     }
 }

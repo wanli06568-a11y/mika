@@ -2,6 +2,7 @@ package com.wangzan101.mika.core.assembly
 
 import com.wangzan101.mika.core.agent.CoreSections
 import com.wangzan101.mika.core.agent.DO_STEPS_TOOL
+import com.wangzan101.mika.core.cap.phone.AppPacing
 import com.wangzan101.mika.core.cap.phone.PHONE
 import com.wangzan101.mika.core.cap.phone.PhoneCapability
 import com.wangzan101.mika.core.cap.sandbox.SandboxCapability
@@ -12,15 +13,16 @@ import com.wangzan101.mika.core.cap.web.WEB
 import com.wangzan101.mika.core.cap.web.WebCapability
 import com.wangzan101.mika.core.cap.web.WebGroup
 import com.wangzan101.mika.core.cap.web.WebPort
-import com.wangzan101.mika.core.cap.web.IdleScroll
+import com.wangzan101.mika.core.uistate.IdleScroll
 import com.wangzan101.mika.core.cap.web.PagePacing
-import com.wangzan101.mika.core.cap.web.SitePace
+import com.wangzan101.mika.core.uistate.PlacePace
 import com.wangzan101.mika.core.cap.mcp.McpConnection
 import com.wangzan101.mika.core.general.GeneralGroup
 import com.wangzan101.mika.core.knowledge.GuideCatalog
 import com.wangzan101.mika.core.memory.MemoryStore
 import com.wangzan101.mika.core.memory.ProfileStore
 import com.wangzan101.mika.core.memory.UserUtterances
+import com.wangzan101.mika.core.skills.PersonalSkills
 import com.wangzan101.mika.core.uistate.ScreenPort
 import com.wangzan101.mika.core.tool.AgentTool
 import com.wangzan101.mika.core.tool.LegacyNames
@@ -58,9 +60,15 @@ fun toolDispatcher(
     /** 网页一页一页看的节奏(换页前补足停留,见 [PagePacing]);默认不等。 */
     webPacing: () -> PagePacing = { PagePacing.Off },
     /** 网站对浏览快慢的要求(按主机名);默认按 [skills] 里站点知识的 pace。 */
-    webSitePace: (String) -> SitePace = { host -> SitePace.of(skills?.sitePace(host)) },
+    webPlacePace: (String) -> PlacePace = { host -> PlacePace.of(skills?.sitePace(host)) },
     /** 网页停留时轻轻滚几下页面(见 [IdleScroll]);默认不滚。 */
     webIdleScroll: () -> IdleScroll? = { null },
+    /** 在 App 里一步一步操作的节奏(改动屏幕的动作之前补足停留,见 [AppPacing]);默认不等。 */
+    appPacing: () -> AppPacing = { AppPacing.Off },
+    /** App 对浏览快慢的要求(按包名);默认按 [skills] 里 App 知识的 pace。 */
+    appPace: (String) -> PlacePace = { pkg -> PlacePace.of(skills?.appPace(pkg)) },
+    /** App 里新的一屏上的停留时轻轻滚几下(见 [IdleScroll]);默认不滚。 */
+    appIdleScroll: () -> IdleScroll? = { null },
     /** 跨读屏的稳定编号:读屏给模型编号和 s<N>,动作前翻译回端口编号。 */
     stableRefs: Boolean = false,
     /** 写操作成功后等界面稳定再读一屏,把与上一屏的差异放进结果的 screen 字段;隐含 [stableRefs]。 */
@@ -99,17 +107,19 @@ fun toolDispatcher(
     childHost: ChildRunHost? = null,
     /** 这个对话里用户发来的屏幕;给了而这次的话或之前几轮里带着屏幕时提供 view_user_screen。 */
     userScreens: UserScreenSource? = null,
+    /** 用户的个人技能;和 [skills]、[utterances] 都给了才提供 skill_save(用户要求时写下或改一份个人技能)。 */
+    personalSkills: PersonalSkills? = null,
 ): ToolDispatcher {
     val config = ToolConfig(visionEnabled, skills, recordFrames, vision, inlineScreen, adaptiveVision, memory, profile, utterances, conversationId,
-        imageOps, scheduleTrigger, scheduleAdmin, runSpec, childHost, userScreens)
+        imageOps, scheduleTrigger, scheduleAdmin, runSpec, childHost, userScreens, personalSkills)
     val providers: List<CapabilityProvider> = listOf(
         object : CapabilityProvider {
             override val id = PHONE
-            override fun open(spec: RunSpec) = PhoneCapability(screen, deepLinks)
+            override fun open(spec: RunSpec) = PhoneCapability(screen, deepLinks, appPacing(), appPace, appIdleScroll())
         },
         object : CapabilityProvider {
             override val id = WEB
-            override fun open(spec: RunSpec) = WebCapability(web, workspacePath, webPacing(), webSitePace, webIdleScroll())
+            override fun open(spec: RunSpec) = WebCapability(web, workspacePath, webPacing(), webPlacePace, webIdleScroll())
         },
         object : CapabilityProvider {
             override val id = SANDBOX

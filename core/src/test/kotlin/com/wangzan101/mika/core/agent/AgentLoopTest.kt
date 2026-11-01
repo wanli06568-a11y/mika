@@ -10,6 +10,7 @@ import com.wangzan101.mika.core.model.ModelReply
 import com.wangzan101.mika.core.model.Part
 import com.wangzan101.mika.core.model.Role
 import com.wangzan101.mika.core.model.StopReason
+import com.wangzan101.mika.core.model.StreamingChatModel
 import com.wangzan101.mika.core.model.ToolSpec
 import com.wangzan101.mika.core.record.RunEvent
 import com.wangzan101.mika.core.record.RunSink
@@ -81,7 +82,7 @@ private val FIXED_RETRY = RetryPolicy(jitter = { 1.0 })
 class AgentLoopTest {
     /** 只有手机、展开了手机一组之后的系统提示词:几组的入口、交给用户的规矩、手机一段(去掉没提供的工具那几行)。 */
     private fun phoneOpenedPrompt(base: String) = listOf(
-        base, com.wangzan101.mika.core.capability.PromptEnv(setOf("phone_launch_app"), false).gate(SystemPrompt.read("groups")), SystemPrompt.read("handover"),
+        base, com.wangzan101.mika.core.capability.PromptEnv(setOf("phone_launch_app", "phone_set_alarm"), false).gate(SystemPrompt.read("groups")), SystemPrompt.read("handover"),
         SystemPrompt.read("phone").lines().filterNot { "<!-- needs: phone_open_link -->" in it || "<!-- needs: phone_find_visually -->" in it }.joinToString("\n"),
     ).joinToString("\n\n")
 
@@ -454,6 +455,37 @@ class AgentLoopTest {
         assertEquals(30_000, currentTime)
     }
 
+    // 流式回复没收尾连接就断了:回复还没进历史、也没执行工具,原样重发;界面上那半截字在重试前就清掉
+    @Test fun streamCutIsRetriedWithoutKeepingPartialText() = runTest {
+        lateinit var l: AgentLoop
+        val previews = mutableListOf<String?>()
+        val requests = mutableListOf<List<Message>>()
+        fun preview() = (l.state.value as? TaskState.Running)?.preview
+        val model = object : StreamingChatModel {
+            override val capabilities = Capabilities(toolCalls = true, vision = false, contextTokens = 128_000, reasoning = false)
+            override suspend fun complete(system: String, messages: List<Message>, tools: List<ToolSpec>): ModelReply = error("应走流式")
+            override suspend fun completeStreaming(
+                system: String, messages: List<Message>, tools: List<ToolSpec>, onText: (String) -> Unit,
+            ): ModelReply {
+                requests += messages
+                if (requests.size == 1) {
+                    onText("半句")
+                    previews += preview()
+                    throw ModelError.StreamCut()
+                }
+                previews += preview()
+                onText(DONE)
+                return finish()
+            }
+        }
+        l = AgentLoop(model, toolDispatcher(FakeScreen()), "BASE", retry = FIXED_RETRY, streamReplies = true)
+        com.wangzan101.mika.core.testing.assertAnswered(DONE, l.run("t"))
+        assertEquals(listOf("半句", null), previews)
+        assertEquals(2, requests.size)
+        assertEquals(requests[0], requests[1])
+        assertEquals(1000, currentTime)
+    }
+
     @Test fun networkErrorRetriesAfterOneSecond() = runTest {
         val m = FakeModel(ModelError.Network(), finish())
         com.wangzan101.mika.core.testing.assertAnswered(DONE, loop(m).run("t"))
@@ -485,7 +517,7 @@ class AgentLoopTest {
         com.wangzan101.mika.core.testing.assertAnswered(DONE, run.await())
         val text = m.requests[1].withoutRuntime().last().results().single().json().s("instruction")
         assertEquals(
-            "用户说已自己完成,请只 observe 读一下 App 现在的状态来核实:确认完成就直接回答用户读到的结果,无法确认就 end_not_done,不要再做其他操作。",
+            "The user says they finished it themselves. Only observe to read the app's current state and check: if it is confirmed done, answer the user directly with what you read; if you cannot confirm it, call end_not_done. Do nothing else.",
             text,
         )
     }
@@ -742,7 +774,7 @@ class AgentLoopTest {
         val retried = m.requests[11].withoutRuntime()
         assertEquals(1 + 1 + 6 * 2, retried.size)
         val summary = retried[1].plainText()
-        assertTrue(summary, summary.startsWith(ContextCompressor.HEADER) && "第 4 步 wait(0.4)→ 生效" in summary && "第 5 步" !in summary)
+        assertTrue(summary, summary.startsWith(ContextCompressor.HEADER) && "Step 4 wait(0.4) → applied" in summary && "Step 5 " !in summary)
         // 之后只追加:压缩的结果原样在前,多一次往返接在后面
         assertEquals(1 + 1 + 7 * 2, m.requests[12].withoutRuntime().size)
         assertEquals(retried, m.requests[12].withoutRuntime().take(retried.size))
@@ -766,7 +798,7 @@ class AgentLoopTest {
         val retried = m.requests[16].withoutRuntime()
         assertTrue("${retried.size} < ${overflowed.size}", retried.size < overflowed.size)
         val summary = retried[1].plainText()
-        assertTrue(summary, summary.startsWith(ContextCompressor.HEADER) && "第 8 步" in summary && "第 9 步" !in summary)
+        assertTrue(summary, summary.startsWith(ContextCompressor.HEADER) && "Step 8 " in summary && "Step 9 " !in summary)
     }
 
     @Test fun contextTooLongWithNothingToFoldFailsWithoutResending() = runTest {
@@ -788,7 +820,7 @@ class AgentLoopTest {
     }
 
     @Test fun longTaskStaysUnderBudget() = runTest {
-        // 每次读屏约 6000 字;60 步,上下文 32000 token 时每次发出的估算不超过 60%
+        // 每次读屏约 6000 字;60 步,上下文 32000 token:每次发出的消息估算(乘还没校准时的比值)不超过可用窗口
         var n = 0
         val screen = object : ScreenPort by FakeScreen() {
             override suspend fun snapshot(): ScreenSnapshot {
@@ -806,7 +838,7 @@ class AgentLoopTest {
         val observation = m.requests[1][2].results().single().content
         assertTrue("observation should be about 6000+ chars, was ${observation.length}", observation.length >= 6000)
         val worst = m.requests.maxOf { TokenEstimate.of(it) }
-        assertTrue("sent about $worst tokens", worst <= 19_200)
+        assertTrue("sent about $worst tokens", worst * ContextCompressor.UNCALIBRATED_SCALE <= ContextLimits.of(32_000).usable)
         // 只裁旧读屏已经超出预算(压缩器只在超出时才折叠),折叠后回到预算内
         assertTrue(m.requests.last().any { msg -> msg.plainText().startsWith(ContextCompressor.HEADER) })
     }

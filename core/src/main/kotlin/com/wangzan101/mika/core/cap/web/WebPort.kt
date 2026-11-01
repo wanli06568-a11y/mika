@@ -48,6 +48,23 @@ data class PageText(
 /** [file] 为沙箱路径 /workspace/downloads/<名字>;[status] 为 done|failed|running。 */
 data class DownloadInfo(val file: String, val bytes: Long, val mime: String?, val status: String, val error: String?)
 
+/**
+ * web_keep_open 的结果:[keep] 为 true 时这一页([tabId]、[url]、[title]、站点 [host])在任务结束后留在后台接着运行,
+ * 至多 [hours] 小时;[replaces] 是此刻留着的另一页的站点(任务结束时它会被关掉),没有为 null。[keep] 为 false 时撤销了这个任务里的留页。
+ */
+data class KeepOpenResult(
+    val keep: Boolean,
+    val tabId: String?,
+    val url: String?,
+    val title: String?,
+    val host: String?,
+    val hours: Int,
+    val replaces: String? = null,
+)
+
+/** 当前标签是用户自己在 Mika 浏览器里看着的那一页(借来的):它本来就不随任务关,用不着留。 */
+class WebTabIsUsers(val tabId: String) : Exception("tab $tabId is the user's own page")
+
 /** web_site_mode 的结果:[host] 当前页面的站点,[mobile] 现在用手机版,[reloaded] 当前页已按新版本重新加载。 */
 data class SiteModeResult(val host: String, val mobile: Boolean, val reloaded: Boolean)
 
@@ -108,6 +125,13 @@ interface WebPort : ScreenPort {
      */
     suspend fun setSiteMode(mobile: Boolean): SiteModeResult? = throw UnsupportedOperationException("site mode is not available")
 
+    /**
+     * 任务结束后留下当前标签接着运行([keep] 为 false 时撤销这个任务里的留页)。默认任务结束时关掉全部标签;留下的那一页至多留
+     * [KeepOpenResult.hours] 小时,全局只留一页。没有打开的网页为 null;当前标签是用户自己的页面时抛 [WebTabIsUsers];
+     * 不支持时抛 [UnsupportedOperationException]。
+     */
+    suspend fun keepOpen(keep: Boolean, reason: String): KeepOpenResult? = throw UnsupportedOperationException("keeping a page open is not available")
+
     /** 当前标签此刻用的版本:`mobile` 或 `desktop`;没有打开的网页或不知道为 null。 */
     suspend fun siteMode(): String? = null
 
@@ -136,11 +160,6 @@ interface WebPort : ScreenPort {
     /** 等 [kind] 成立,至多 [timeoutMs]。要看网络的条件在没有 DevTools 时抛 [DevtoolsUnavailable]。 */
     suspend fun waitFor(kind: WaitKind, value: String?, timeoutMs: Long): WaitOutcome = throw DevtoolsUnavailable()
 
-    /**
-     * 停留时顺手轻轻滚一下整页([fraction] 个视口高度,正为往下),走和往下滚一样的原生输入,不移动指针、不点。
-     * 页面这会儿不便滚(有页面弹框、输入法开着、输入框拿着焦点、标签不在显示)时不滚,返回 false;滚了为 true。
-     */
-    suspend fun idleScroll(fraction: Double): Boolean = false
 }
 
 /** web_interact 的落点:读屏编号,或 view 像素坐标。 */
@@ -153,8 +172,6 @@ const val DEVTOOLS_UNAVAILABLE = "devtools_unavailable"
 const val NO_DIALOG = "no_dialog"
 /** 页面有弹框在等回话:别的动作都不做,先回话。 */
 const val DIALOG_OPEN = "dialog_open"
-/** 这个网站本任务里看的页到了上限:不再换页(见 [PageLimitReached])。 */
-const val PAGE_LIMIT = "page_limit"
 
 /** 当前标签正交给用户处理(接管中);返回非 ActionResult 的方法用它报,工具结果是 handed_over。 */
 class WebTabHandedOver(val tabId: String) : Exception("tab $tabId is with the user")

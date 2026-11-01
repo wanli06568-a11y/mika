@@ -38,6 +38,8 @@ internal class ToolConfig(
     val childHost: ChildRunHost? = null,
     /** 这个对话里用户发来的屏幕;没有时不提供 view_user_screen。 */
     val userScreens: com.wangzan101.mika.core.userscreen.UserScreenSource? = null,
+    /** 用户的个人技能;给了(且有技能目录、用户本次说的话)才提供 skill_save。 */
+    val personalSkills: com.wangzan101.mika.core.skills.PersonalSkills? = null,
 )
 
 /**
@@ -87,7 +89,7 @@ internal class ToolContext(
     /** 这次调用里能力为节奏有意停下的时间(见 [ToolExecution.waitMs]);能力在停下时往上加,分发器每次调用清零后交进结果。 */
     var pacedWaitMs = 0L
 
-    /** 这次调用里停留时轻轻滚了几下页面(见 [com.wangzan101.mika.core.cap.web.IdleScroll]);和 [pacedWaitMs] 一样每次调用清零,只进运行记录。 */
+    /** 这次调用里停留时轻轻滚了几下页面(见 [com.wangzan101.mika.core.uistate.IdleScroll]);和 [pacedWaitMs] 一样每次调用清零,只进运行记录。 */
     var idleScrolls = 0
 }
 

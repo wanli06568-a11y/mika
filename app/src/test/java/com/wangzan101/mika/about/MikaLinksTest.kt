@@ -1,5 +1,7 @@
 package com.wangzan101.mika.about
 
+import org.junit.Rule
+import com.wangzan101.mika.i18n.ChineseTexts
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -8,6 +10,8 @@ import java.net.URI
 import java.net.URLDecoder
 
 class MikaLinksTest {
+    @get:Rule val texts = ChineseTexts()
+
     private val device = MikaLinks.Device("Google", "Pixel 8", "14", 34, "0.1.0", "65fcf92")
 
     @Test
@@ -19,6 +23,9 @@ class MikaLinksTest {
         assertTrue(lines.contains("### 遇到了什么问题"))
         assertTrue(lines.contains("### 做了哪几步"))
         assertTrue(lines.contains("### 期望是什么样"))
+        // 诊断信息不自动带上:只提示用户去哪里复制
+        assertTrue(lines.contains("### 诊断信息"))
+        assertTrue(lines.contains("（可选）在 Mika「关于 › 反馈问题 › 复制诊断信息」复制后粘贴在这里"))
     }
 
     /** 型号里已经带厂商名时不重复写。 */
@@ -45,6 +52,7 @@ class MikaLinksTest {
     fun linksPointAtTheRepo() {
         assertEquals("https://github.com/wangzan101/Mika#readme", MikaLinks.README)
         assertEquals("https://x.com/wangzan101", MikaLinks.X)
+        assertTrue(MikaLinks.X_GROUP.startsWith("https://x.com/i/chat/group_join/"))
         assertTrue(MikaLinks.LATEST_RELEASE_API.endsWith("/repos/wangzan101/Mika/releases/latest"))
     }
 }

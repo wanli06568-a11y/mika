@@ -1,5 +1,9 @@
 package com.wangzan101.mika.ui
 
+import org.junit.Rule
+import com.wangzan101.mika.i18n.ChineseTexts
+import com.wangzan101.mika.i18n.ResFileTexts
+import com.wangzan101.mika.i18n.UiText
 import com.wangzan101.mika.core.usage.ProviderUsage
 import com.wangzan101.mika.core.usage.UsageBucket
 import com.wangzan101.mika.core.usage.UsageCounts
@@ -19,6 +23,8 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 class UsageCopyTest {
+    @get:Rule val texts = ChineseTexts()
+
     private val today = LocalDate.of(2026, 10, 27)
 
     @Test fun tokensUseWanAndYiWithThreeSignificantDigits() {
@@ -34,6 +40,12 @@ class UsageCopyTest {
         assertEquals("进位到一亿时改写成亿", "1 亿", UsageCopy.tokens(99_999_999))
         assertEquals("1.5 亿", UsageCopy.tokens(150_000_000))
         assertEquals("12.3 亿", UsageCopy.tokens(1_234_567_890))
+    }
+
+    @Test fun traditionalTokensUseTraditionalUnits() {
+        UiText.source = ResFileTexts.traditional
+        assertEquals("1.23 萬", UsageCopy.tokens(12_345))
+        assertEquals("1.5 億", UsageCopy.tokens(150_000_000))
     }
 
     @Test fun settingsValueSaysNoneForZero() {

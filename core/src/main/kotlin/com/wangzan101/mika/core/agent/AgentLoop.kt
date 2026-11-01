@@ -55,7 +55,6 @@ import com.wangzan101.mika.core.tool.ToolDispatcher
 import com.wangzan101.mika.core.tool.ToolExecution
 import com.wangzan101.mika.core.tool.Verb
 import com.wangzan101.mika.core.replay.RouteMatcher
-import com.wangzan101.mika.core.verify.Verdict
 import com.wangzan101.mika.core.verify.Verifier
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.CancellationException
@@ -130,7 +129,7 @@ class AgentLoop(
     intentJudge: ChatModel? = null,
     /** 经验回放的路线匹配;只在 flags.replay 打开时用。 */
     routes: RouteMatcher? = null,
-    /** 技能目录(含个人技能);任务开始时按目标推荐。为 null 时不推荐。 */
+    /** 技能目录(含个人技能);任务开始时列出全部技能,并按目标给几条 App/站点知识的索引。为 null 或 [recommendSkills] 关着时不给索引。 */
     private val skills: GuideCatalog? = null,
     private val recommendSkills: Boolean = true,
     /** 记忆;为 null(或总开关关)时不检索、不注入、不提供 memory_* 工具。 */
@@ -176,6 +175,11 @@ class AgentLoop(
     /** 这次的原话给模型时的样子(带着屏幕时换成了说明,见 [UserScreenTurns]);还没开始为 null。判结局、提取记忆按它读。 */
     @Volatile var taskText: String? = null
         private set
+    /**
+     * 用户最近一句话(开局原话或插话)里他这次打的字,见 [ownWords];插话里没打字(只发了屏幕、只选了字)时沿用上一句的。
+     * 语言提示和回答的语言检查按它;记忆、技能的引文收的是 [UserWords.said](还认他引的自己说过的话)。
+     */
+    private var latestWords = ""
 
     private val _state = MutableStateFlow<TaskState>(TaskState.Idle)
     val state: StateFlow<TaskState> = _state.asStateFlow()
@@ -187,8 +191,8 @@ class AgentLoop(
     /** 本次任务真的用过的能力组(记进这一轮,下一轮开局预先展开);任务结束后读取。 */
     val usedGroups: Set<String> get() = tools.used
 
-    /** 用户本次说的话(memory_save 的引文校验用);记忆关着时不收集。 */
-    private val utterances get() = if (memory != null) tools.utterances else null
+    /** 用户本次说的话(memory_save、skill_save 的引文校验用);给了就收集,只在内存里、每个任务开始清空。 */
+    private val utterances get() = tools.utterances
 
     private val user = UserExchange(tools, confirmations, confirmTimeoutMs, inputTimeoutMs, { utterances }, { _state.value = it }, ::emit, ::now)
     private val replay = routes?.let { RouteReplay(it, tools, ::awaitGate, { r -> gateState = r; _state.value = r }, ::emit, clock) }
@@ -197,10 +201,10 @@ class AgentLoop(
     /** 锁屏/被拿走关卡等完之后恢复的界面状态(当前这一步、批或回放)。 */
     @Volatile private var gateState: TaskState = TaskState.Idle
     @Volatile private var cancelRequested = false
+    /** 被插话撤掉请求的那一步;之后迟到的流式文字不再显示。 */
+    @Volatile private var interruptedStep = 0
     /** 本对话之前几轮用户说的话,只给核查器理解追问;不含干活模型的任何东西。 */
     private var earlierGoals: List<String> = emptyList()
-    /** 最后一次核查结论;路线计数要和回放结果一起看。 */
-    private var lastVerdict: Verdict? = null
     /** 本次运行的结局;判过结局后路线计数要用([noteOutcome])。 */
     @Volatile private var lastEnd: TaskState? = null
     private val review = AnswerReview(tools, verifier, ::emit, ::now)
@@ -230,10 +234,10 @@ class AgentLoop(
         // 同意只在一次任务内有效
         confirmations?.reset()
         utterances?.clear()
-        emit(RunEvent.TaskStarted(now(), Redactor.text(task), model.name))
+        emit(RunEvent.TaskStarted(now(), Redactor.text(task), model.name,
+            origin = runProvenance.origin.takeIf { it != RunOrigin.Ui }?.name?.lowercase()))
         var end: TaskState? = null
         replay?.reset()
-        lastVerdict = null
         lastEnd = null
         try {
             end = runLoop(task, priorTurns, inbox)
@@ -282,12 +286,12 @@ class AgentLoop(
     }
 
     /**
-     * 交出的回答判过结局([OutcomeJudge])之后调用:回放走完的路线只在办成([RunOutcome.Done])时记一次成功。
+     * 交出的回答判过结局([OutcomeJudge])之后调用:回放走完的路线只在办成([LearnGate])时记一次成功。
      * 失败、取消的任务不判也不用调用;不调用就不记成功。
      */
     suspend fun noteOutcome(outcome: RunOutcome) {
         val end = lastEnd ?: return
-        if (outcome == RunOutcome.Done) replay?.noteResult(end, lastVerdict)
+        replay?.noteResult(end, outcome)
     }
 
     /** 交回接管的结局;结局作为 hand_to_user 的工具结果交给模型。 */
@@ -317,15 +321,20 @@ class AgentLoop(
         val opening = shots.render(raw)
         val task = opening?.said ?: raw
         taskText = task
+        latestWords = ownWords(raw, opening)
         val priorTurns = shots.collapse(rawPrior)
         earlierGoals = priorTurns.map { it.userText }
         // 之前的轮次只作参考,放在本次任务之前
         val context = Conversation.context(priorTurns)
-        utterances?.add(opening?.words ?: task)
+        utterances?.add(UserWords.said(opening?.words ?: raw, tools))
         // 记忆块:对话上文之后、任务原文之前;用到的条目由代码记下
         usedMemory = emptyList()
         // 上次没读出记忆文件(密钥库一时不可用)就再读一次;还读不出就这次不带记忆
-        val block = memory?.takeIf { it.reloadIfNeeded() }?.let { MemoryContext.build(it.items.value, task, priorTurns.lastOrNull()?.userText, tools.legacy::rewrite) }
+        // 产品路径用 Auto:记忆总量装得下就全量注入(不漏检索),装不下才退回检索
+        val block = memory?.takeIf { it.reloadIfNeeded() }?.let {
+            MemoryContext.build(it.items.value, task, priorTurns.lastOrNull()?.userText, tools.legacy::rewrite,
+                mode = MemoryContext.Mode.Auto)
+        }
         if (block?.message != null) {
             usedMemory = block.usedIds
             memory?.markUsed(block.usedIds)
@@ -366,29 +375,32 @@ class AgentLoop(
         var answered: String? = null
         var followUpNudged = false
         var resultReadNudged = false
+        var languageNudged = false
+        // 工具调用漏成文字的回复刚退回过一次(见 [LeakedToolCall]);正常调了工具就重新算
+        var leakNudged = false
         fun facts() = ReviewFacts(acted, paymentHandedOver || recorder.outwardActs > 0, recorder.lastChangeMark?.let { !tools.readSince(it) } == true)
         media.clear()
         gapsNudged = false
+        interruptedStep = 0
         var note = ""
         // 除用户原话以外的上下文都经它生成:统一外壳、统一预算
         ctx = ContextBuilder(zone = zone)
         val installed = try { installedApps() } catch (e: CancellationException) { throw e } catch (e: Exception) { emptyList() }
         val labels = installed.toMap()
         val matched = knowledge?.matchTask(task, Int.MAX_VALUE, installed).orEmpty()
-        val recommended = if (skills != null && recommendSkills) GuideRecommender.recommend(skills, task) else null
+        val index = if (skills != null && recommendSkills) GuideRecommender.index(skills, task) else null
         val start = ctx.start(
             task, priorTurns = context?.let { (it.parts.single() as Part.Text).text },
             memory = listOfNotNull(ProfileContext.render(profileSnapshot), block?.message).takeIf { it.isNotEmpty() }?.joinToString("\n\n"),
             channel = if (knowledge != null) channelLine(matched) else null,
             knowledge = matched, knowledgeNote = toolsNote(tools.scriptsOffered()), withLinks = flags.deepLinks,
-            skillsIndex = recommended?.index, indexedSkills = recommended?.ids.orEmpty(), skill = recommended?.personal,
+            skillsIndex = index,
             taskImages = opening?.images.orEmpty(), screens = opening?.details.orEmpty(),
         )
         val history = start.messages.toMutableList()
         start.knowledge.filter { it.trial }.forEach { emit(RunEvent.State(now(), "knowledge_trial_used", it.name)) }
         // 链接只在 open_link 可用时给,且只放行真的给了模型的那几份
         if (flags.deepLinks) start.knowledge.forEach { if (it.links.isNotEmpty()) tools.allowLinks(it.links) }
-        if (start.skillKept) recommended?.personalName?.let { emit(RunEvent.SkillUsed(now(), it, "injected")) }
         // 网页上每个站点只在第一次进入时按域名找一次知识
         val visitedSites = mutableSetOf<String>()
 
@@ -439,7 +451,7 @@ class AgentLoop(
                 return StopRules.modelFailed(e)
             }
             if (routed == null) {
-                appendSteers(history, inbox)
+                keepInterrupted(history, inbox, step)
                 continue
             }
             var (reply, used) = routed
@@ -450,7 +462,7 @@ class AgentLoop(
                 if (intent == IntentGate.Intent.Discuss) {
                     // 提议的调用尚未写进历史、也没有执行；重问一次，只给直接回答的机会。
                     val discussion = history + ctx.notice("conversation_intent",
-                        "用户这次是在讨论或复盘。直接回答这次的问题，不读取或操作 App、网站或其他外部内容。")
+                        "The user is discussing or reviewing this time. Answer this question directly, without reading or operating apps, websites or other outside content.")
                     reply = try { caller.ask(discussion, emptyList(), using = model, onText = previewFor(step)) }
                     catch (e: CancellationException) { throw e }
                     catch (e: Exception) { return StopRules.modelFailed(e) }
@@ -458,7 +470,7 @@ class AgentLoop(
                 }
             }
             val text = reply.parts.filterIsInstance<Part.Text>().joinToString("") { it.text }.trim()
-            history += Message(Role.Assistant, reply.parts, Author.Mika).also { caller.noteReply(it, used) }
+            history += Message(Role.Assistant, reply.parts, Author.Mika).also { caller.noteReply(it, used, reply.usage) }
             val calls = reply.parts.filterIsInstance<Part.ToolCall>()
             note = text.ifEmpty { calls.firstOrNull()?.name ?: note }
             val tool = calls.firstOrNull()?.name
@@ -482,7 +494,7 @@ class AgentLoop(
                 track.after(null, ok = false, guard = false, changed = null, recovery = false, app = null)
                 recordReply(null)
                 // 模型给出最终回答时,先收下在途的用户插话,再决定是否交出回答。
-                if (appendSteers(history, inbox)) continue
+                if (keepFinished(history, inbox)) continue
                 // 空回复、被输出上限截断的半截话不是回答:提醒一次,再这样就结束
                 if (text.isEmpty() || reply.stopReason == StopReason.MaxTokens) {
                     val n = TurnPolicy.afterEmpty(emptyNudged, truncated = text.isNotEmpty()) ?: return StopRules.noAnswer()
@@ -491,6 +503,16 @@ class AgentLoop(
                     continue
                 }
                 emptyNudged = false
+                // 工具调用原样漏成了文字(服务端没解析成调用):不是回答。退回一次,经工具接口重新调用;
+                // 紧接着又漏就结束,不把原样的标记交给用户
+                val leaked = LeakedToolCall.find(text, everything.map { it.name })
+                if (leaked != null) {
+                    if (leakNudged) return StopRules.toolCallAsText()
+                    leakNudged = true
+                    emit(RunEvent.State(now(), "tool_call_as_text", RunEvent.clip(leaked)))
+                    TurnPolicy.leakedToolCall(leaked).let { history += ctx.notice(it.source, it.text) }
+                    continue
+                }
                 // 用户刚同意或回答了什么、之后却什么也没做:先提醒一次照做或说明为什么不做;之后照常核对
                 val owed = owedFollowUp(answered).takeIf { !followUpNudged }
                 if (owed != null) {
@@ -506,19 +528,29 @@ class AgentLoop(
                 val currentFacts = facts()
                 if (!reviewFinalAnswer && currentFacts.unreadChange && !resultReadNudged) {
                     resultReadNudged = true
-                    history += ctx.notice("operation_result", "最后一次操作之后还没有读取结果。先查看当前界面，确认实际状态，再回答；如果无法读取，如实说明。")
+                    history += ctx.notice("operation_result", "The result of the last action has not been read yet. Look at the current screen first to confirm the actual state, then answer; if it cannot be read, say so plainly.")
                     continue
+                }
+                // 回答的正文不是用户最近那句的语言:退回一次整段改写;改写后还不对照样交出
+                if (!languageNudged) {
+                    val mismatch = ReplyLanguage.mismatch(latestWords, text)
+                    if (mismatch != null) {
+                        languageNudged = true
+                        TurnPolicy.language(mismatch).let { history += ctx.notice(it.source, it.text) }
+                        continue
+                    }
                 }
                 // 不带调用的回复就是最终回答；产品路径只整理来源。
                 val result = conclude(task, text, step, currentFacts, history)
                 if (result != null) {
                     // 交出之前还有插话(核对、整理来源时到的):不收尾,带着它接着做;没有就关上收件箱,之后的话才是下一件事
-                    if (inbox?.closeUnlessSteered() == false) { appendSteers(history, inbox); continue }
+                    if (inbox?.closeUnlessSteered() == false) { keepFinished(history, inbox); continue }
                     return result
                 }
                 continue
             }
             emptyNudged = false
+            leakNudged = false
             acted = true
             // 回答之后又做了别的:那个回答算有了下文
             answered = null
@@ -667,17 +699,13 @@ class AgentLoop(
             content["id"]?.jsonPrimitive?.content ?: "", content["kind"]?.jsonPrimitive?.content ?: "", content["status"]?.jsonPrimitive?.content ?: ""))
     }
 
-    /** 前台 App/站点的参考资料补进历史,关联的技能补进索引(确定性,不靠关键词猜)。 */
+    /** 前台 App/站点的参考资料补进历史(确定性,不靠关键词猜);技能开局已全部列出,这里不再补。 */
     private fun injectKnowledge(history: MutableList<Message>, e: KnowledgeEntry?) {
         ctx.knowledge(e, toolsNote(tools.scriptsOffered()), flags.deepLinks)?.let { m ->
             if (flags.deepLinks && e!!.links.isNotEmpty()) tools.allowLinks(e.links)
             history += m
             if (e?.trial == true) emit(RunEvent.State(now(), "knowledge_trial_used", e.name))
         }
-        val catalog = skills?.takeIf { recommendSkills } ?: return
-        e ?: return
-        val linked = catalog.linkedSkills(e.name).map { GuideRecommender.id(it) to GuideRecommender.line(it) }
-        ctx.linkedSkills("关联 ${e.display} 的技能", SKILL_INDEX_HEADER, linked)?.let { history += it }
     }
 
     /**
@@ -687,11 +715,18 @@ class AgentLoop(
      */
     private suspend fun appendRuntimeState(history: MutableList<Message>, place: Place?, labels: Map<String, String>, step: Int) {
         val mode = if (place?.kind == PlaceKind.Site) tools.placeMode() else null
-        val state = ctx.runtimeState(place, place?.name?.let(labels::get), mode, step, maxSteps, now())
+        val state = ctx.runtimeState(place, place?.name?.let(labels::get), mode, step, maxSteps, now(), latestWords)
         val last = history.lastOrNull()
         if (last == null || last.role == Role.Assistant) history += Message(Role.User, listOf(state), Author.Mika)
         else history[history.lastIndex] = last.copy(parts = last.parts + state)
     }
+
+    /**
+     * 用户这句话里他这次打的字:屏幕的说明、浏览器页的页面说明、引的那一段和附件行先后去掉(见 [UserWords.typed];几样都带着时都去掉),
+     * 都没有时是原话;只发了屏幕、只引了一段、只选了字、只带了附件时为空。
+     * 给模型的那句带着固定的英文说明、插话标记,后面还可能接着运行时状态,不能拿来判断用户用的语言。
+     */
+    private fun ownWords(raw: String, shown: UserScreenTurns.Rendered?): String = UserWords.typed(shown?.words ?: raw, tools)
 
     private suspend fun channelLine(matched: List<KnowledgeEntry>): String? {
         val facts = channelFacts ?: return null
@@ -703,16 +738,37 @@ class AgentLoop(
      * 插话是独立的真实用户行;只在两步之间追加,绝不改写已经发给模型的消息。
      * 插话带着用户此刻的屏幕时和开局原话一样换好:那句话连同截图,后面跟着屏幕的详情。
      */
-    private suspend fun appendSteers(history: MutableList<Message>, inbox: RunInbox?): Boolean {
-        val updates = inbox?.takeSteers().orEmpty()
+    private suspend fun appendSteers(history: MutableList<Message>, inbox: RunInbox?): Boolean =
+        appendSteers(history, inbox?.takeSteers().orEmpty())
+
+    private suspend fun appendSteers(history: MutableList<Message>, updates: List<RunInbox.UserSteer>): Boolean {
         updates.forEach { update ->
             val shown = screens?.render(update.text)
+            val words = ownWords(update.text, shown)
+            if (words.isNotBlank()) latestWords = words
             history += Message(Role.User, listOf(Part.Text("$STEER_MARKER\n${shown?.said ?: update.text}")) + shown?.images.orEmpty(), Author.User)
             shown?.details?.forEach { (source, body) -> history += ctx.userScreen(source, body) }
-            utterances?.add(shown?.words ?: update.text)
+            utterances?.add(UserWords.said(shown?.words ?: update.text, tools))
             emit(RunEvent.State(now(), "steer_received", RunEvent.clip(Redactor.text(update.messageId))))
         }
         return updates.isNotEmpty()
+    }
+
+    /**
+     * 不带调用的回复已经记进历史、也显示出来了,这时有插话:接上插话接着做(返回 true)。
+     * 屏幕上那段回复要留着:下一步一开始界面上的实时文字就清掉了,所以发 `reply_finished_before_steer` 把它挂到插话上方。
+     * 没有插话返回 false,什么也不动。
+     */
+    private suspend fun keepFinished(history: MutableList<Message>, inbox: RunInbox?): Boolean {
+        val steers = inbox?.takeSteers().orEmpty()
+        if (steers.isEmpty()) return false
+        val current = _state.value as? TaskState.Running
+        val shown = current?.preview?.trim()
+        if (current?.preview != null) _state.value = current.copy(preview = null)
+        // 不截短:这是一段完整的回答,界面要和没插话时一样显示全文(长度本来就受模型输出上限约束)
+        if (!shown.isNullOrEmpty()) emit(RunEvent.State(now(), "reply_finished_before_steer", Redactor.text(shown)))
+        appendSteers(history, steers)
+        return true
     }
 
     /** 插话只取消正在等待的模型请求(本步不写进历史,下一步带着插话重问);工具调用进入执行入口后由它自己做完。 */
@@ -733,9 +789,28 @@ class AgentLoop(
         }
     }
 
+    /**
+     * 插话撤掉了第 [step] 步的请求:用户已经看到的那段字(界面上的 preview)作为一条只有文字的回复记进历史,
+     * 接着才是插话,模型下一次看到的和用户看到的一样。没看到字、或没有插话时什么也不记。
+     * 思考内容和半截工具调用本来就不在 preview 里。界面上的那段字在这里清掉,改由 `reply_interrupted` 事件挂到插话上方。
+     */
+    private suspend fun keepInterrupted(history: MutableList<Message>, inbox: RunInbox?, step: Int) {
+        val steers = inbox?.takeSteers().orEmpty()
+        interruptedStep = step
+        val current = _state.value as? TaskState.Running
+        val partial = current?.takeIf { it.step == step }?.preview?.trim()
+        if (current?.preview != null) _state.value = current.copy(preview = null)
+        if (!partial.isNullOrEmpty() && steers.isNotEmpty()) {
+            history += Message(Role.Assistant, listOf(Part.Text(partial)), Author.Mika)
+            emit(RunEvent.State(now(), "reply_interrupted", RunEvent.clip(Redactor.text(partial))))
+        }
+        appendSteers(history, steers)
+    }
+
     private fun previewFor(step: Int): ((String) -> Unit)? = if (!streamReplies) null else { preview ->
         val current = _state.value as? TaskState.Running
-        if (current?.step == step) _state.value = current.copy(preview = preview.takeIf(String::isNotEmpty))
+        // 撤掉之后网络线程可能还送来一段:不再显示,免得屏幕上比历史里多
+        if (current?.step == step && interruptedStep != step) _state.value = current.copy(preview = preview.takeIf(String::isNotEmpty))
     }
 
     /**
@@ -826,7 +901,6 @@ class AgentLoop(
             _state.value = TaskState.Running(step, VERIFYING_NOTE, reason = VERIFYING_NOTE,
                 preview = (_state.value as? TaskState.Running)?.preview)
         }
-        r.verdict?.let { lastVerdict = it }
         val missing = r.unconfirmed
         if (missing.isNotEmpty() && history != null && !gapsNudged) {
             gapsNudged = true
@@ -873,7 +947,7 @@ class AgentLoop(
                 repliedAtMs = repliedAtMs,
             ))
             // 收尾模型也可能正在生成时收到插话。最多重答两次，其余交给下一任务。
-            if (attempt < 2 && appendSteers(history, inbox)) return@repeat
+            if (attempt < 2 && keepFinished(history, inbox)) return@repeat
             if (call == null) {
                 if (calls.isNotEmpty() || text.isEmpty() || reply.stopReason == StopReason.MaxTokens) return StopRules.stepLimit(maxSteps)
                 return conclude(task, text, step, facts, history = null)!!

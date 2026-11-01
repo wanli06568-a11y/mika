@@ -1,5 +1,7 @@
 package com.wangzan101.mika.shell;
 
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.os.ParcelFileDescriptor;
 import android.os.Bundle;
 import android.view.Surface;
@@ -72,6 +74,43 @@ interface IMikaShell {
     // 在 Mika 自己的屏上按一根手指的一笔触摸:times[i] 毫秒(相对按下)时手指在 (xs[i], ys[i]);第一个点按下,最后一个点抬起。
     // 按时间逐个注入,注完才返回(至多约 10 秒);不是 Mika 的屏、参数不对或按下没注入成功返回 false
     boolean injectStroke(int displayId, in int[] xs, in int[] ys, in long[] times) = 34;
+    // 系统动作(设闹钟、计时器、打开闹钟列表、打开预填的新日程,见 SystemIntents;别的 intent 一律不启动),启动到这块屏。
+    // 先以 shell 身份启动;接手的页面要求 Mika 有的权限(如设闹钟)而 shell 没有时,改为发出 Mika 做好的 asMika(以 Mika 的身份启动、
+    // 屏仍是这块)。返回值同 startView:5=没有页面接,6=不在放行之列;接手的 App 在主屏有任务时不启动、返回 1
+    int startSystemAction(int displayId, in Intent intent, in PendingIntent asMika) = 35;
+    // 以 shell 身份跑一条设置用的命令(授权、无障碍列表等;和经已配对的无线调试跑一样),不限于某块屏;返回 exitCode 和 output。
+    // 助手是电脑经 USB 起的、没配对过无线调试时,Mika 的这类命令只能经这里
+    Bundle runCommand(String command) = 36;
+    // Mika 的进程被杀后助手要不要把它拉起来(RestoreWish.flags:1=拉起来 2=拉起来前写回无障碍服务)。
+    // 助手读不到 Mika 的设置,只记最后交来的这一份;Mika 每次交接后和心愿变了时都交一次
+    void setRestoreWish(int flags) = 37;
+    // 能打开里面 App 的那几份别的用户(分身、工作资料一类;规则见 AppCopies):users=int[] 编号,summary=给诊断信息的一行
+    // (编号、标记、类型、资料组,不含名字和装了什么);读不到用户为 null
+    Bundle appCopyUsers() = 38;
+    // 在另一份用户 userId 里打开该包,启动到这块屏;只认 appCopyUsers 列出的那几份,别的返回 8。返回值同 startApp / restartApp。
+    // 主屏、Mika 另一块屏上的占用只看这一份(包名 + 用户):用户在主屏用着本来那份时不挡这一份,反过来也一样。
+    // cold 时只结束这份用户里的进程,另一份不动;userId 是 Mika 自己的用户时等同 startApp / restartApp
+    int startAppInUser(int displayId, String packageName, int userId, boolean cold) = 39;
+    // 该包在 userId 那份用户里的任务所在的 Mika 虚拟屏;不在 Mika 的任何一块屏上返回 -1
+    int displayOfPackageInUser(String packageName, int userId) = 40;
+
+    // 主屏设备准备,与虚拟屏按键白名单分开;凭据只经 Binder 传入,不经 shell 命令行。
+    boolean wakeDevice() = 41;
+    boolean dismissDeviceKeyguard() = 42;
+    boolean enterDeviceCredential(int kind, in byte[] credential) = 43;
+
+    // 同 getAudioMode / setAudioMuted / setAudioMode,作用在 userId 那份用户里的那份(分身、工作资料);
+    // userId 是 Mika 自己的用户时等同原来的几个。PLAY_AUDIO 按包 + 用户分开设,两份互不影响
+    String getAudioModeInUser(String packageName, int userId) = 44;
+    boolean setAudioMutedInUser(String packageName, int userId, boolean muted) = 45;
+    boolean setAudioModeInUser(String packageName, int userId, String mode) = 46;
+    // 该包(userId 那份)在主屏上有看得见的任务,即用户正在主屏用它;看不清主屏时返回 true
+    boolean visibleOnMainScreen(String packageName, int userId) = 47;
+
+    // 任务结束:按规则处理这块屏上的 App(见 AppsAfterTask),再释放这块屏。留下的挪到主屏、排在最后面(不到用户眼前),
+    // 正在出声的和 close 里的随屏关掉。keep / close 是模型标过的键(包名,另一份为 包名@用户)。
+    // 返回 AppsAfterTask.KEY_* :kept=留下的键,closed=关掉的「键:原因」,note=挪不了时的一句原因(可为空)。不是 Mika 的屏为 null
+    Bundle finishDisplay(int displayId, in String[] keep, in String[] close) = 48;
 
     // 沿用早先定下的销毁事务号;AIDL 要求要么全部方法编号要么都不编号
     void destroy() = 16777114;

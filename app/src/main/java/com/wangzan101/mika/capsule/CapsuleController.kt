@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.geometry.Size
@@ -23,12 +24,15 @@ import androidx.compose.ui.graphics.TransformOrigin
 import android.graphics.Rect
 import com.wangzan101.mika.record.RunStore
 import com.wangzan101.mika.R
+import com.wangzan101.mika.cap.web.KeptPage
+import com.wangzan101.mika.core.cap.web.KeptPageClose
 import com.wangzan101.mika.chat.ConversationStore
 import java.util.UUID
 import kotlinx.coroutines.withContext
 import com.wangzan101.mika.MikaApp
 import com.wangzan101.mika.cap.phone.a11y.MainScreenCapture
 import com.wangzan101.mika.cap.phone.a11y.OverlayDrag
+import com.wangzan101.mika.cap.phone.a11y.OverlayHold
 import com.wangzan101.mika.cap.phone.a11y.OverlayPlacement
 import com.wangzan101.mika.cap.phone.a11y.OverlayWindow
 import com.wangzan101.mika.cap.phone.a11y.ScreenAccessibility
@@ -46,6 +50,11 @@ import com.wangzan101.mika.task.TaskService
 import com.wangzan101.mika.task.TaskService.Companion.isActive
 import com.wangzan101.mika.takeover.TakeoverQueue
 import com.wangzan101.mika.ui.ChatCopy
+import com.wangzan101.mika.ui.VoiceCopy
+import com.wangzan101.mika.i18n.tr
+import com.wangzan101.mika.voice.HoldToTalk
+import com.wangzan101.mika.voice.SpeechChoice
+import com.wangzan101.mika.voice.SpeechFailure
 import com.wangzan101.mika.ui.ChatViewModel
 import com.wangzan101.mika.ui.Exchange
 import com.wangzan101.mika.ui.ExchangeStatus
@@ -55,6 +64,8 @@ import com.wangzan101.mika.ui.ToolLabels
 import com.wangzan101.mika.ui.theme.MikaTheme
 import com.wangzan101.mika.ui.theme.animationsOff
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -82,6 +93,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * 双击一颗或胶囊(见 [DoubleTap]:单击要等双击的时限过去才展开)把用户此刻的屏幕发给卡片里那段对话,和在卡片里发一句话走同一条路;
  * 卡片输入框左边的截屏按钮截下来先挂在输入框上面,可以补一句再发。截的时候浮层先藏起来,截完再出来,一颗上闪一下。
  * 卡片底部的输入框点开时浮层才能接收键盘,发出、收起、点外面、按返回时马上还回去;输入法弹出时胶囊和卡片挪到它上面。
+ * 长按一颗或胶囊说话(见 [CapsuleTalk]、[CapsuleVoicePanel]):按着时整屏压暗、胶囊旁边浮出面板和「取消」「改一改」两个落点,
+ * 松开直接发给单击会展开的那张卡片(和双击发屏幕同一套找目标),拖到「改一改」打开卡片、字在输入框里,拖到「取消」丢掉;
+ * 发出、没听清、用不了时胶囊上闪一句([note])。面板在一颗那个窗口下面的另一个窗口里,不接触摸。
  * 卡片展开时才收那件事的画面(每秒至多 [PREVIEW_FPS] 张,没变不推)。平时是一颗图标,有事要说时展开成胶囊(模型定);
  * 可以拖,松手贴到最近的左边或右边;停的位置按边和高度比例记在 [FeatureFlags],转屏后按比例重新摆。
  * 卡片左右居中(对话卡片固定高,任务卡片按内容高、最多一样高),按着标题栏上下拖,上边的比例另记一份,换卡片时上边不动;
@@ -99,6 +113,8 @@ class CapsuleController(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val model = CapsuleModel(::reasonLabel)
     private val flags = FeatureFlags.get(context)
+    /** 任务结束后留在后台运行的那一页(没有任务时胶囊说它,卡片里能看画面、关掉)。 */
+    private val keeper get() = (context.applicationContext as MikaApp).pageKeeper
     private val toolLabels by lazy { ToolLabels(knownTools()) }
     private val appLabels = HashMap<String, String>()
     /** 各任务这一问一答此刻的样子,和对话页同一套推法(步骤、要你做的事、结果)。 */
@@ -120,6 +136,14 @@ class CapsuleController(
     private var follow: String? = null
     /** 空闲卡片接着的最近那段对话(点开空闲图标时读一次)。 */
     private var idle: CardView.Chat? = null
+
+    /** 长按说话;[talkIdle] 是空闲图标上开始说时去读的最近那段对话(说完发给它)。 */
+    private val talk = CapsuleTalk(context, { (context.applicationContext as MikaApp).voice }, scope, ::spoken)
+    private var talkIdle: Deferred<CardView.Chat>? = null
+    /** 胶囊上临时闪的一句(已发出、没听清、用不了);到时自己消失。 */
+    private var note by mutableStateOf<CapsuleNote?>(null)
+    private var noteJob: Job? = null
+    private var noteCount = 0
 
     /**
      * 对话卡片的来回:[threadOf] 那个对话记下的全部轮次([past],后台从 [ConversationStore] 读,和对话页同一份;还没读到为 null),
@@ -180,6 +204,8 @@ class CapsuleController(
      */
     private var window: OverlayWindow? = null
     private var cardWindow: OverlayWindow? = null
+    /** 长按说话时的面板,在一颗那个窗口下面(压暗不盖住胶囊);平时空着没有大小。加不上时不能长按说话。 */
+    private var panelWindow: OverlayWindow? = null
     /** 窗口加在哪个服务实例上;服务换了,旧窗口已随旧实例拆掉。 */
     private var windowOn: ScreenAccessibility? = null
     /** 在这个服务实例上加窗口失败过:不再试,等服务重连。 */
@@ -196,12 +222,29 @@ class CapsuleController(
         val screen = DeviceStateWatcher(context) { -1 }
         scope.launch {
             combine(
-                combine(runs(), flags.capsuleModeChanges(), foreground.visible, screen.locked, ScreenAccessibility.instance, ::Snapshot),
+                combine(runs(), flags.capsuleModeChanges(), foreground.visible, screen.locked, ScreenAccessibility.instance) { r, m, f, l, a -> Snapshot(r, m, f, l, a) },
                 ticks,
-            ) { s, _ -> s }.collect(::render)
+                keeper.page,
+            ) { s, _, kept -> s.copy(kept = kept) }.collect(::render)
         }
+        // 说话面板出来时铺满整屏(压暗背后),收起时回到没有大小
+        scope.launch { snapshotFlow { talk.active }.collect { panelWindow?.setFullScreen(it) } }
         // 停止后的交代写好(或写不成)时那一轮已改进对话:重读记下的轮次
         scope.launch { tasks.summarizing.collect { threadOf?.let(::loadPast) } }
+        // 对话删掉了:见 [forget]
+        scope.launch { ConversationStore.shared(context).deletions.collect(::forget) }
+        // 卡片上这个对话的标题变了(用户在侧栏改了名、后台起好了标题):卡片顶上「接着「…」聊」跟着换
+        scope.launch {
+            val store = ConversationStore.shared(context)
+            store.changes.collect { id ->
+                if (id != threadOf) return@collect
+                val title = withContext(Dispatchers.IO) { store.title(id) }
+                if (id == threadOf && title != pastTitle) {
+                    pastTitle = title
+                    rebuildThread()
+                }
+            }
+        }
         // 转屏:按记下的边和比例重新摆;系统给新尺寸可能稍晚一点,过一会儿再摆一次
         context.registerComponentCallbacks(object : ComponentCallbacks {
             override fun onConfigurationChanged(newConfig: Configuration) {
@@ -217,14 +260,17 @@ class CapsuleController(
         })
     }
 
-    private class Snapshot(
+    private data class Snapshot(
         val runs: List<CapsuleRun>, val mode: CapsuleMode, val mikaInForeground: Boolean, val locked: Boolean,
         val service: ScreenAccessibility?,
+        /** 任务结束后留在后台运行的那一页。 */
+        val kept: KeptPage? = null,
     )
 
     /**
      * 各任务此刻的样子。任务收尾后会从 [TaskCenterState.runs] 里拿掉;拿掉时它的状态已是终态,
-     * 再带它一轮,模型才能记下「办好了」并停一会儿。没到终态就被拿掉的(服务被销毁)直接不算。
+     * 还带着它(到任务列表再变为止),模型才能记下「办好了」并停一会儿,停完以后再列着它模型也不算。
+     * 没到终态就被拿掉的(服务被销毁)直接不算。
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun runs(): Flow<List<CapsuleRun>> {
@@ -263,13 +309,15 @@ class CapsuleController(
         last = s
         val service = s.service
         if (windowOn != null && windowOn !== service) {
+            talk.abort()
             window = null
             cardWindow = null
+            panelWindow = null
             windowOn = null
         }
         val inputs = CapsuleInputs(
             s.runs, s.mode, s.mikaInForeground, screenInteractive = !s.locked,
-            serviceAvailable = service != null && service !== failedOn, cardOpen = expanded,
+            serviceAvailable = service != null && service !== failedOn, cardOpen = expanded, kept = s.kept,
         )
         val shown = model.update(inputs, System.currentTimeMillis()) as? CapsuleView.Shown
         schedule(model.nextChangeAt)
@@ -280,13 +328,15 @@ class CapsuleController(
         // App 已交到你手上:顶部那一条代替卡片
         if (shown.kind == CapsuleKind.HandedOver) resetCard()
         view = shown
-        card = if (expanded) CapsuleCards.of(model.cardRuns(), follow, idle) else null
+        card = if (expanded) CapsuleCards.of(model.cardRuns(), follow, idle, s.kept) else null
         if (expanded && card == null) resetCard()
         updateThread(card as? CardView.Chat, s.runs)
         // 换成了没有输入框的内容(例如变成要你同意):输入框收起,焦点还给下面的 App
         if (inputUi.open && card?.let(CapsuleCards::input) == null) closeInput()
         val detail = card as? CardView.Detail
-        watchPreview(detail?.takeIf { CapsuleCards.showsScreen(it.content) }?.run?.run?.key)
+        val keptCard = card as? CardView.Kept
+        if (keptCard != null) watchKept(keptCard.page.id)
+        else watchPreview(detail?.takeIf { CapsuleCards.showsScreen(it.content) }?.run?.run?.key)
         val w = window ?: openWindows(service)
         if (w == null) {
             view = null
@@ -308,16 +358,20 @@ class CapsuleController(
     /** 加上两个窗口(先一颗的,再卡片的,卡片在上面);有一个加不上就都不要,退回通知。 */
     private fun openWindows(service: ScreenAccessibility): OverlayWindow? {
         val overlays = service.overlays()
+        // 面板先加,在一颗下面:按着说话时压暗的那层不盖住胶囊
+        val panel = overlays.open(OverlayPlacement(Gravity.TOP or Gravity.LEFT), touchable = false) { VoicePanelOverlay() }
         val ball = overlays.open(OverlayPlacement(Gravity.TOP or Gravity.RIGHT)) { CapsuleOverlay() }
         val cardW = ball?.let { overlays.open(OverlayPlacement(Gravity.TOP or Gravity.CENTER_HORIZONTAL), ::outside) { CardOverlay() } }
         if (ball == null || cardW == null) {
             ball?.close()
+            panel?.close()
             failedOn = service
             Log.w(TAG, "capsule overlay unavailable, falling back to notifications")
             return null
         }
         window = ball
         cardWindow = cardW
+        panelWindow = panel
         windowOn = service
         for (it in listOf(ball, cardW)) {
             it.onResize(::place)
@@ -332,6 +386,19 @@ class CapsuleController(
         last?.let(::render)
     }
 
+    /**
+     * 对话 [id] 删掉了:它刚结束的任务马上从胶囊和卡片上拿掉,卡片不再接着它(刚在卡片里发了话的;空闲卡片接着的,
+     * 展开着时换成开新对话的那张),展开着的卡片按 [CapsuleCards.of] 重挑(什么都没有就收起)。删对话先停掉它的任务、
+     * 等它收尾(最多 15 秒)再删记录,所以这时它的任务一般已经结束;等不到收尾的,或者收尾以后、删记录之前又在卡片里接着说的
+     * (会在这个对话里开一件新任务),之后存进的那一轮会把对话重新建起来,胶囊照常显示它。
+     */
+    private fun forget(id: String) {
+        model.forget(id)
+        if (follow == id) follow = null
+        if (idle?.conversationId == id) idle = if (expanded) CardView.Chat(null) else null
+        refresh()
+    }
+
     private fun hide() {
         tapJob?.cancel()
         taps.reset()
@@ -342,10 +409,16 @@ class CapsuleController(
         imeJob = null
         imeTop = null
         dragging = false
+        talk.abort()
+        talkIdle = null
+        noteJob?.cancel()
+        note = null
         window?.close()
         window = null
         cardWindow?.close()
         cardWindow = null
+        panelWindow?.close()
+        panelWindow = null
         windowOn = null
         view = null
         resetCard()
@@ -418,6 +491,7 @@ class CapsuleController(
         val run = when (c) {
             is CardView.Detail -> c.run.run
             is CardView.Chat -> c.run?.run
+            is CardView.Kept -> null
         }
         when (kind) {
             CardInputKind.Steer -> run?.let { TaskService.start(context, text, it.conversationId, messageId = UUID.randomUUID().toString()) }
@@ -507,12 +581,12 @@ class CapsuleController(
      * 空闲卡片也改成接着这个对话(新开的对话标题就是这句话)。
      */
     private fun startIn(conversationId: String, text: String) {
-        TaskService.start(context, text, conversationId, queue = true)
+        TaskService.start(context, text, conversationId)
         follow = conversationId
         idle = idle?.let { CardView.Chat(conversationId, title = if (it.target == conversationId) it.title else ScreenCopy.plain(text)) }
     }
 
-    /** 点开空闲图标:先读最近那段对话是哪个、标题是什么,再展开(来回由 [updateThread] 读)。 */
+    /** 点开空闲图标:先读用户此刻在哪个对话([loadIdle]),再展开(来回由 [updateThread] 读)。 */
     private fun openIdle() {
         scope.launch {
             idle = loadIdle()
@@ -521,11 +595,18 @@ class CapsuleController(
         }
     }
 
-    /** 空闲卡片接着的那段对话:最近的那个(没有任何对话时开新对话)。 */
+    /**
+     * 空闲卡片接着的那段对话:用户在 App 里所在的那个,没有记录时接着最近那个(见 [CapsuleIdle]);一个都没有时开新对话。
+     * 不按对话文件的时间猜:新开的对话还没有文件,猜到的是上一个。
+     */
     private suspend fun loadIdle(): CardView.Chat = withContext(Dispatchers.IO) {
         runCatching {
-            val last = ConversationStore.shared(context).list().firstOrNull()
-            CardView.Chat(last?.id, title = last?.title?.let(ScreenCopy::plain))
+            val store = ConversationStore.shared(context)
+            val recent = store.list().firstOrNull()?.let { CardView.Chat(it.id, title = it.title?.let(ScreenCopy::plain)) }
+            CapsuleIdle.chat(store.currentChat(), recent) { id ->
+                // 和侧栏一样:用户起的名字或第一句话
+                (store.title(id) ?: store.turns(id).firstOrNull()?.userText)?.let(ScreenCopy::plain)
+            }
         }.getOrElse { CardView.Chat(null) }
     }
 
@@ -660,6 +741,19 @@ class CapsuleController(
         }
     }
 
+    /** 留在后台运行的那一页的卡片:收它那块显示的画面(和任务卡片的小画面同一个节流)。 */
+    private fun watchKept(id: Long) {
+        val key = "kept:$id"
+        if (key == previewKey) return
+        previewKey = key
+        previewJob?.cancel()
+        preview = null
+        zoomed = false
+        previewJob = scope.launch {
+            keeper.frames().filterNotNull().previewFrames(same = ::sameFrame).flowOn(Dispatchers.Default).collect { preview = it }
+        }
+    }
+
     /** 新的一帧和上一张一样(同一张图,或尺寸相同、像素都相同)就不推:网页画面每次给的是新拷贝。 */
     private fun sameFrame(a: Bitmap, b: Bitmap): Boolean =
         a === b || !a.isRecycled && !b.isRecycled && a.width == b.width && a.height == b.height && a.sameAs(b)
@@ -721,9 +815,16 @@ class CapsuleController(
     private fun cardFull(base: DockArea): Int =
         CardDocking.maxHeight(windowOn?.overlays()?.area()?.height ?: 0, base, room()) + 2 * room()
 
-    /** 能拖哪里:胶囊和那一条整个能拖;卡片只有按着标题栏能拖(中间上下滑是滚动),放大画面时不能拖。 */
+    /**
+     * 能拖哪里:胶囊和那一条整个能拖;卡片只有按着标题栏能拖(中间上下滑是滚动),放大画面时不能拖。
+     * 一颗和胶囊还能长按说话(那一条不能;语音输入设成不用时也不能,长按照旧是点按)。
+     */
     private fun applyDrag() {
         window?.draggable(drag)
+        val talkable = canTalk()
+        // 说着说着不能说了(例如这时 App 交到你手上、胶囊换成那一条):这一段丢掉,不发——用户没机会松开选落点
+        if (!talkable && talk.active) talk.abort()
+        window?.holdable(talkHold.takeIf { talkable }, CapsuleTalk.HOLD_MS)
         cardWindow?.draggable(cardDrag, cardHandle.takeIf { !zoomed } ?: Rect())
     }
 
@@ -832,6 +933,141 @@ class CapsuleController(
         place()
     }
 
+    // ---------- 长按说话 ----------
+
+    /** 此刻能不能在胶囊上说话:有面板窗口、不是「你来处理」那一条、语音输入没设成不用。 */
+    private fun canTalk(): Boolean = panelWindow != null && !isBar() &&
+        (context.applicationContext as MikaApp).speech.choice.value != SpeechChoice.Off
+
+    /** 一颗那个窗口交来的长按:开始说、手指移动算落点、松开按落点收尾。 */
+    private val talkHold = object : OverlayHold {
+        override fun start(rawX: Float, rawY: Float) = beginTalk(byTouch = true)
+
+        override fun move(rawX: Float, rawY: Float) {
+            if (talk.byTouch) talk.move(rawX, rawY, dp(TARGET_SLOP_DP))
+        }
+
+        override fun end(rawX: Float, rawY: Float) {
+            if (!talk.byTouch) return
+            talk.finish(CapsuleVoice.drop(rawX, rawY, talk.cancelAt, talk.editAt, dp(TARGET_SLOP_DP)))
+        }
+
+        override fun cancel() {
+            if (talk.byTouch) talk.abort()
+        }
+    }
+
+    /** 读屏的「说话」:没在说就开始(没有手指,只能发出),在说就发出。 */
+    private fun toggleTalk() {
+        if (talk.active && !talk.byTouch && !talk.released) talk.finish(CapsuleVoice.Drop.Send)
+        else beginTalk(byTouch = false)
+    }
+
+    /**
+     * 开始说:先等着的单击、双击不算了。说给谁按单击会展开的那张卡片(空闲图标上先去读最近那段对话,读到后面板顶上那句跟着换)。
+     * 没有录音权限(胶囊弹不了权限框)、语音输入用不了时不录,胶囊上说一句,点一下打开 Mika。
+     */
+    private fun beginTalk(byTouch: Boolean) {
+        val v = view ?: return
+        // 松开后还在转时可以重新按:上一段由 talk.begin 丢掉
+        if (capturing || (talk.active && !talk.released) || !canTalk()) return
+        tapJob?.cancel()
+        taps.reset()
+        wake()
+        clearNote()
+        val loading = if (v.kind == CapsuleKind.Idle) scope.async { loadIdle() } else null
+        when (val b = talk.begin(CapsuleVoice.title(CapsuleCards.of(model.cardRuns(), follow, idle)), byTouch)) {
+            CapsuleTalk.Begin.Started -> {
+                talkIdle?.cancel()
+                talkIdle = loading
+                loading?.let {
+                    scope.launch {
+                        val chat = it.await()
+                        if (talk.active && talkIdle === it) talk.title = CapsuleVoice.title(CapsuleCards.of(model.cardRuns(), follow, chat))
+                    }
+                }
+            }
+            CapsuleTalk.Begin.NoPermission -> {
+                loading?.cancel()
+                showNote(tr(R.string.capsule_voice_need_mic), CapsuleKind.Failed, opensMika = true, NOTE_LONG_MS)
+            }
+            is CapsuleTalk.Begin.Unavailable -> {
+                loading?.cancel()
+                showNote(tr(R.string.capsule_voice_not_ready), CapsuleKind.Failed, opensMika = true, NOTE_LONG_MS)
+            }
+        }
+    }
+
+    /** 说完了:按松开时的落点发出或打开卡片;没听清、出错时胶囊上说一句(说法和输入栏一样)。 */
+    private fun spoken(drop: CapsuleVoice.Drop, state: HoldToTalk.State) {
+        val idleJob = talkIdle
+        talkIdle = null
+        when (state) {
+            is HoldToTalk.State.Done -> scope.launch {
+                idleJob?.let { idle = it.await() }
+                if (drop == CapsuleVoice.Drop.Edit) editSpoken(state.text) else sendSpoken(state.text)
+            }
+            is HoldToTalk.State.Problem -> {
+                idleJob?.cancel()
+                when (val why = state.why) {
+                    null -> showNote(VoiceCopy.NO_MATCH, CapsuleKind.Failed, opensMika = false, NOTE_SHORT_MS)
+                    SpeechFailure.NoPermission -> showNote(tr(R.string.capsule_voice_need_mic), CapsuleKind.Failed, opensMika = true, NOTE_LONG_MS)
+                    is SpeechFailure.Unavailable -> showNote(tr(R.string.capsule_voice_not_ready), CapsuleKind.Failed, opensMika = true, NOTE_LONG_MS)
+                    else -> showNote(VoiceCopy.failure(why), CapsuleKind.Failed, opensMika = false, NOTE_LONG_MS)
+                }
+            }
+            else -> idleJob?.cancel()
+        }
+    }
+
+    /**
+     * 松开直接发出:发给单击会展开的那张卡片里的对话(和双击发屏幕同一套),胶囊上闪「已插话 / 已回答 / 已发出:…」。
+     * 那张卡片没有输入框(要你接管、同意)时不发,展开卡片,字先放进输入框。
+     */
+    private fun sendSpoken(text: String) {
+        val target = CapsuleCards.of(model.cardRuns(), follow, idle)
+        val kind = target?.let(CapsuleCards::input)?.kind
+        if (target == null || kind == null) {
+            open()
+            inputUi = inputUi.copy(draft = text)
+            refresh()
+            return
+        }
+        submit(target, kind, text, CapsuleCards.conversationOf(target))
+        showNote(CapsuleVoice.sent(kind, text), CapsuleKind.Done, opensMika = false, NOTE_SENT_MS)
+        refresh()
+    }
+
+    /** 拖到「改一改」松开:展开卡片,字在输入框里、键盘弹出,改完自己发。 */
+    private fun editSpoken(text: String) {
+        open()
+        inputUi = inputUi.copy(draft = text)
+        refresh()
+        if (card?.let(CapsuleCards::input) != null) openInput()
+    }
+
+    private fun showNote(text: String, kind: CapsuleKind, opensMika: Boolean, ms: Long) {
+        note = CapsuleNote(text, kind, opensMika, ++noteCount)
+        wake()
+        noteJob?.cancel()
+        noteJob = scope.launch {
+            delay(ms)
+            note = null
+        }
+    }
+
+    private fun clearNote() {
+        noteJob?.cancel()
+        note = null
+    }
+
+    /** 胶囊上闪着一句时点它:那句说要打开 Mika 就打开,否则收掉那句、照常点按。 */
+    private fun tapCapsule() {
+        val n = note
+        clearNote()
+        if (n?.opensMika == true) open(null) else tap()
+    }
+
     // ---------- 点按与卡片 ----------
 
     /** 点一颗或胶囊:第一下先等一等,双击的时限里没有第二下才展开卡片;有就是双击,发出此刻的屏幕。 */
@@ -852,13 +1088,21 @@ class CapsuleController(
         }
     }
 
-    /** 展开卡片(空闲图标是空闲卡片)。 */
+    /** 展开卡片(空闲图标是空闲卡片)。每次展开都按用户此刻在哪个对话重读一次空闲卡片,不拿上次那份。 */
     private fun expand() {
         val v = view ?: return
-        if (v.kind == CapsuleKind.Idle) openIdle()
-        else {
-            open()
-            refresh()
+        if (v.kind == CapsuleKind.Idle) {
+            openIdle()
+            return
+        }
+        open()
+        refresh()
+        scope.launch {
+            val fresh = loadIdle()
+            if (fresh != idle) {
+                idle = fresh
+                refresh()
+            }
         }
     }
 
@@ -937,6 +1181,10 @@ class CapsuleController(
         override fun dropScreen() {
             inputUi = inputUi.copy(screen = null)
         }
+        override fun closeKeptPage() {
+            keeper.close(KeptPageClose.User)
+            collapse()
+        }
     }
 
     /** 卡片窗口里:展开时是卡片,收起时什么都没有(窗口没有大小)。 */
@@ -951,24 +1199,47 @@ class CapsuleController(
         }
     }
 
-    /** 边上那个窗口里:一颗、胶囊或那一条;卡片出来后是空的,卡片往回缩时一颗同时从边上冒出来。 */
+    /** 面板窗口里:按着说话时整屏的那一层,贴着一颗此刻的位置;平时什么都没有。 */
+    @Composable
+    private fun VoicePanelOverlay() {
+        if (!talk.active) return
+        val a = windowOn?.overlays()?.area()
+        val top = placedY + room()
+        val bottom = placedY + (window?.height ?: 0) - room()
+        MikaTheme(reduceMotion = animationsOff(context)) {
+            CapsuleVoicePanel(talk, top, bottom.coerceAtLeast(top), a?.insetTop ?: 0, a?.insetBottom ?: 0)
+        }
+    }
+
+    /** 边上那个窗口里:一颗、胶囊或那一条;卡片出来后是空的,卡片往回缩时一颗同时从边上冒出来。胶囊上闪着一句时显示那句。 */
     @Composable
     private fun CapsuleOverlay() {
-        val v = view ?: return
+        val shown = view ?: return
         if (card != null && cardOut && !closing) return
+        val n = note
+        val v = if (n == null || shown.kind == CapsuleKind.HandedOver) shown
+            else shown.copy(kind = n.kind, text = n.text, detail = null, count = 0, needCount = 0, pill = true, widthEpoch = -n.id)
+        val talking = talk.active && !talk.released
         MikaTheme(reduceMotion = animationsOff(context)) {
             OverlayMotion(open = true, origin = { TransformOrigin(if (dock.side == DockSide.Right) 1f else 0f, 0.5f) }, onClosed = {}) {
                 CapsuleContent(
                     v,
-                    onTap = ::tap,
+                    onTap = ::tapCapsule,
                     onSendScreen = ::sendScreen,
                     flash = flash,
                     onStop = { v.runKey?.let { TaskService.cancel(context, it) } },
                     onHandBack = { v.runKey?.let { TaskService.handBack(context, runKey = it) } },
                     side = dock.side,
-                    tapLabel = if (v.kind == CapsuleKind.Idle) CapsuleCopy.TALK else CapsuleCopy.EXPAND,
+                    tapLabel = when {
+                        n?.opensMika == true -> tr(R.string.capsule_voice_open)
+                        v.kind == CapsuleKind.Idle -> CapsuleCopy.TALK
+                        else -> CapsuleCopy.EXPAND
+                    },
                     onSwapSide = if (v.kind == CapsuleKind.HandedOver) null else ::swapSide,
                     alpha = alpha,
+                    holding = talking && talk.byTouch,
+                    onTalk = if (canTalk()) ::toggleTalk else null,
+                    talkLabel = tr(if (talking && !talk.byTouch) R.string.capsule_voice_send else R.string.capsule_voice_talk),
                 )
             }
         }
@@ -1017,8 +1288,17 @@ class CapsuleController(
         const val SNAP_MS = 220L
 
         const val ROTATE_SETTLE_MS = 300L
+        /** 说话时两个落点各自外扩多少算拖到了。 */
+        const val TARGET_SLOP_DP = 14
+        /** 胶囊上闪的那句停多久:发出了、没听清、出错或用不了。 */
+        const val NOTE_SENT_MS = 1_500L
+        const val NOTE_SHORT_MS = 2_000L
+        const val NOTE_LONG_MS = 3_500L
         /** 截屏前收起卡片里的输入法,最多等它这么久下去。 */
         const val IME_GONE_MS = 700L
         const val IME_POLL_MS = 30L
     }
 }
+
+/** 胶囊上临时闪的一句:[kind] 定前面的标记(办好了是勾、没办成是叹号);[opensMika] 时点它打开 Mika;[id] 每句不同(胶囊按它重新定宽)。 */
+private data class CapsuleNote(val text: String, val kind: CapsuleKind, val opensMika: Boolean, val id: Int)

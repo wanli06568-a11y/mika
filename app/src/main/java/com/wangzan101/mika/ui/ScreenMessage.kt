@@ -1,5 +1,7 @@
 package com.wangzan101.mika.ui
 
+import com.wangzan101.mika.R
+import com.wangzan101.mika.i18n.tr
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.util.LruCache
@@ -36,6 +38,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wangzan101.mika.MikaApp
+import com.wangzan101.mika.core.agent.QuoteMessage
+import com.wangzan101.mika.core.cap.web.AttachedPage
 import com.wangzan101.mika.core.userscreen.UserScreen
 import com.wangzan101.mika.core.userscreen.UserScreenMessage
 import com.wangzan101.mika.ui.theme.MikaIcons
@@ -48,11 +52,11 @@ import java.time.format.DateTimeFormatter
 
 /** 用户发来的屏幕在界面上的说法(对话页、卡片、截屏按钮共用)。 */
 object ScreenCopy {
-    const val TAG = "你此刻的屏幕"
-    const val BLOCKED = "没截到：这个页面不允许截图"
-    const val CAMERA = "截当前屏幕发给 Mika"
-    const val REMOVE = "不要这张截图"
-    const val SEND_SCREEN = "把此刻的屏幕发给 Mika"
+    val TAG: String get() = tr(R.string.screen_tag)
+    val BLOCKED: String get() = tr(R.string.screen_blocked)
+    val CAMERA: String get() = tr(R.string.screen_camera)
+    val REMOVE: String get() = tr(R.string.screen_remove)
+    val SEND_SCREEN: String get() = tr(R.string.screen_send)
 
     private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -64,8 +68,12 @@ object ScreenCopy {
     /** 附件条上的第二行:「设置 · 19:42」。 */
     fun detail(screen: UserScreen): String = "${screen.app} · ${clock(screen.takenAt)}"
 
-    /** 用这句话称呼对话、写在列表里:附言;只发了屏幕时是「你此刻的屏幕」。不带屏幕的原样返回。 */
-    fun plain(text: String): String {
+    /**
+     * 用这句话称呼对话、写在列表里:附言;只发了屏幕时是「你此刻的屏幕」。引用的那几行([QuoteMessage])和网页说明([AttachedPage])不算。
+     * 不带屏幕的原样返回。
+     */
+    fun plain(raw: String): String {
+        val text = QuoteMessage.words(AttachedPage.words(raw))
         val p = UserScreenMessage.parse(text)
         return if (!p.hasScreen) text else p.words.ifEmpty { TAG }
     }
@@ -126,7 +134,9 @@ fun rememberShownScreen(conversationId: String?, id: String): ShownScreen? {
  * 不让截图的页面是一行「没截到」;截图已经不在时只有那一行字。不带屏幕时就是 [bubble]。
  */
 @Composable
-fun UserMessage(conversationId: String?, text: String, thumbWidth: Dp, modifier: Modifier = Modifier, bubble: @Composable (String) -> Unit) {
+fun UserMessage(conversationId: String?, raw: String, thumbWidth: Dp, modifier: Modifier = Modifier, bubble: @Composable (String) -> Unit) {
+    // 在浏览器页上对着一页问的:页面说明那几行不显示(对话页在上面另画「网页 · 网站」);只带着选中的字时显示那段字
+    val text = AttachedPage.parse(raw).let { pg -> pg.words.ifEmpty { pg.page?.selection?.let { "“$it”" }.orEmpty() } }
     val p = UserScreenMessage.parse(text)
     if (!p.hasScreen) {
         bubble(text)

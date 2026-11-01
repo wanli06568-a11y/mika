@@ -1,9 +1,11 @@
 package com.wangzan101.mika.core.shell
 
 import com.wangzan101.mika.core.adb.AdbConnectionException
+import com.wangzan101.mika.core.adb.AdbKeyUnreadableException
 import com.wangzan101.mika.core.adb.AdbPairingException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -27,24 +29,30 @@ class BuiltinShellEngineTest {
         /** 每次起助手的结果:null = 成功并交接,其余抛对应异常;用完后一直成功。 */
         val launchResults = ArrayDeque<AdbConnectionException.Reason?>()
         var deliverOnLaunch = true
+        var keyUnreadable = false
         val calls = mutableListOf<String>()
 
         override fun paired() = pairedFlag
         override fun setPaired(paired: Boolean) { pairedFlag = paired; calls += "paired=$paired" }
         override fun wirelessDebugging() = wireless
         override fun wifiConnected() = wifi
-        override suspend fun findPairingPort(timeoutMs: Long) = pairingPort
+        /** 配对窗口没开([pairingPort] 为 null)时找满时限才说没找到。 */
+        override suspend fun findPairingPort(timeoutMs: Long) = pairingPort ?: run { delay(timeoutMs); null }
         override fun pair(port: Int, code: String) {
             calls += "pair $port $code"
             pairError?.let { throw AdbPairingException(it, "x") }
         }
         override suspend fun launchHelper() {
             calls += "launch"
+            if (keyUnreadable) throw AdbKeyUnreadableException("cannot unwrap adbkey.bin")
             launchResults.removeFirstOrNull()?.let { throw AdbConnectionException(it, "x") }
             if (deliverOnLaunch) helper.value = "binder"
         }
         override fun stopHelper() { calls += "stop"; helper.value = null }
         override fun forget() { calls += "forget" }
+        var usb = false
+        override fun usbStarted() = usb
+        override fun setUsbStarted(on: Boolean) { usb = on }
     }
 
     private val platform = FakePlatform()
@@ -122,6 +130,22 @@ class BuiltinShellEngineTest {
         assertEquals(BuiltinShellStatus.Failed(BuiltinShellFailure.PairingWindowClosed), e.status.value)
     }
 
+    /** 诊断信息用的最近一次出错:异常类别、原因和说明;连上后清空。 */
+    @Test
+    fun lastErrorRecordedAndClearedOnSuccess() = runTest {
+        val e = engine()
+        platform.pairError = AdbPairingException.Reason.WRONG_CODE
+        e.startPairing("123456", 40000)
+        assertEquals("AdbPairingException(WRONG_CODE): x", e.lastError)
+        platform.pairError = null
+        platform.launchResults += AdbConnectionException.Reason.UNAUTHORIZED
+        e.startPairing("123456", 40000)
+        assertEquals("AdbConnectionException(UNAUTHORIZED): x", e.lastError)
+        e.retry()
+        assertEquals(BuiltinShellStatus.Running, e.status.value)
+        assertEquals(null, e.lastError)
+    }
+
     @Test
     fun startupWaitsForRedeliveryBeforeLaunching() = runTest {
         platform.pairedFlag = true
@@ -185,6 +209,18 @@ class BuiltinShellEngineTest {
         assertEquals(BuiltinShellStatus.Failed(BuiltinShellFailure.ConnectFailed), e.status.value)
         e.retry()
         assertEquals(4, launches())
+    }
+
+    @Test
+    fun unreadableKeyAsksToPairAgainAndIsNotRetried() = runTest {
+        platform.pairedFlag = true
+        platform.keyUnreadable = true
+        val e = engine()
+        e.retry()
+        advanceUntilIdle()
+        assertEquals(1, launches())
+        assertEquals(BuiltinShellStatus.Failed(BuiltinShellFailure.KeyUnreadable, BuiltinShellFix.RePair), e.status.value)
+        assertTrue(e.lastError!!.startsWith("AdbKeyUnreadableException"))
     }
 
     @Test
@@ -371,6 +407,126 @@ class BuiltinShellEngineTest {
         assertEquals(0, launches())
     }
 
+    /** 电脑经 USB 起的助手没配对也收下:状态是运行中,并记下「是电脑起的」;手机操作和配对过的一样可用。 */
+    @Test
+    fun usbStartedHelperRunsWithoutPairing() = runTest {
+        val e = engine()
+        e.start()
+        advanceUntilIdle()
+        assertEquals(BuiltinShellStatus.NotPaired, e.status.value)
+        helper.value = "usb"
+        runCurrent()
+        assertEquals(BuiltinShellStatus.Running, e.status.value)
+        assertTrue(platform.usb)
+        assertEquals(false, e.paired)
+        assertEquals(0, launches())
+    }
+
+    /** 没配对时电脑起的助手停了:不当作从没设置过,说它停了;Mika 自己不去起(起不来)。 */
+    @Test
+    fun usbHelperStoppingSaysSoAndDoesNotLaunch() = runTest {
+        val e = engine()
+        e.start()
+        helper.value = "usb"
+        runCurrent()
+        helper.value = null
+        advanceUntilIdle()
+        assertEquals(BuiltinShellStatus.Failed(BuiltinShellFailure.UsbHelperStopped), e.status.value)
+        e.need()
+        e.retry()
+        advanceUntilIdle()
+        assertEquals(BuiltinShellStatus.Failed(BuiltinShellFailure.UsbHelperStopped), e.status.value)
+        assertEquals(0, launches())
+        // 再运行一次命令,不是去配对无线调试
+        assertEquals(BuiltinShellFix.RunUsbCommand, (e.status.value as BuiltinShellStatus.Failed).fix)
+        assertEquals(HelperRestart.UsbCommand, e.restart)
+    }
+
+    /** 用着用着断了(比如助手正在换一个新的来交接):先显示正在连接,等一会儿还没回来才说停了。 */
+    @Test
+    fun usbHelperDropMidRunGetsAGraceBeforeStopped() = runTest {
+        val e = engine()
+        e.start()
+        helper.value = "usb"
+        runCurrent()
+        helper.value = null
+        runCurrent()
+        assertEquals(BuiltinShellStatus.Connecting, e.status.value)
+        advanceTimeBy(2_000)
+        assertEquals(BuiltinShellStatus.Connecting, e.status.value)
+        // 换手完成:新的助手来交接,一直没有闪成「已停止」
+        helper.value = "usb2"
+        runCurrent()
+        assertEquals(BuiltinShellStatus.Running, e.status.value)
+        advanceUntilIdle()
+        assertEquals(BuiltinShellStatus.Running, e.status.value)
+        assertEquals(0, launches())
+    }
+
+    /** 助手停了以后靠什么再起来:没设置、只用 USB 命令起过、配对过无线调试(配对过优先,哪怕上次是用命令起的)。 */
+    @Test
+    fun restartRouteFollowsHowTheHelperCameUp() = runTest {
+        val e = engine()
+        e.start()
+        advanceUntilIdle()
+        assertEquals(HelperRestart.None, e.restart)
+        helper.value = "usb"
+        runCurrent()
+        assertEquals(HelperRestart.UsbCommand, e.restart)
+        platform.pairedFlag = true
+        assertEquals(HelperRestart.Wireless, e.restart)
+    }
+
+    /** 重启后(新进程)助手没来交接:先等一会儿(还活着的会自己来),等不到才说它停了。 */
+    @Test
+    fun afterRestartUsbHelperGetsAGraceThenStopped() = runTest {
+        platform.usb = true
+        val e = engine()
+        assertEquals(BuiltinShellStatus.Connecting, e.status.value)
+        e.start()
+        advanceTimeBy(2_000)
+        assertEquals(BuiltinShellStatus.Connecting, e.status.value)
+        advanceUntilIdle()
+        assertEquals(BuiltinShellStatus.Failed(BuiltinShellFailure.UsbHelperStopped), e.status.value)
+        assertEquals(0, launches())
+    }
+
+    @Test
+    fun usbHelperComingBackWithinGraceIsRunning() = runTest {
+        platform.usb = true
+        val e = engine()
+        e.start()
+        advanceTimeBy(1_000)
+        helper.value = "usb"
+        advanceUntilIdle()
+        assertEquals(BuiltinShellStatus.Running, e.status.value)
+    }
+
+    /** 配对过就照旧由看门狗经无线调试重起,不提示跑命令。 */
+    @Test
+    fun pairedUsbHelperIsRestartedWireless() = runTest {
+        platform.usb = true
+        platform.pairedFlag = true
+        val e = engine()
+        e.start()
+        advanceUntilIdle()
+        assertEquals(BuiltinShellStatus.Running, e.status.value)
+        assertEquals(1, launches())
+    }
+
+    /** 解除配对把「电脑起过」也忘掉:之后是没设置,不是「停了」。 */
+    @Test
+    fun unpairForgetsUsbStart() = runTest {
+        val e = engine()
+        e.start()
+        helper.value = "usb"
+        runCurrent()
+        e.unpair()
+        advanceUntilIdle()
+        assertEquals(false, platform.usb)
+        assertEquals(BuiltinShellStatus.NotPaired, e.status.value)
+    }
+
     @Test
     fun discoveryReportsFoundPort() = runTest {
         val e = engine()
@@ -379,6 +535,20 @@ class BuiltinShellEngineTest {
         advanceUntilIdle()
         assertEquals(PairingDiscovery.Found(37000), e.pairingDiscovery.value)
         e.stopDiscovery()
+        assertEquals(PairingDiscovery.Idle, e.pairingDiscovery.value)
+    }
+
+    /** 还在找时再开始一次(用户又回到配对这件事上),找的时限从这时重新算,不按第一次开始的时候收工。 */
+    @Test
+    fun startingDiscoveryAgainRestartsTheSearchTime() = runTest {
+        val e = engine()
+        platform.pairingPort = null
+        e.startDiscovery()
+        advanceTimeBy(9 * 60_000L)
+        e.startDiscovery()
+        advanceTimeBy(9 * 60_000L)
+        assertEquals(PairingDiscovery.Searching, e.pairingDiscovery.value)
+        advanceTimeBy(2 * 60_000L)
         assertEquals(PairingDiscovery.Idle, e.pairingDiscovery.value)
     }
 }

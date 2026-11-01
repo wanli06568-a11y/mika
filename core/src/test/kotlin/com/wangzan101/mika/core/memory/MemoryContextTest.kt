@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.memory
 
+import com.wangzan101.mika.core.agent.TokenEstimate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -37,10 +38,10 @@ class MemoryContextTest {
         assertFalse(msg.contains("先领券"))
         assertEquals(MemoryContext.MAX_PROCEDURES, block.usedIds.count { id -> approved.any { it.id == id } })
         assertTrue(fact.id in block.usedIds)
-        val procSection = msg.substringAfter("用户批准的做法(和用户这次说的冲突时以这次为准):")
+        val procSection = msg.substringAfter("Ways of doing things the user approved (when they conflict with what the user says now, follow what they say now):")
         assertEquals(3, numberedLines(procSection).size)
         assertTrue(numberedLines(procSection).all { it.contains("先比较") })
-        assertFalse(msg.substringBefore("用户批准的做法").contains("先比较"))
+        assertFalse(msg.substringBefore("Ways of doing things the user approved").contains("先比较"))
     }
 
     @Test fun pinnedProceduresCountTowardCap() {
@@ -51,13 +52,13 @@ class MemoryContextTest {
         assertEquals(1, block.usedIds.count { id -> approved.any { it.id == id } })
     }
 
-    @Test fun budget1200Respected() {
+    @Test fun budgetRespected() {
         val filler = "很".repeat(180)
         val relevant = (1..8).map { mem("外卖$it$filler", keywords = listOf("外卖")) }
         val pinned = (1..4).map { mem("置顶$it$filler", pinned = true) }
         val block = MemoryContext.build(distractors(20) + relevant + pinned, goal = "点外卖", lastUserTurn = null)
         val msg = block.message!!
-        assertTrue(msg.length <= MemoryContext.MAX_CHARS)
+        assertTrue(TokenEstimate.of(msg) <= MemoryContext.MAX_TOKENS)
         // 置顶的最后去:四条置顶都在,相关的只剩装得下的
         assertTrue(pinned.all { it.id in block.usedIds })
         assertTrue(block.usedIds.size in 5..6)
@@ -68,7 +69,7 @@ class MemoryContextTest {
         val strong = (1..3).map { mem("外卖不要香菜$it$filler") }
         val weak = (1..5).map { mem("外卖$it$filler", keywords = listOf("外卖")) }
         val block = MemoryContext.build(distractors(20) + weak + strong, goal = "外卖不要香菜", lastUserTurn = null)
-        assertTrue(block.message!!.length <= MemoryContext.MAX_CHARS)
+        assertTrue(TokenEstimate.of(block.message!!) <= MemoryContext.MAX_TOKENS)
         assertTrue(strong.all { it.id in block.usedIds })
         assertTrue(block.usedIds.size < 8)
     }
@@ -95,14 +96,14 @@ class MemoryContextTest {
 
     @Test fun headerSaysCurrentRequestWins() {
         val block = MemoryContext.build(distractors(10) + mem("外卖不要香菜"), goal = "点外卖,这次多放香菜", lastUserTurn = null)
-        assertTrue(block.message!!.startsWith("关于用户的记忆(用户告诉过你的;可能过时,和用户这次说的冲突时以这次为准):"))
+        assertTrue(block.message!!.startsWith("Memories about the user (things the user told you; may be out of date; when they conflict with what the user says now, follow what they say now):"))
     }
 
     @Test fun proceduresOnlyBlockAlsoSaysCurrentRequestWins() {
         val block = MemoryContext.build(
             distractors(10) + mem("点外卖时先比价", kind = MemoryKind.procedure), goal = "点外卖", lastUserTurn = null,
         )
-        assertTrue(block.message!!.startsWith("用户批准的做法(和用户这次说的冲突时以这次为准):"))
+        assertTrue(block.message!!.startsWith("Ways of doing things the user approved (when they conflict with what the user says now, follow what they say now):"))
     }
 
     @Test fun emptyGivesNull() {

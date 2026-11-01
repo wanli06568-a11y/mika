@@ -1,13 +1,21 @@
 package com.wangzan101.mika.ui
 
+import com.wangzan101.mika.R
+import com.wangzan101.mika.cap.web.KeptPage
+import com.wangzan101.mika.i18n.tr
+import com.wangzan101.mika.i18n.trPlural
 import com.wangzan101.mika.core.assembly.legacyNames
 import com.wangzan101.mika.core.tool.LegacyNames
 import com.wangzan101.mika.chat.ConversationStore
+import com.wangzan101.mika.chat.CurrentChat
+import com.wangzan101.mika.chat.DeleteImpact
 import com.wangzan101.mika.chat.SharedFile
 import com.wangzan101.mika.cap.sandbox.ImportResult
 import com.wangzan101.mika.confirm.ConfirmationCopy
 import com.wangzan101.mika.confirm.ConfirmationNotifier
+import com.wangzan101.mika.core.agent.AttachmentLines
 import com.wangzan101.mika.core.agent.Conversation
+import com.wangzan101.mika.core.agent.QuoteMessage
 import com.wangzan101.mika.core.agent.TaskState
 import com.wangzan101.mika.task.TaskGate
 import com.wangzan101.mika.core.agent.Turn
@@ -39,12 +47,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.wangzan101.mika.core.tool.ToolIndex
 import com.wangzan101.mika.core.assembly.knownTools
+import com.wangzan101.mika.core.cap.web.AttachedPage
+import com.wangzan101.mika.core.userscreen.UserScreenMessage
 
 /** 界面对任务服务能做的事;真机上由 TaskService 实现,测试里换成记录调用。 */
 interface TaskActions {
     fun start(goal: String, conversationId: String)
     /** 任务进行中在它的对话里插的话;[messageId] 用来跟这句话的去向。 */
     fun steer(conversationId: String, messageId: String, text: String) = start(text, conversationId)
+    fun withdrawSteer(conversationId: String, messageId: String): Boolean = false
     fun cancel()
     fun resume()
     fun takeOver()
@@ -105,9 +116,9 @@ sealed interface ExchangeStatus {
         val unconfirmed: List<String> = emptyList(), val reviewed: Boolean = true,
     ) : ExchangeStatus {
         val unverifiedLine: String? get() = when {
-            unconfirmed.isNotEmpty() -> "这几处没能确认:" + unconfirmed.joinToString("、")
+            unconfirmed.isNotEmpty() -> tr(R.string.chat_unconfirmed, unconfirmed.joinToString(tr(R.string.list_sep)))
             verified || !reviewed -> null
-            else -> "办完了,但没能核实" + note?.let { ":$it" }.orEmpty()
+            else -> note?.let { tr(R.string.chat_unverified_because, it) } ?: tr(R.string.chat_unverified)
         }
     }
     data class Failed(val reason: String) : ExchangeStatus
@@ -152,32 +163,42 @@ data class Exchange(
     val line: String = "",
     /** 任务进行中用户在这里插的话和它们的去向。 */
     val steers: List<SteerNote> = emptyList(),
+    /** 这一轮结束后留在后台运行的那一页的站点(见 [Turn.keptPage]);没留为 null。 */
+    val keptPage: String? = null,
+    /** 那一页后来关掉的原因([Turn.keptPageClosed]);还开着或不知道为 null。 */
+    val keptPageClosed: String? = null,
 )
 
 /** 在跑时的一行进展:等你时说等什么;模型请求在途时只给中性状态;否则是这一步的话,没有就是最近做的事。 */
 fun liveLine(ex: Exchange): String? {
     when (ex.status) {
-        is ExchangeStatus.NeedsTakeover -> return "需要你处理"
-        is ExchangeStatus.NeedsInput -> return "等你回答"
-        is ExchangeStatus.NeedsConfirmation -> return "等你同意"
+        is ExchangeStatus.NeedsTakeover -> return tr(R.string.takeover_title)
+        is ExchangeStatus.NeedsInput -> return tr(R.string.chat_wait_answer)
+        is ExchangeStatus.NeedsConfirmation -> return tr(R.string.chat_wait_approval)
         else -> Unit
     }
-    if (ex.waitingForModel) return "正在处理"
+    if (ex.waitingForModel) return tr(R.string.chat_working)
     return ex.line.ifEmpty { null } ?: ex.steps.lastOrNull()?.text
 }
 
 /** 插话下面那行小字;还没有去向时不写。 */
 fun steerLabel(state: SteerState): String? = when (state) {
-    SteerState.Pending -> null
-    SteerState.Received -> "已收到，下一步处理"
-    SteerState.Joined -> "已加入当前任务"
-    SteerState.Next -> "将作为下一件事"
-    SteerState.Cancelled -> "已取消"
+    SteerState.Pending, SteerState.Withdrawn -> null
+    SteerState.Received -> tr(R.string.steer_received)
+    SteerState.Joined -> tr(R.string.steer_joined)
+    SteerState.Next -> tr(R.string.steer_next)
+    SteerState.Cancelled -> tr(R.string.steer_cancelled)
 }
+
+/**
+ * 插话能不能取回编辑。悬浮胶囊插的带着屏幕、浏览器页上选了字插的带着页面说明,取回来时输入框开头是
+ * `[[screen:…]]` 那一行或几行页面说明原文,删掉就丢了屏幕和页面,改坏就认不出页面,这两种不给编辑。
+ */
+internal fun editableSteer(text: String): Boolean = !UserScreenMessage.has(text) && AttachedPage.parse(text).page == null
 
 /** 结束后收起的那一行:「做了 12 步 · 1 分 20 秒」;不知道用时就只说步数。 */
 fun stepsSummary(ex: Exchange): String =
-    "做了 ${ex.steps.size} 步" + ex.elapsedMs?.let { " · " + RunTimelineViewModel.duration(it) }.orEmpty()
+    trPlural(R.plurals.chat_steps_done, ex.steps.size) + ex.elapsedMs?.let { " · " + RunTimelineViewModel.duration(it) }.orEmpty()
 
 /** 结果卡片上记忆与技能提示的按钮;真机上由记忆存储与个人技能实现(读写在后台线程),测试里换成记录调用。 */
 interface LearningActions {
@@ -233,6 +254,8 @@ data class ChatUi(
     val rejectedAttachments: List<String> = emptyList(),
     /** 超过一次能带的个数([AttachTray.LIMIT])没加上的个数;为 0 不提示。 */
     val overLimit: Int = 0,
+    /** 输入框上方要随下一句话发出去的引用(长按消息选「引用」);没有为 null。换对话时清掉。 */
+    val quote: QuoteMessage.Quote? = null,
 ) {
     /** 任务此刻正在后台的虚拟屏上操作(输入框上方那行提示):开过屏、在干活,不在等你或等解锁。 */
     val operatingPhone: Boolean
@@ -250,7 +273,10 @@ class ChatViewModel(
     private val takeoverStage: StateFlow<Takeover.Stage>,
     private val actions: TaskActions,
     private val store: ConversationStore,
-    /** 服务还在收尾上一个任务;这时开始的新任务要等它收完再交给服务,否则会被忽略。 */
+    /**
+     * 服务还有任务(这个对话上一个任务还在收尾,或别处开始的任务在跑);并行关着时新任务等它收完再交给服务,
+     * 免得这个对话的新一句被当成上一个任务的插话。等着时那条消息下面写「等前一个任务做完再开始」。
+     */
     private val serviceBusy: StateFlow<Boolean> = MutableStateFlow(false),
     /** 包名换成 App 显示名(确认卡片用)。 */
     private val appLabel: (String) -> String = { it },
@@ -299,9 +325,26 @@ class ChatViewModel(
     private val summarizing: StateFlow<Set<String>> = MutableStateFlow(emptySet()),
     /** 算用时的时钟(毫秒)。 */
     private val clock: () -> Long = System::currentTimeMillis,
+    /** 删掉一个对话会连带什么(见 `ConversationDeleter.impact`)。 */
+    private val deletionImpact: (String) -> DeleteImpact = { DeleteImpact(runningTask = false, schedules = 0) },
+    /** 删掉一个对话和属于它的一切(见 `ConversationDeleter.delete`)。 */
+    private val removeConversation: suspend (String) -> Unit = {},
+    /** 任务结束后留在后台运行的那一页(全局至多一页);对话页在它来自的那一轮下面显示一行,顶栏写「后台保持着 1 个网页」。 */
+    val keptPage: StateFlow<KeptPage?> = MutableStateFlow(null),
+    /** 关掉留着的那一页(用户点了那一行上的「关闭」)。 */
+    private val closeKept: () -> Unit = {},
 ) {
+    /** 用户在对话页上关掉留在后台的那一页。 */
+    fun closeKeptPage() = closeKept()
+
     private val _ui = MutableStateFlow(ChatUi())
     val ui: StateFlow<ChatUi> = _ui.asStateFlow()
+
+    /** 删掉了(或正在删)的对话:侧栏当场不再列出,不等删完。 */
+    private val _deleted = MutableStateFlow<Set<String>>(emptySet())
+    val deleted: StateFlow<Set<String>> = _deleted.asStateFlow()
+    /** 还没删完的。 */
+    private val deleting = mutableSetOf<String>()
 
     /** 屏上这个对话以外、有任务在跑或排队的对话(顶部「另 n 个任务进行中」)。 */
     val otherRunning: StateFlow<List<String>> = combine(activeConversations, _ui.map { it.conversationId }.distinctUntilChanged()) { active, current ->
@@ -369,7 +412,13 @@ class ChatViewModel(
         scope.launch { taskState.collect { s -> if (!parallel()) shownTask.value?.let { onShown(it.first, s) } ?: onState(s) } }
         scope.launch { shownTask.collect { t -> if (t != null && parallel()) onShown(t.first, t.second) } }
         // 不论是谁存进屏上这个对话的(悬浮胶囊、定时任务、这里),都按存下的那份补上
-        scope.launch { store.changes.collect { id -> if (id == _ui.value.conversationId) syncSaved(id) } }
+        scope.launch {
+            store.changes.collect { id ->
+                if (id == _ui.value.conversationId) syncSaved(id)
+                // 删掉的对话又有人往里存了:重新列出来
+                if (id in _deleted.value && id !in deleting && store.turns(id).isNotEmpty()) _deleted.update { it - id }
+            }
+        }
         // 并行时只收屏上这个对话的任务的接管进度
         scope.launch {
             takeoverStage.collect { s -> if (ownTask()) _ui.update { it.copy(takeoverStage = s) } }
@@ -417,7 +466,7 @@ class ChatViewModel(
             val added = list.filter { it.id !in shown }
             ui.copy(exchanges = ui.exchanges.mapIndexed { i, ex ->
                 val updated = if (ex.steers.none { it.id in byId }) ex
-                    else ex.copy(steers = ex.steers.map { n -> byId[n.id]?.let { n.copy(state = it.state) } ?: n })
+                    else ex.copy(steers = ex.steers.map { n -> byId[n.id]?.let { n.copy(state = it.state, interrupted = it.interrupted ?: n.interrupted, finished = it.finished ?: n.finished) } ?: n })
                 if (i == liveIndex && added.isNotEmpty() && ex.status.active()) updated.copy(steers = updated.steers + added) else updated
             })
         }
@@ -545,15 +594,30 @@ class ChatViewModel(
     private fun gated(p: PipUi) = if (screenSeen) p else p.copy(visible = false, expanded = false)
 
 
-    /** 发送输入框里的话。返回 false 表示没发出去(条件不满足,或任务在跑)。 */
+    /** 长按消息选了「引用」:引的内容放到输入框上方,随下一句话发出去(新任务、插话、回答都带)。空的不引。 */
+    fun quote(from: QuoteMessage.From, text: String) {
+        val t = text.trim()
+        if (t.isNotEmpty()) _ui.update { it.copy(quote = QuoteMessage.Quote(from, t)) }
+    }
+
+    fun clearQuote() = _ui.update { it.copy(quote = null) }
+
+    /** 发送输入框里的话;有引用时引用写在话的前面(见 [QuoteMessage]),发出去后清掉。返回 false 表示没发出去(条件不满足,或任务在跑)。 */
     fun send(text: String, check: Prerequisites.Check): Boolean {
         refreshParallel()
         val ui = _ui.value
         if (ui.importing) return false
+        val sent = sendQuoted(text.trim(), ui, check)
+        if (sent) _ui.update { it.copy(quote = null) }
+        return sent
+    }
+
+    private fun sendQuoted(words: String, ui: ChatUi, check: Prerequisites.Check): Boolean {
         // 附件只跟新任务走;回答问题时不带
-        if (ui.composer == ComposerMode.Idle && ui.attachments.isNotEmpty()) return sendWithAttachments(text.trim(), ui.attachments, check)
-        val goal = text.trim()
-        if (goal.isEmpty()) return false
+        if (ui.composer == ComposerMode.Idle && ui.attachments.isNotEmpty()) return sendWithAttachments(QuoteMessage.compose(ui.quote, words), ui.attachments, check)
+        // 只有引用、没写话时不发
+        if (words.isEmpty()) return false
+        val goal = QuoteMessage.compose(ui.quote, words)
         when (ui.composer) {
             ComposerMode.Answer -> {
                 act({ actions.answer(goal) }) { actions.answerIn(it, goal) }
@@ -596,6 +660,8 @@ class ChatViewModel(
     /** 在对话 [id] 里开始新任务 [goal]:界面上加一问一答,交给服务(并行关着、服务还忙时排在它收尾后面)。 */
     private fun begin(goal: String, id: String) {
         lingerJob?.cancel()
+        // 这个对话的编号定下来了:胶囊之后接着它(新开的对话到这一刻才有编号)
+        markCurrent(CurrentChat.Open(id))
         // 上一个任务收尾时先撤屏再报结束,这里读到的就是新任务开始前的样子;
         // 并行时那是别的对话的任务的屏,新任务还没有屏
         // 新消息开始时不能继承上一次运行的屏；真正建好本次的屏后由 screenOpen 打开小窗。
@@ -613,6 +679,13 @@ class ChatViewModel(
         }
         // 并行时服务忙着(别的对话的任务在跑)也直接交给它
         if (serviceBusy.value && !parallel()) {
+            // 等着的这段时间说清楚在等什么,不让它看着像卡住了;交给服务后由任务自己的状态接着写
+            _ui.update { ui ->
+                val exchanges = ui.exchanges.toMutableList()
+                exchanges[liveIndex] = exchanges[liveIndex].copy(line = tr(R.string.chat_wait_previous_task))
+                ui.copy(exchanges = exchanges)
+            }
+            // 交过去时别处(定时、电脑)可能刚好先开始了一个:服务把它排在那个后面,不丢
             pendingStart = scope.launch {
                 serviceBusy.first { !it }
                 pendingStart = null
@@ -646,6 +719,28 @@ class ChatViewModel(
         return true
     }
 
+    fun withdrawSteer(messageId: String): Boolean {
+        val ui = _ui.value
+        val id = ui.conversationId ?: return false
+        val note = ui.exchanges.getOrNull(liveIndex)?.steers?.firstOrNull { it.id == messageId } ?: return false
+        if (!note.state.unconsumed || note.remote) return false
+        if (!held.removeAll { it.id == messageId } && !actions.withdrawSteer(id, messageId)) return false
+        _ui.update { now -> now.copy(exchanges = now.exchanges.map { ex ->
+            ex.copy(steers = ex.steers.map { if (it.id == messageId) it.copy(state = SteerState.Withdrawn) else it })
+        }) }
+        return true
+    }
+
+    fun editSteer(messageId: String): String? {
+        val ui = _ui.value
+        if (ui.quote != null || ui.attachments.isNotEmpty() || ui.importing) return null
+        val note = ui.exchanges.getOrNull(liveIndex)?.steers?.firstOrNull { it.id == messageId } ?: return null
+        if (!editableSteer(note.text) || !withdrawSteer(messageId)) return null
+        val parsed = QuoteMessage.parse(note.text)
+        _ui.update { it.copy(quote = parsed.quote) }
+        return parsed.words
+    }
+
     /** 原话的任务还没交给服务时插的话。 */
     private val held = mutableListOf<SteerNote>()
 
@@ -654,6 +749,8 @@ class ChatViewModel(
      * 服务换去显示别的对话的任务(别处刚开始了一个)时,这里正在跟的任务还在跑就让服务显示回来,不让它停在半路。
      */
     private fun onShown(conversationId: String, s: TaskState) {
+        // 删掉的对话的任务正在停下:不接到屏上
+        if (conversationId in _deleted.value) return
         val current = _ui.value.conversationId
         when {
             current == null -> {
@@ -682,6 +779,7 @@ class ChatViewModel(
         liveIndex = -1
         // 没有任务的对话不带别的任务的接管进度
         _ui.update { ChatUi(conversationId = conversationId, exchanges = past, takeoverStage = Takeover.Stage.None) }
+        markCurrent(CurrentChat.Open(conversationId))
         if (conversationId !in activeConversations.value) { unpark(conversationId); return }
         follow(conversationId, unpark(conversationId))
     }
@@ -749,7 +847,9 @@ class ChatViewModel(
                 tracked.remove(mine)
                 // 停止后补上的交代记在存下的那份里
                 val m = if (mine.status is ExchangeStatus.Cancelled && s.status is ExchangeStatus.Cancelled && s.status.summary != null) mine.copy(status = s.status) else mine
-                if (m.goal.isEmpty()) m.copy(goal = s.goal) else m
+                // 留页的记录(留下的站点、后来关掉的原因)也只在存下的那份里
+                val k = if (s.keptPage != null) m.copy(keptPage = s.keptPage, keptPageClosed = s.keptPageClosed) else m
+                if (k.goal.isEmpty()) k.copy(goal = s.goal) else k
             }.asReversed()
             val exchanges = merged + tracked + listOfNotNull(live)
             if (exchanges == ui.exchanges) return@update ui
@@ -771,7 +871,10 @@ class ChatViewModel(
         }
         val pending = pendingStart
         if (pending == null || !pending.isActive) {
-            act({ actions.cancel() }) { actions.cancelIn(it) }
+            // 这个对话在服务里有任务(在跑或排着队)就只停它:不带编号的停止按服务显示中的任务算,
+            // 这条还排在别处开始的任务后面时,停掉的会是那个任务
+            val id = _ui.value.conversationId
+            if (id != null && id in activeConversations.value) actions.cancelIn(id) else act({ actions.cancel() }) { actions.cancelIn(it) }
             return
         }
         // 任务还没交给服务:作废这次开始;服务里正在收尾的是上一个任务,不去碰它
@@ -817,8 +920,17 @@ class ChatViewModel(
         val past = saved(id)
         liveIndex = -1
         _ui.update { ChatUi(conversationId = id, exchanges = past, takeoverStage = it.takeoverStage, attachEnabled = it.attachEnabled) }
+        markCurrent(CurrentChat.Open(id))
         // 这个对话的任务是别处开始的(悬浮胶囊、定时任务):打开就接上它
         if (id in activeConversations.value) follow(id)
+    }
+
+    /**
+     * 告诉悬浮胶囊用户此刻在哪个对话([CurrentChat]):胶囊的空闲卡片接着它,而不是按对话文件最后被谁写过猜一个。
+     * 写不进去不影响界面。
+     */
+    private fun markCurrent(current: CurrentChat) {
+        runCatching { store.setCurrent(current) }
     }
 
     fun newConversation() {
@@ -829,11 +941,57 @@ class ChatViewModel(
             parkLive()
             liveIndex = -1
             _ui.update { ChatUi(conversationId = store.newConversation(), takeoverStage = Takeover.Stage.None, attachEnabled = it.attachEnabled) }
+            // 还没说过话:胶囊上是一张新对话卡片(编号等说出来再定,见 begin)
+            markCurrent(CurrentChat.Fresh)
             return
         }
         if (busy()) return
         liveIndex = -1
         _ui.update { ChatUi(takeoverStage = it.takeoverStage, attachEnabled = it.attachEnabled) }
+        markCurrent(CurrentChat.Fresh)
+    }
+
+    /** 删掉 [id] 会连带什么:侧栏的确认弹窗据此写明会停掉任务、删掉定时任务。 */
+    fun deleteImpact(id: String): DeleteImpact = deletionImpact(id)
+
+    /**
+     * 删掉对话 [id](用户在侧栏确认过):当场从侧栏拿掉;是屏上这个对话就换成一个新的空对话。
+     * 停任务、删定时任务、删文件在后台做(见 `ConversationDeleter`)。
+     */
+    fun deleteConversation(id: String) {
+        if (!deleting.add(id)) return
+        _deleted.update { it + id }
+        if (id == _ui.value.conversationId) startOver(id) else unpark(id)
+        scope.launch {
+            try { removeConversation(id) } catch (e: CancellationException) { throw e } catch (e: Exception) { } finally { deleting -= id }
+        }
+    }
+
+    /** 用户在侧栏给对话 [id] 改名:换成 [title](去掉两头空白;空的不改)。之后起好的标题不会再盖掉它。 */
+    fun renameConversation(id: String, title: String) {
+        if (id in _deleted.value) return
+        runCatching { store.rename(id, title) }
+    }
+
+    /** 侧栏里置顶或取消置顶对话 [id]。 */
+    fun setPinned(id: String, pinned: Boolean) {
+        if (id in _deleted.value) return
+        runCatching { store.setPinned(id, pinned, clock()) }
+    }
+
+    /** 屏上的对话被删了:不再跟它的任务(还没交给服务的开始直接作废),换成新的空对话。 */
+    private fun startOver(id: String) {
+        lingerJob?.cancel()
+        pendingStart?.cancel()
+        pendingStart = null
+        held.clear()
+        unpark(id)
+        liveIndex = -1
+        screenSeen = false
+        val fresh = if (parallel()) store.newConversation() else null
+        _ui.update { ChatUi(conversationId = fresh, takeoverStage = Takeover.Stage.None, attachEnabled = it.attachEnabled) }
+        // 屏上换成了一个新的空对话:胶囊不再接着删掉的那个
+        markCurrent(CurrentChat.Fresh)
     }
 
     fun busy() = _ui.value.composer != ComposerMode.Idle
@@ -1006,14 +1164,14 @@ class ChatViewModel(
                     // 读成功了却不知道读的是哪里:不列;没读成的照样列出来
                     if (where == null && !a.failed) continue
                     val text = if (where == null) toolLabel(a.label)
-                        else "看了$where" + a.title?.takeIf(String::isNotBlank)?.let { "的$it" }.orEmpty()
-                    val subtitle = if (a.failed) "没成功" else ""
+                        else a.title?.takeIf(String::isNotBlank)?.let { tr(R.string.step_viewed_part, where, it) } ?: tr(R.string.step_viewed, where)
+                    val subtitle = if (a.failed) tr(R.string.step_failed) else ""
                     val last = out.lastOrNull()
                     if (last?.title != text || last.subtitle != subtitle) out += StepRow(a.step, text, subtitle, StepState.Ok)
                 } else {
                     val reason = if (said.add(a.step)) ex.notes[a.step].orEmpty() else ""
                     val title = listOfNotNull(toolLabel(a.label), where).joinToString(" · ")
-                    out += StepRow(a.step, title, if (a.failed) "没成功" else "", StepState.Ok, reason)
+                    out += StepRow(a.step, title, if (a.failed) tr(R.string.step_failed) else "", StepState.Ok, reason)
                 }
             }
             if (out.isEmpty()) return out
@@ -1044,13 +1202,17 @@ class ChatViewModel(
             }
             return Exchange(t.userText, emptyList(), status, live = false, runId = t.runId,
                 memoryNotes = t.memoryNotes, usedMemory = t.usedMemory, skillNotes = t.skillNotes,
-                steers = t.steers.mapIndexed { i, text -> SteerNote("turn-$i", text, SteerState.Joined) })
+                keptPage = t.keptPage, keptPageClosed = t.keptPageClosed,
+                steers = t.steers.mapIndexed { i, text ->
+                    SteerNote("turn-$i", text, SteerState.Joined, t.interruptedReplies.getOrNull(i)?.takeIf(String::isNotEmpty),
+                        t.finishedReplies.getOrNull(i)?.takeIf(String::isNotEmpty))
+                })
         }
 
 
         /** 消息末尾每个附件一行:「附件:/workspace/inbox/<名字>(<大小>)」;[files] 是复制进工作区后的 (路径, 字节数)。 */
         internal fun withAttachments(text: String, files: List<Pair<String, Long>>): String =
-            AttachmentMessage.compose(text, files.map { (p, n) -> p to sizeLabel(n) })
+            AttachmentLines.compose(text, files.map { (p, n) -> p to sizeLabel(n) })
 
         fun sizeLabel(bytes: Long): String = when {
             bytes < 1024 -> "$bytes B"
@@ -1077,7 +1239,7 @@ data class EvidenceSource(val place: String?, val screenshots: List<Int>, val it
 fun evidenceSource(events: List<RunEvent>, appLabel: (String) -> String = { it }): EvidenceSource {
     events.filterIsInstance<RunEvent.Sources>().lastOrNull()?.items?.takeIf { it.isNotEmpty() }?.let { list ->
         fun where(p: String?) = p?.let { placeLabel(it, appLabel) }
-        val items = list.map { s -> listOfNotNull("第 ${s.step} 步", where(s.place), s.title).joinToString(" · ") }
+        val items = list.map { s -> listOfNotNull(tr(R.string.step_number, s.step), where(s.place), s.title).joinToString(" · ") }
         return EvidenceSource(list.asReversed().firstNotNullOfOrNull { where(it.place) }, list.flatMap { it.mediaIds }.distinct(), items)
     }
     val shots = events.filterIsInstance<RunEvent.Media>()
@@ -1100,7 +1262,7 @@ private fun placeLabel(place: String, appLabel: (String) -> String): String = wh
 
 /** 「来源」那一行:「来源 · 12306 · 2 张截图」;没有地方、没有截图时省掉那一段。 */
 fun sourceLabel(source: EvidenceSource?): String = listOfNotNull(
-    "来源", source?.place, source?.screenshots?.size?.takeIf { it > 0 }?.let { "$it 张截图" },
+    tr(R.string.source_label), source?.place, source?.screenshots?.size?.takeIf { it > 0 }?.let { trPlural(R.plurals.screenshots, it) },
 ).joinToString(" · ")
 
 /**
@@ -1119,8 +1281,77 @@ fun splitEvidence(answer: String): Pair<String, String?> {
 // 段首或句末标点之后,可带 markdown 的 **、#、- 等前缀
 private val EVIDENCE = Regex("""(^|\n|[。.!！?？]\s*)[\s*#>\-]*\**(?:依据|证据|来源)\**\s*[:：]\**""")
 
-/** 工具名到界面上的中文说法(工具声明里的 label);没有的原样显示。 */
-/** 工具在界面上的说法;改名前的运行记录里的旧名按 [legacy] 认成现在的工具。 */
+/**
+ * 工具在界面上的说法:工具声明里的 label(中文)按界面语言换成对应的资源;没有 label 的原样显示工具名。
+ * 改名前的运行记录里的旧名按 [legacy] 认成现在的工具。
+ */
 class ToolLabels(private val tools: ToolIndex, private val legacy: LegacyNames = legacyNames()) {
-    fun label(tool: String) = (tools[tool] ?: legacy.resolve(tool)?.let { tools[it] })?.label ?: tool
+    fun label(tool: String): String {
+        val declared = (tools[tool] ?: legacy.resolve(tool)?.let { tools[it] })?.label ?: return tool
+        return TOOL_LABELS[declared]?.let { tr(it) } ?: declared
+    }
+
+    companion object {
+        /** 工具声明里的 label → 界面文字;中文资源与 label 一字不差(ToolLabelsTest 核对每个工具都有)。 */
+        val TOOL_LABELS: Map<String, Int> = mapOf(
+            "查看已装的 App" to R.string.tool_list_apps,
+            "打开 App" to R.string.tool_open_app,
+            "分享文字到 App" to R.string.tool_share_text,
+            "设闹钟" to R.string.tool_set_alarm,
+            "设计时器" to R.string.tool_set_timer,
+            "查看闹钟" to R.string.tool_show_alarms,
+            "添加日程" to R.string.tool_add_calendar_event,
+            "拨滚轮" to R.string.tool_set_wheel,
+            "滚动查找" to R.string.tool_scroll_find,
+            "等待界面条件" to R.string.tool_wait_condition,
+            "等待界面事件" to R.string.tool_wait_event,
+            "提取界面数据" to R.string.tool_extract,
+            "检查弹窗" to R.string.tool_check_dialog,
+            "多点手势" to R.string.tool_gesture,
+            "系统命令" to R.string.tool_shell,
+            "查找界面控件" to R.string.tool_find_element,
+            "采集多屏内容" to R.string.tool_collect,
+            "连续操作手机" to R.string.tool_phone_run,
+            "处理文件" to R.string.tool_process_files,
+            "运行自带脚本" to R.string.tool_run_script,
+            "读文件" to R.string.tool_read_file,
+            "写文件" to R.string.tool_write_file,
+            "搜索文件" to R.string.tool_search_files,
+            "导出文件" to R.string.tool_export_file,
+            "打开网页" to R.string.tool_open_page,
+            "切换网页标签" to R.string.tool_switch_tab,
+            "切换网页版本" to R.string.tool_switch_version,
+            "保持网页开着" to R.string.tool_keep_page,
+            "定下 App 做完后留着还是关掉" to R.string.tool_app_after_task,
+            "读网页" to R.string.tool_read_page,
+            "查看下载" to R.string.tool_downloads,
+            "查看网页收到的数据" to R.string.tool_network,
+            "等网页变化" to R.string.tool_wait_page,
+            "读取网页数据" to R.string.tool_read_script,
+            "运行站点命令" to R.string.tool_site_command,
+            "上传文件" to R.string.tool_upload,
+            "遇到障碍" to R.string.tool_obstacle,
+            "查找 App/网站知识" to R.string.tool_find_knowledge,
+            "查找技能" to R.string.tool_find_skill,
+            "查看 App/网站知识" to R.string.tool_read_knowledge,
+            "查看技能" to R.string.tool_read_skill,
+            "保存技能" to R.string.tool_save_skill,
+            "说明没办成的原因" to R.string.tool_explain_failure,
+            "问你一个问题" to R.string.tool_ask_user,
+            "请你接手" to R.string.tool_takeover,
+            "请你同意" to R.string.tool_confirm,
+            "等待" to R.string.tool_wait,
+            "检查屏幕" to R.string.tool_diagnose,
+            "返回" to R.string.tool_back,
+            "按键" to R.string.tool_press_key,
+            "看屏幕" to R.string.tool_observe,
+            "读取界面元素" to R.string.tool_list_elements,
+            "截图" to R.string.tool_screenshot,
+            "滚动" to R.string.tool_scroll,
+            "滑动" to R.string.tool_swipe,
+            "点击" to R.string.tool_tap,
+            "输入文字" to R.string.tool_type,
+            "清空输入框" to R.string.tool_clear,
+        )
+    }
 }

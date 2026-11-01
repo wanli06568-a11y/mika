@@ -17,6 +17,9 @@ import com.wangzan101.mika.core.tool.ToolContext
 import com.wangzan101.mika.core.workspace.WorkspacePathCheck
 import kotlinx.coroutines.CancellationException
 import com.wangzan101.mika.core.uistate.sessions
+import com.wangzan101.mika.core.uistate.DwellStop
+import com.wangzan101.mika.core.uistate.IdleScroll
+import com.wangzan101.mika.core.uistate.PlacePace
 
 private const val EVIDENCE_PAGE_CHARS = 3000
 private val HOST_RE = Regex("^[a-z0-9-]+(\\.[a-z0-9-]+)+$")
@@ -31,7 +34,7 @@ internal class WebCapability(
     val port: WebPort?,
     val workspacePath: ((String) -> WorkspacePathCheck)?,
     pacing: PagePacing = PagePacing.Off,
-    sitePace: (String) -> SitePace = { SitePace.NORMAL },
+    sitePace: (String) -> PlacePace = { PlacePace.NORMAL },
     idle: IdleScroll? = null,
 ) : Capability {
     override val id = WEB
@@ -43,6 +46,12 @@ internal class WebCapability(
     override fun status(): CapabilityStatus = if (port != null) CapabilityStatus.Available else CapabilityStatus.Unavailable("no browser")
 
     override fun tools(): List<AgentTool> = WebGroup.tools
+
+    /** 这次的话是从浏览器页上对着一页问的(带着 [AttachedPage] 的说明):那一页已经是当前标签,开局就展开网页一组。 */
+    override fun preload(task: String): Boolean = port != null && AttachedPage.has(task)
+
+    /** 页面说明里的标题、网址和选中的字来自网页,去掉后剩下用户打的字。 */
+    override fun userWords(text: String): String = AttachedPage.words(text)
 
     override val family = WEB_FAMILY
 

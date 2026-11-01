@@ -1,6 +1,11 @@
 package com.wangzan101.mika.core.agent
 
 import com.wangzan101.mika.core.model.Author
+import com.wangzan101.mika.core.assembly.toolDispatcher
+import com.wangzan101.mika.core.model.ChatModel
+import com.wangzan101.mika.core.testing.answerReply
+import com.wangzan101.mika.core.tool.FakeScreen
+import kotlinx.coroutines.test.runTest
 import com.wangzan101.mika.core.model.Message
 import com.wangzan101.mika.core.model.Part
 import com.wangzan101.mika.core.model.Role
@@ -26,6 +31,38 @@ class ContextCompressorTest {
     }
 
     private fun taps(n: Int) = (1..n).flatMap { round("phone_tap", """{"target":"按钮$it"}""") }
+
+    @Test fun modelOverrideReachesTheCallerAndMovesTheFirstCompaction() = runTest {
+        val history = head + (1..40).flatMap { round("phone_tap", result = """{"pad":"${"x".repeat(1_360)}"}""") }
+        assertTrue(uncalibrated(history) in 16_001..18_000)
+        suspend fun sent(trigger: Int?): List<Message> {
+            val transport = FakeModel(answerReply("ok"), contextTokens = 32_000)
+            val model = object : ChatModel by transport {
+                override val capabilities = transport.capabilities.copy(compactionTriggerTokens = trigger)
+            }
+            val caller = ModelCaller(model, toolDispatcher(FakeScreen()), null, SpeedFlags.OFF, RetryPolicy.NONE, {}, { 0 })
+            caller.reset("")
+            caller.ask(history, emptyList())
+            return transport.requests.single()
+        }
+        assertEquals(history, sent(null))
+        assertTrue(uncalibrated(sent(16_000)) < uncalibrated(history))
+    }
+
+    @Test fun overflowUsesTheTargetForTheSameModelOverride() {
+        // 32K 窗口，自动目标 12K；手填 16K 触发时目标为 10K。
+        val user = Message(Role.User, listOf(Part.Text("x".repeat(26_000))), Author.User)
+        val history = listOf(user) + (1..20).flatMap {
+            round("phone_tap", """{"target":"ok","note":"${"x".repeat(1_600)}"}""", "{}")
+        }
+        fun retrySize(trigger: Int?): Int {
+            val compressor = ContextCompressor(TOOLS, triggerOverride = trigger)
+            assertTrue(compressor.overflow(history, 32_000))
+            return uncalibrated(compressor.current(history, 32_000))
+        }
+        assertTrue(retrySize(null) in 10_001..12_000)
+        assertTrue(retrySize(16_000) <= 10_000)
+    }
     private fun summary(ms: List<Message>) = ms.firstNotNullOfOrNull { m ->
         m.plainText().takeIf { it.startsWith(ContextCompressor.HEADER) }
     }
@@ -39,8 +76,8 @@ class ContextCompressorTest {
         assertEquals(0, c.foldedSteps)
     }
 
-    /** 刚越过触发点的上下文:压一次就能回到触发点的一半以下,用最轻的一级(留最近 12 次往返)。 */
-    private fun justOver(h: List<Message>) = (TokenEstimate.of(h) / ContextCompressor.COMPACT_AT).toInt() - 10
+    /** 触发点刚好低于整份请求的窗口:压一次就能回到目标以下,用最轻的一级(留最近 12 次往返)。 */
+    private fun justOver(h: List<Message>) = windowFor(uncalibrated(h)) - 1
 
     @Test fun foldsOldestKeepsRecent12() {
         val h = head + taps(40)
@@ -53,7 +90,7 @@ class ContextCompressorTest {
         assertEquals(ContextKind.Notice, ContextBuilder.kindOf(c.messages[2]))
         assertEquals(h.takeLast(24), c.messages.drop(3))
         val s = summary(c.messages)!!
-        assertTrue(s, "第 1 步 phone_tap(按钮1)→ 生效" in s && "第 28 步 phone_tap(按钮28)→ 生效" in s && "第 29 步" !in s)
+        assertTrue(s, "Step 1 phone_tap(按钮1) → applied" in s && "Step 28 phone_tap(按钮28) → applied" in s && "Step 29" !in s)
     }
 
     @Test fun appendOnlyBetweenCompactions() {
@@ -68,7 +105,8 @@ class ContextCompressorTest {
         assertEquals(folds, rewrites)
         assertTrue("$rewrites", rewrites.isNotEmpty() && rewrites.size <= 10)
         rewrites.zipWithNext().forEach { (a, b) -> assertTrue("$rewrites", b - a > 1) }
-        outs.forEach { assertTrue(TokenEstimate.of(it.messages) <= ctx * ContextCompressor.COMPACT_AT + 200) }
+        // 发出的整份请求始终在可用窗口(扣掉输出预留)以内
+        outs.forEach { assertTrue(uncalibrated(it.messages) <= ContextLimits.of(ctx).usable) }
     }
 
     @Test fun oversizedNewestResultIsShrunkToFitTheWindow() {
@@ -77,7 +115,7 @@ class ContextCompressorTest {
         val h = head + taps(3) + huge
         val ctx = 16_000
         val c = ContextCompressor(TOOLS).compress(h, contextTokens = ctx, fixedOverhead = 1000)
-        assertTrue("${TokenEstimate.of(c.messages)}", TokenEstimate.of(c.messages) <= ctx - 1000)
+        assertTrue("${uncalibrated(c.messages, 1000)}", uncalibrated(c.messages, 1000) <= ContextLimits.of(ctx).usable)
         val last = c.messages.last().parts.filterIsInstance<Part.ToolResult>().single()
         assertTrue(last.content, HistoryPruner.OMITTED_READ in last.content && "\"exitCode\":0" in last.content)
         val calls = c.messages.flatMap { m -> m.parts.filterIsInstance<Part.ToolCall>().map { it.id } }
@@ -88,13 +126,16 @@ class ContextCompressorTest {
     @Test fun overheadHeavySmallWindowNeverExceedsTheWindow() {
         val all = head + taps(40)
         val ctx = 4000
-        val overhead = 3000
+        val overhead = 1800
         val c = ContextCompressor(TOOLS)
-        // 固定开销已超过触发点:回差推迟的再压缩也不会越过上下文的九成,发出的始终放得下
+        // 固定开销几乎占满触发点:每次压缩后有回差,不会每步都压;发出的整份请求始终放得下
+        var rewrites = 0
         for (n in 1..40) {
-            val out = c.compress(all.take(head.size + 2 * n), contextTokens = ctx, fixedOverhead = overhead).messages
-            assertTrue("$n: ${TokenEstimate.of(out)}", TokenEstimate.of(out) <= ctx - overhead)
+            val out = c.compress(all.take(head.size + 2 * n), contextTokens = ctx, fixedOverhead = overhead)
+            if (out.rewritten) rewrites++
+            assertTrue("$n: ${uncalibrated(out.messages, overhead)}", uncalibrated(out.messages, overhead) <= ctx)
         }
+        assertTrue("$rewrites", rewrites in 1..20)
     }
 
     @Test fun foldedObservationsKeepScreenshotId() {
@@ -102,7 +143,7 @@ class ContextCompressorTest {
         val dump = round("phone_list_elements", "{}", """{"ok":true,"snapshotId":"s2","screenshotId":8,"pad":"$pad"}""")
         val h = head + obs + dump + taps(20)
         val s = summary(ContextCompressor(TOOLS).compress(h, contextTokens = 1000).messages)!!
-        assertTrue(s, "第 1 步 phone_observe #7→ 生效" in s && "第 2 步 phone_list_elements #8→ 生效" in s)
+        assertTrue(s, "Step 1 phone_observe #7 → applied" in s && "Step 2 phone_list_elements #8 → applied" in s)
     }
 
     @Test fun pinnedMessagesKept() {
@@ -186,12 +227,12 @@ class ContextCompressorTest {
             listOf(
                 ContextCompressor.HEADER,
                 ContextCompressor.SUMMARY_REMINDER,
-                "第 1 步 phone_tap(设置)→ 生效",
-                "第 2 步 phone_scroll(down)→ 没变化",
-                "第 3 步 phone_launch_app(com.x)→ app_not_found",
-                "第 4 步 phone_back→ 生效",
-                "第 5 步 phone_type_text(${"天气".repeat(10)}…)→ 生效",
-                "第 7 步 phone_observe→ 生效",
+                "Step 1 phone_tap(设置) → applied",
+                "Step 2 phone_scroll(down) → no change",
+                "Step 3 phone_launch_app(com.x) → app_not_found",
+                "Step 4 phone_back → applied",
+                "Step 5 phone_type_text(${"天气".repeat(10)}…) → applied",
+                "Step 7 phone_observe → applied",
             ),
             s.lines().take(8),
         )
@@ -204,11 +245,11 @@ class ContextCompressorTest {
         val out = ContextCompressor(TOOLS).compress(h, contextTokens = 1_000_000, aggressive = true).messages
         val texts = out.map { it.plainText() }
         // 开头 2 条,第一段摘要,保留的接管往返,第二段摘要,最近 6 次往返
-        assertTrue(texts[2]!!.startsWith(ContextCompressor.HEADER) && "第 3 步" in texts[2]!! && "第 5 步" !in texts[2]!!)
+        assertTrue(texts[2]!!.startsWith(ContextCompressor.HEADER) && "Step 3" in texts[2]!! && "Step 5" !in texts[2]!!)
         assertEquals(takeover, out.subList(3, 5))
         assertTrue(texts[5]!!.startsWith(ContextCompressor.HEADER))
-        assertEquals(listOf(ContextCompressor.HEADER, ContextCompressor.SUMMARY_REMINDER) + listOf("第 5 步 phone_tap(按钮1)→ 生效", "第 6 步 phone_tap(按钮2)→ 生效") +
-            (7..12).map { "第 $it 步 phone_tap(按钮${it - 6})→ 生效" },
+        assertEquals(listOf(ContextCompressor.HEADER, ContextCompressor.SUMMARY_REMINDER) + listOf("Step 5 phone_tap(按钮1) → applied", "Step 6 phone_tap(按钮2) → applied") +
+            (7..12).map { "Step $it phone_tap(按钮${it - 6}) → applied" },
             texts[5]!!.lines())
         assertEquals(2 + 1 + 2 + 1 + 12, out.size)
     }
@@ -219,20 +260,19 @@ class ContextCompressorTest {
             val r = listOf(Message(Role.Assistant, listOf(Part.ToolCall(id, "phone_tap", "{}")), Author.Mika)) +
                 listOfNotNull(result?.let { Message(Role.Tool, listOf(it.copy(callId = id)), Author.Mika) })
             val h = head + r + taps(12)
-            return summary(ContextCompressor(TOOLS).compress(h, contextTokens = 100).messages)!!.lines()[2].substringAfter("→ ")
+            return summary(ContextCompressor(TOOLS).compress(h, contextTokens = 100).messages)!!.lines()[2].substringAfter(" → ")
         }
-        assertEquals("无结果", one(null))
-        assertEquals("失败", one(Part.ToolResult("", """{"message":"boom"}""", isError = true)))
+        assertEquals("no result", one(null))
+        assertEquals("failed", one(Part.ToolResult("", """{"message":"boom"}""", isError = true)))
         assertEquals("ref_expired", one(Part.ToolResult("", """{"error":"ref_expired"}""", isError = true)))
         assertEquals("timeout", one(Part.ToolResult("", "timeout", isError = true)))
-        assertEquals("失败", one(Part.ToolResult("", "出了点问题", isError = true)))
-        assertEquals("生效", one(Part.ToolResult("", "done", isError = false)))
+        assertEquals("failed", one(Part.ToolResult("", "出了点问题", isError = true)))
+        assertEquals("applied", one(Part.ToolResult("", "done", isError = false)))
     }
 
     @Test fun fixedOverheadCountsAgainstBudget() {
         val h = head + taps(20)
-        val size = TokenEstimate.of(h)
-        val context = (size / 0.6).toInt() + 10
+        val context = windowFor(uncalibrated(h))
         assertEquals(0, ContextCompressor(TOOLS).compress(h, context).foldedSteps)
         assertTrue(ContextCompressor(TOOLS).compress(h, context, fixedOverhead = 100).foldedSteps > 0)
     }

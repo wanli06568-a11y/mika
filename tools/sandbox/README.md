@@ -9,7 +9,7 @@ Mika 只以子进程方式运行它们,不链接它们。
 | `libproot_loader.so` | PRoot 的载入器(静态、`-nostdlib`) | 同一个 PRoot 源码包 | 5.4.0 | GPL-2.0-or-later |
 | `libmikarun.so` | Mika 的沙箱启动器(超时、断网、清场) | `app/src/main/cpp/mikarun/mikarun.c` | 随 Mika | MIT |
 
-许可证全文在仓库根目录的 `licenses/`,版权声明见 `THIRD_PARTY_NOTICES.md`。
+许可证全文和版权声明(`licenses/THIRD_PARTY_NOTICES.md`)都在仓库根目录的 `licenses/`。
 
 ## 自带的运行环境
 
@@ -33,6 +33,9 @@ python3 tools/sandbox/build-runtime.py --check     # 重新生成并与仓库里
 ```
 
 `build-runtime.py` 里的 `WANT` 必须与 core 的 `SANDBOX_PACKAGES` 一致(`BundledRuntimeTest` 核对)。
+
+运行环境包含 `tzdata`。每次启动命令时,`ProcRunner.env` 都把手机当前的 IANA 时区写入 `TZ`,
+让命令行、Python 和 Node 的本地时间与手机一致,并保留夏令时和历史偏移规则;手机切换时区后,下一条命令随之更新。
 
 ## 文件
 

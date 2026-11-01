@@ -71,9 +71,9 @@ class AgentLoopReplayTest {
         s.pages["home"] = listOf(ui("@e4", "text", "请先登录", listOf(0, 0, 999, 60), clickable = false))
         val r = run(screen = s)
         val msg = firstPrompt(r)
-        assertTrue(msg, msg.contains("已按以往成功的做法自动完成 1/3 步"))
+        assertTrue(msg, msg.contains("1 of 3 steps were run automatically, following a way that worked before"))
         assertTrue(msg, msg.contains("1. phone_launch_app com.notes"))
-        assertTrue(msg, msg.contains("第 2 步预期"))
+        assertTrue(msg, msg.contains("Step 2 expected"))
         assertTrue(msg, msg.contains("请先登录"))
         // 带着一份全量读屏(编号与 snapshotId),模型可直接接着做
         assertTrue(msg, msg.contains("\"snapshotId\"") && msg.contains("\"ref\":\"@e4\""))
@@ -91,21 +91,21 @@ class AgentLoopReplayTest {
     @Test fun executedButUnchangedStepToldToModel() {
         val s = Notes.screen().apply { links.clear() }
         val msg = firstPrompt(run(screen = s))
-        assertTrue(msg, msg.contains("第 2 步已执行,但没看到预期变化"))
+        assertTrue(msg, msg.contains("Step 2 was run, but the expected change did not show"))
     }
 
     @Test fun unreadableHandbackScreenStillContinues() {
         val s = Notes.screen().apply { failReads = true }
         val r = run(screen = s)
         val msg = firstPrompt(r)
-        assertTrue(msg, msg.contains("当前界面没能读出来"))
+        assertTrue(msg, msg.contains("The current screen could not be read"))
         assertEquals("succeeded", r.sink.all.filterIsInstance<RunEvent.TaskEnded>().single().outcome)
     }
 
     @Test fun completedStillRequiresAnAnswer() {
         // 走完了也要模型自己回答;回答核实过才算路线的一次成功:这个回答引用的「新笔记」读到过(字面核对对上了,不用另请核查)
         val ok = run(main = FakeModel(text("写好了,在「新笔记」里")), verifier = Verifier(FakeModel(text(pass)), null))
-        assertTrue(firstPrompt(ok).contains("已按以往的做法走完全部步骤"))
+        assertTrue(firstPrompt(ok).contains("All steps of the earlier way of doing this were run"))
         assertEquals(1, ok.main.requests.size)
         assertTrue(ok.sink.all.none { it is RunEvent.Verifier })
         assertEquals(1, ok.store.m["r1"]!!.successes)
@@ -114,8 +114,11 @@ class AgentLoopReplayTest {
         assertTrue(gaveUp.sink.all.none { it is RunEvent.Verifier })
         assertEquals(0, gaveUp.store.m["r1"]!!.successes)
 
-        // 回答里没有可核对的值、也没请核查:没核对过,不记成功
-        assertEquals(0, run().store.m["r1"]!!.successes)
+        // 回答里没有可核对的值、也没请核查:判下来办成就记成功(学习看结局,不看核查)
+        assertEquals(1, run().store.m["r1"]!!.successes)
+        // 核对过却没对上(退回一次后仍标成未确认):不记成功
+        val doubtful = run(main = FakeModel(text("写好了,在「旧草稿 42 号」里"), text("写好了,在「旧草稿 42 号」里")))
+        assertEquals(0, doubtful.store.m["r1"]!!.successes)
     }
 
     @Test fun routeSuccessOnlyWhenJudgedDone() {

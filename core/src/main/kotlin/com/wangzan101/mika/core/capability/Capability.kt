@@ -7,6 +7,9 @@ import com.wangzan101.mika.core.knowledge.BundledScripts
 import com.wangzan101.mika.core.observation.Look
 import com.wangzan101.mika.core.tool.AgentTool
 import com.wangzan101.mika.core.tool.ToolContext
+import com.wangzan101.mika.core.tool.ToolExecution
+import com.wangzan101.mika.core.tool.Verb
+import kotlinx.serialization.json.JsonObject
 
 /** 能力此刻能不能用。 */
 sealed interface CapabilityStatus {
@@ -65,6 +68,9 @@ internal interface Capability : PromptSections {
     /** 按这次的话([task])开局就展开这一组(一定用得上时);默认不展开。 */
     fun preload(task: String): Boolean = false
 
+    /** 用户的一句话([text])去掉和本能力有关的说明(浏览器页的页面说明这类)后,用户自己打的字;没有这类说明的原样返回。 */
+    fun userWords(text: String): String = text
+
     /** 本能力可能提供的全部工具;本任务能不能用由各工具自己看上下文。 */
     fun tools(): List<AgentTool>
 
@@ -91,6 +97,15 @@ internal interface Capability : PromptSections {
 
     fun onOutwardEnd(ctx: ToolContext, site: String, done: Boolean) {}
 
+    /**
+     * 本能力的屏上要做一个改动屏幕的动作([verb])了:按本能力的节奏先停一会儿(见 [com.wangzan101.mika.core.action.ActionExecutor],
+     * 单步、一批里的每一步都经这里)。[outward]:这一步是对外动作(发送、提交)。默认不停。
+     */
+    suspend fun beforeWrite(ctx: ToolContext, verb: Verb?, outward: Boolean): Paced = Paced.NONE
+
+    /** 那个动作做完了([result] 是它的结果);[beforeWrite] 停下没做的不调。 */
+    fun afterWrite(ctx: ToolContext, verb: Verb?, result: JsonObject) {}
+
     /** 不动屏幕的工具的守卫,每个任务一份;没有为 null。 */
     fun guard(): OffScreenGuard? = null
 
@@ -98,6 +113,16 @@ internal interface Capability : PromptSections {
      * 核查前再看一眼这个能力此刻的样子(不改模型手里的任何东西);[withImage] 时连同一帧画面。没有可看的为 null。
      */
     suspend fun freshLook(ctx: ToolContext, withImage: Boolean): Look? = null
+}
+
+/**
+ * 改动屏幕的动作之前按能力的节奏停的结果:停了 [waitMs](算进这次调用的等待),停留里轻轻滚了 [idleScrolls] 下(只进运行记录);
+ * [stop] 不为 null 时这个动作不做,它就是这次调用的结果(到了屏数上限、停留中用户插了话)。
+ */
+internal class Paced(val waitMs: Long = 0, val idleScrolls: Int = 0, val stop: ToolExecution? = null) {
+    companion object {
+        val NONE = Paced()
+    }
 }
 
 /** 能力放进工具上下文的东西的键;核心不认识里面是什么。 */

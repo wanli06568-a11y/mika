@@ -99,10 +99,11 @@ data class ScreenSnapshot(
  * [picker]:开出来的是系统问「用哪一个打开」的窗口(同一 App 装了两份、几个 App 都能打开等)。它从不挪:留给用户在自己屏上选,
  * 选之前任务停着等;[app] 是问的那个 App 的名字(认得出时)。
  * [closed]:用户把那个问题关了,什么也没打开。[byUser]:选出来的 App 要用户亲手处理,用户在自己屏上处理完、点了继续。
+ * [needsUser]:冒到主屏上的是要用户亲手处理的弹窗(登录验证、账号确认、付款确认一类),留在主屏给他们点。
  */
 data class OpenedElsewhere(
     val packageName: String, val app: String?, val pulledBack: Boolean, val inProfile: String? = null, val picker: Boolean = false,
-    val closed: Boolean = false, val byUser: Boolean = false,
+    val closed: Boolean = false, val byUser: Boolean = false, val needsUser: Boolean = false,
 ) {
     /** 此刻还在用户的主屏上(用户正用着,或系统正在问用户)。 */
     val onUserScreen: Boolean get() = !pulledBack && !closed && !byUser
@@ -112,6 +113,7 @@ data class OpenedElsewhere(
         app?.let { put("app", it) }
         put("pulledBack", pulledBack)
         if (onUserScreen) put("onUserScreen", true)
+        if (needsUser) put("needsUser", true)
         inProfile?.let { put("inProfile", it) }
         if (picker) put("picker", true)
         if (closed) put("closed", true)
@@ -148,7 +150,9 @@ sealed interface ActionResult {
      * [coveredBy] 打开的 App 已在最上面,但另一个包的窗口盖在它上面(权限弹窗、账号选择器)时那个包;
      * [chooser] 打开 App 后系统先问「打开哪一个」(同一 App 装了两份等),选好之前 App 还没到前台;
      * [opened] 这个动作让一个 App 开到了用户的主屏上(见 [OpenedElsewhere]);
-     * [inProfile] 刚到前台的 App 装了两份时开的是哪一份(见 [OpenedElsewhere.inProfile]),只在系统问过打开哪一个之后报。
+     * [inProfile] 刚到前台的 App 装了两份时开的是哪一份(见 [OpenedElsewhere.inProfile]):系统问过打开哪一个之后,
+     * 以及目标 App 列出过另一份、或要的就是另一份时每次都报;[profileUser] 是此刻屏上那一份所属的用户编号,
+     * [requestedUser] 是打开时要的那份用户(要的是本来那份为 null)。
      */
     data class Ok(
         val changed: Boolean? = null,
@@ -164,6 +168,8 @@ sealed interface ActionResult {
         val chooser: LaunchChoice? = null,
         val opened: OpenedElsewhere? = null,
         val inProfile: String? = null,
+        val profileUser: Int? = null,
+        val requestedUser: Int? = null,
     ) : ActionResult
 
     /** 引用已过期时 reason 为 "ref_expired"。[hint] 是端口的补充说明(例如盖住目标的是什么),原样附在错误说明后。 */
@@ -200,11 +206,24 @@ interface ScreenPort {
         tapXY(x, y).let { if (it is ActionResult.Ok) clearText(null, null) else it }
     suspend fun scroll(ref: String?, snapshotId: String?, down: Boolean): ActionResult
     suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long = DEFAULT_SWIPE_MS): ActionResult
+
+    /**
+     * 停留时顺手轻轻滚一下([fraction] 个屏幕或视口高度,正为往下),不点任何东西。网页走和往下滚一样的原生输入、不移动指针;
+     * 手机在占了大半屏的那块可滚动内容上慢慢划一小段。这会儿不便滚(有弹框、输入法开着、输入框拿着焦点、看不到可滚的内容)时不滚,
+     * 返回 false;滚了为 true。默认不滚。
+     */
+    suspend fun idleScroll(fraction: Double): Boolean = false
     /** 多点手势；每条路径是按时间先后排列的像素点，所有手指同时移动。 */
     suspend fun gesture(paths: List<List<Pair<Int, Int>>>, durationMs: Long): ActionResult = ActionResult.Failed("unsupported")
     suspend fun back(): ActionResult
     suspend fun pressKey(keyCode: Int): ActionResult
     suspend fun openApp(packageName: String, cold: Boolean = false): ActionResult
+
+    /**
+     * 打开装在另一份用户 [userId] 里的那份 [packageName](分身、工作资料,见 [appCopies]);其余同 [openApp]。
+     * 那份用户不能用、或那里没装这个 App 时失败 copy_not_found。不支持的端口返回 unsupported。
+     */
+    suspend fun openAppCopy(packageName: String, userId: Int, cold: Boolean = false): ActionResult = ActionResult.Failed("unsupported")
 
     /**
      * 在 Agent 的屏上打开一个链接或安卓设置页([action] 为 null 时按 VIEW 打开 [uri]);[packageName] 限定由哪个 App 打开。
@@ -217,6 +236,19 @@ interface ScreenPort {
      * 这个 App 没有收文字分享的页面时失败 cannot_share;其余和 [openApp] 一样(建屏、用户正在用、系统问打开哪一个)。不支持的端口返回 unsupported。
      */
     suspend fun shareText(packageName: String, text: String): ActionResult = ActionResult.Failed("unsupported")
+
+    /**
+     * 经安卓标准接口做一个系统动作(见 [SystemAction]):先查有没有 App 接,没有报 not_supported;有就在 Agent 的屏上交给它
+     * (第一次用时建屏,用户正在主屏用那个 App 时不打开)。不支持的端口返回 unsupported。
+     */
+    suspend fun systemAction(action: SystemAction): SystemActionResult = SystemActionResult(ActionResult.Failed("unsupported"))
+
+    /**
+     * 把编号 [ref] 那个滚轮(或滚轮里的一项)转到显示 [value]:在端口里一次做完(能输入就输入,能无障碍滚就一格格滚,
+     * 都不行就按一格多高拖),每做几下读回一次。不支持的端口报 unsupported。
+     */
+    suspend fun setWheel(ref: String, snapshotId: String, value: String): WheelOutcome =
+        WheelOutcome(false, null, null, 0, "none", error = "unsupported")
     suspend fun waitStable(timeoutMs: Long): Boolean
     /**
      * 等这块屏的下一次界面变化,最多 [timeoutMs];等到返回 true。事件驱动的端口在有界面事件(无障碍事件、页面变动)时醒来,
@@ -236,6 +268,14 @@ interface ScreenPort {
 
     /** 也装在这台手机另一份用户里(分身、工作资料等)的 App:包名 → 那几份用户的名字。查不到或不支持时为空。 */
     suspend fun otherProfiles(): Map<String, List<String>> = emptyMap()
+
+    /** 能打开的另一份 App(装在分身、工作资料一类的另一份用户里,规则见 [AppCopies]);查不到或不支持时为空。 */
+    suspend fun appCopies(): List<AppCopy> = emptyList()
+
+    /**
+     * 任务结束时这份 App 怎么办(见 [AfterTaskMarks]):只记下,此刻什么也不动。不支持的端口(没有任务结束时的去留)为 null。
+     */
+    val afterTask: AfterTaskMarks? get() = null
 
     /** 屏幕诊断;端口不支持时为 null,由调用方按元素列表粗判。 */
     suspend fun checkScreen(): ScreenCheck? = null
