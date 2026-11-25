@@ -1,9 +1,9 @@
 package com.wangzan101.mika.core.tool
 
-import com.wangzan101.mika.core.gate.ConfirmationRequest
-import com.wangzan101.mika.core.observation.Observation
-import com.wangzan101.mika.core.observation.Place
-import com.wangzan101.mika.core.risk.IrrevAction
+import com.wangzan101.mika.core.safety.gate.ConfirmationRequest
+import com.wangzan101.mika.core.screen.observation.Observation
+import com.wangzan101.mika.core.screen.observation.Place
+import com.wangzan101.mika.core.safety.gate.IrrevAction
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
@@ -30,6 +30,7 @@ sealed interface Outcome {
  * [observations]:这次调用读到的东西(能力给出,见 [Observation]);分发器记进证据账本后换成账本里那几条(带编号)。
  * [place]:这次调用之后任务在哪(由能力一侧按结果给出);没说为 null(沿用之前的)。
  * [waitMs]:这次调用里能力为了节奏有意停下的时间(网页一页没看够就换页时补的停留);运行记录把它算作等待。
+ * [followUpTools]: actions made useful by this result; expose their tools for the next model turn.
  */
 class ToolExecution(
     val content: JsonObject,
@@ -44,6 +45,8 @@ class ToolExecution(
     val observations: List<Observation> = emptyList(),
     val place: Place? = null,
     val waitMs: Long = 0,
+    val followUpTools: List<Verb> = emptyList(),
+    val playback: com.wangzan101.mika.core.run.record.PlaybackCapture? = null,
 ) {
     val image: ByteArray? get() = images.firstOrNull()
 
@@ -52,8 +55,10 @@ class ToolExecution(
         content: JsonObject = this.content, changed: Boolean? = this.changed, frame: ByteArray? = this.frame, images: List<ByteArray> = this.images,
         record: JsonObject = this.record, screenElements: JsonArray? = this.screenElements, imageIds: List<Int?> = this.imageIds,
         observations: List<Observation> = this.observations, place: Place? = this.place, waitMs: Long = this.waitMs,
+        followUpTools: List<Verb> = this.followUpTools,
+        playback: com.wangzan101.mika.core.run.record.PlaybackCapture? = this.playback,
     ) = ToolExecution(content, changed = changed, outcome = outcome, frame = frame, images = images, record = record,
-        screenElements = screenElements, imageIds = imageIds, observations = observations, place = place, waitMs = waitMs)
+        screenElements = screenElements, imageIds = imageIds, observations = observations, place = place, waitMs = waitMs, followUpTools = followUpTools, playback = playback)
 
     /** 另读到了 [more]。 */
     fun observing(vararg more: Observation?): ToolExecution = more.filterNotNull().let { if (it.isEmpty()) this else with(observations = observations + it) }
@@ -87,8 +92,12 @@ enum class HandBackOutcome { complete, skipped, timeout, aborted }
 data class HandBack(
     val outcome: HandBackOutcome, val userFinished: Boolean = false,
     val durationMs: Long? = null, val inputCount: Int? = null, val stoppedAt: String? = null,
+    /** 网页接管交回时,用户最后停在那里的地址;App 接管为 null。 */
+    val url: String? = null,
     /** 用户交回时写的备注(用户原话,可作记忆的出处)。 */
     val note: String? = null,
+    /** 用户已交回操作权,目标 App 恢复失败时给模型的原因。 */
+    val appReturnFailure: String? = null,
 )
 
 

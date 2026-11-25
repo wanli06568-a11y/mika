@@ -3,15 +3,16 @@ package com.wangzan101.mika.capsule
 import org.junit.Rule
 import com.wangzan101.mika.i18n.ChineseTexts
 import com.wangzan101.mika.cap.web.KeptPage
+import com.wangzan101.mika.task.ConfirmationNotifier
 import com.wangzan101.mika.core.agent.FailKind
 import com.wangzan101.mika.core.agent.GateReason
 import com.wangzan101.mika.core.agent.TaskState
-import com.wangzan101.mika.core.gate.ConfirmationRequest
-import com.wangzan101.mika.core.risk.IrrevAction
-import com.wangzan101.mika.ui.Exchange
-import com.wangzan101.mika.ui.ExchangeStatus
-import com.wangzan101.mika.ui.StepRow
-import com.wangzan101.mika.ui.StepState
+import com.wangzan101.mika.core.safety.gate.ConfirmationRequest
+import com.wangzan101.mika.core.safety.gate.IrrevAction
+import com.wangzan101.mika.chat.ui.Exchange
+import com.wangzan101.mika.chat.ui.ExchangeStatus
+import com.wangzan101.mika.chat.ui.StepRow
+import com.wangzan101.mika.chat.ui.StepState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -137,7 +138,7 @@ class CapsuleCardModelTest {
         assertEquals(CardContent.Confirm("要你同意:下单", "在 购物\n金额:¥19.9", 42), CapsuleCards.content(card("a", s, CapsuleKind.NeedConfirm, exchange = ex)))
         // 还没有这一问一答时也能同意:编号和对话页、通知用的同一个
         val raw = CapsuleCards.content(card("a", s, CapsuleKind.NeedConfirm)) as CardContent.Confirm
-        assertEquals(System.identityHashCode(s), raw.key)
+        assertEquals(ConfirmationNotifier.requestKey(s), raw.key)
         assertTrue(raw.body.contains("金额:¥19.9"))
     }
 

@@ -28,6 +28,20 @@ class ModelOptionsTest {
         assertFalse(o.canBeMain)
     }
 
+    @Test fun userSaidVisionWinsOverListingAndPreset() {
+        assertTrue("没写 + 用户说能看", ModelOptions.seesImages(stored = false, userSaid = true, usedForVision = false))
+        assertTrue("看图也用它", ModelOptions.seesImages(stored = false, userSaid = null, usedForVision = true))
+        assertFalse("用户说不能看", ModelOptions.seesImages(stored = true, userSaid = false, usedForVision = true))
+        assertFalse("列表说不能看,用户没改", ModelOptions.seesImages(stored = false, userSaid = null, usedForVision = false))
+        val p = Provider("p", "P", ProviderConfig.Kind.OpenAiCompat, "https://relay.test/v1",
+            models = listOf(ListedModel("a"), ListedModel("b", vision = false)), visionOverrides = mapOf("a" to true))
+        val (a, b) = ModelOptions.ofProvider(p, emptyList())
+        assertTrue(a.canSee)
+        assertEquals(true, a.visionByUser)
+        assertFalse(b.canSee)
+        assertEquals(null, b.visionByUser)
+    }
+
     @Test fun toolCapableFirstAndDefaultMainPrefersConfirmed() {
         val listed = listOf(ListedModel("embed", toolCalls = false), ListedModel("guess"), ListedModel("sure", toolCalls = true))
         val options = ModelOptions.merge(listed, base)
@@ -212,5 +226,28 @@ class ModelOptionsTest {
         assertEquals(listOf("a", "b", "typed"), options.map { it.id })
         assertTrue("已有配置的用配置里的能力", options.first { it.id == "b" }.capabilities.vision)
         assertEquals(emptyList<String>(), ModelOptions.ofProvider(p.copy(models = null), emptyList()).map { it.id })
+    }
+
+    @Test fun ttsMarksDoNotFilterThePicker() {
+        val ids = listOf("fishaudio/drama-3-int4", "renamed-model", "vendor/chat-tts", "speech-endpoint")
+        val catalog = ids.map { ListedModel(it, chat = false) }
+        val p = Provider("p", "Local", ProviderConfig.Kind.OpenAiCompat, "https://local.test/v1", models = catalog)
+        assertEquals(ids.toSet(), ModelOptions.ofProvider(p, emptyList()).map { it.id }.toSet())
+        for (id in ids) {
+            val marked = p.copy(ttsModels = setOf(id))
+            assertEquals(ids.toSet(), ModelOptions.ofProvider(marked, emptyList()).map { it.id }.toSet())
+            assertEquals(ids.toSet(), ModelOptions.ofProvider(marked, emptyList(), includeTts = true).map { it.id }.toSet())
+        }
+    }
+
+    /** 只写了 Mika 不会说的协议的模型:对话用途的选择器不列(调用必然失败),服务商详情和声音模型照样列出。 */
+    @Test fun unusableModelsAreHiddenFromRolePickersButShownInTheFullCatalog() {
+        val p = Provider("p", "Local", ProviderConfig.Kind.OpenAiCompat, "https://local.test/v1", models = listOf(
+            ListedModel("chat-model"),
+            ListedModel("speech-only", unsupportedApis = listOf("/v1/audio/speech")),
+            ListedModel("routed", unsupportedApis = listOf("/v1/audio/speech"), endpoint = ModelEndpoint(ModelProtocol.ChatCompletions, "https://local.test/v1")),
+        ))
+        assertEquals(listOf("chat-model", "routed"), ModelOptions.ofProvider(p, emptyList()).map { it.id })
+        assertEquals(setOf("chat-model", "speech-only", "routed"), ModelOptions.ofProvider(p, emptyList(), includeTts = true).map { it.id }.toSet())
     }
 }

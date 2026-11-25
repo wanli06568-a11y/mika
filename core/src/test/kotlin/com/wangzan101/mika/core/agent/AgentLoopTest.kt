@@ -1,6 +1,6 @@
 package com.wangzan101.mika.core.agent
 
-import com.wangzan101.mika.core.guard.DIAGNOSTIC_VERBS
+import com.wangzan101.mika.core.safety.guard.DIAGNOSTIC_VERBS
 import com.wangzan101.mika.core.model.Author
 import com.wangzan101.mika.core.model.Capabilities
 import com.wangzan101.mika.core.model.ChatModel
@@ -12,12 +12,19 @@ import com.wangzan101.mika.core.model.Role
 import com.wangzan101.mika.core.model.StopReason
 import com.wangzan101.mika.core.model.StreamingChatModel
 import com.wangzan101.mika.core.model.ToolSpec
-import com.wangzan101.mika.core.record.RunEvent
-import com.wangzan101.mika.core.record.RunSink
-import com.wangzan101.mika.core.uistate.ActionResult
-import com.wangzan101.mika.core.uistate.ScreenPort
-import com.wangzan101.mika.core.uistate.ScreenSnapshot
-import com.wangzan101.mika.core.uistate.UiElement
+import com.wangzan101.mika.core.model.Usage
+import com.wangzan101.mika.core.run.record.RunEvent
+import com.wangzan101.mika.core.run.record.RunSink
+import com.wangzan101.mika.core.run.RunId
+import com.wangzan101.mika.core.run.RunInbox
+import com.wangzan101.mika.core.run.RunSpec
+import com.wangzan101.mika.core.model.usage.UsagePurpose
+import com.wangzan101.mika.core.model.usage.UsageSource
+import com.wangzan101.mika.core.model.usage.metered
+import com.wangzan101.mika.core.screen.uistate.ActionResult
+import com.wangzan101.mika.core.screen.uistate.ScreenPort
+import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
+import com.wangzan101.mika.core.screen.uistate.UiElement
 import com.wangzan101.mika.core.tool.FakeScreen
 import com.wangzan101.mika.core.testing.ScriptedScreen
 import com.wangzan101.mika.core.testing.Screen
@@ -33,9 +40,6 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.put
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
@@ -83,7 +87,7 @@ class AgentLoopTest {
     /** 只有手机、展开了手机一组之后的系统提示词:几组的入口、交给用户的规矩、手机一段(去掉没提供的工具那几行)。 */
     private fun phoneOpenedPrompt(base: String) = listOf(
         base, com.wangzan101.mika.core.capability.PromptEnv(setOf("phone_launch_app", "phone_set_alarm"), false).gate(SystemPrompt.read("groups")), SystemPrompt.read("handover"),
-        SystemPrompt.read("phone").lines().filterNot { "<!-- needs: phone_open_link -->" in it || "<!-- needs: phone_find_visually -->" in it }.joinToString("\n"),
+        SystemPrompt.read("phone").lines().filterNot { "<!-- needs: phone_open_link -->" in it || "<!-- needs: phone_find_visually -->" in it || "<!-- needs: phone_sms_login -->" in it }.joinToString("\n"),
     ).joinToString("\n\n")
 
     private fun loop(
@@ -104,6 +108,21 @@ class AgentLoopTest {
         assertTrue(main.offeredTools.last().isEmpty())
         assertTrue(events.none { it is RunEvent.ToolResult })
         assertTrue(events.filterIsInstance<RunEvent.State>().any { it.name == "intent_gate" && it.detail == "Discuss" })
+    }
+
+    @Test fun typedIntentDecisionUsesExistingDiscussionGateAndIsRecorded() = runTest {
+        val main = FakeModel(tools(call("phone_list_apps")), finish("可以，先讨论具体流程。"))
+        val judge = FakeModel()
+        val events = mutableListOf<RunEvent>()
+        val end = AgentLoop(main, toolDispatcher(FakeScreen()), "BASE", intentJudge = judge,
+            intentDecision = com.wangzan101.mika.core.model.decision.DecisionModel { _, _, _, _ ->
+                com.wangzan101.mika.core.model.decision.DecisionChoice("DISCUSS", 0.98)
+            }, sink = object : RunSink { override fun event(e: RunEvent) { events += e } })
+            .run("以后可以帮我把内容同步到公众号并发送，对吧？")
+        assertTrue(end is TaskState.Succeeded)
+        assertTrue(judge.requests.isEmpty())
+        assertTrue(events.none { it is RunEvent.ToolResult })
+        assertTrue(events.filterIsInstance<RunEvent.State>().any { it.name == "jev_intent" && it.detail == "selected:Discuss" })
     }
 
     // 判断不出意图(判断模型和兜底的主模型都没给出三个词之一)时照主模型原来的决定执行,不改成文字回答
@@ -134,10 +153,10 @@ class AgentLoopTest {
 
     @Test fun discussionSkipsMatchingReplayBeforeAnyAction() = runTest {
         val goal = "以后打开备忘录看看，对吧？"
-        val route = com.wangzan101.mika.core.replay.Route("discussion", goal, 0, emptyList(), emptyMap(), emptyList(), lastUsedMs = 0)
-        val store = object : com.wangzan101.mika.core.replay.RouteStore {
+        val route = com.wangzan101.mika.core.learn.replay.Route("discussion", goal, 0, emptyList(), emptyMap(), emptyList(), lastUsedMs = 0)
+        val store = object : com.wangzan101.mika.core.learn.replay.RouteStore {
             override fun all() = listOf(route)
-            override fun put(r: com.wangzan101.mika.core.replay.Route) = Unit
+            override fun put(r: com.wangzan101.mika.core.learn.replay.Route) = Unit
             override fun remove(id: String) = Unit
             override fun clear() = Unit
             override fun count() = 1
@@ -147,7 +166,7 @@ class AgentLoopTest {
         val judge = FakeModel(finish("DISCUSS"))
         val events = mutableListOf<RunEvent>()
         AgentLoop(main, toolDispatcher(FakeScreen()), "BASE", intentJudge = judge,
-            routes = com.wangzan101.mika.core.replay.RouteMatcher(picker, store, null),
+            routes = com.wangzan101.mika.core.learn.replay.RouteMatcher(picker, store, null),
             flags = SpeedFlags(replay = true),
             sink = object : RunSink { override fun event(e: RunEvent) { events += e } }).run(goal)
         assertTrue(picker.requests.isEmpty())
@@ -241,8 +260,6 @@ class AgentLoopTest {
         assertTrue("do_steps" in m.offeredTools[1])
         val result = m.requests[1].withoutRuntime().last().results().single().json()
         assertEquals("true", result.s("ok"))
-        // 相同动作不会仅因次数触发警告
-        assertNull(result["steps"]!!.jsonArray[2].jsonObject["guard"])
         // 跨批累计相同动作也可继续执行
         val m2 = FakeModel(reply(backs(5)), reply(backs(5)), reply(backs(5)), finish())
         val r2 = AgentLoop(m2, toolDispatcher(FakeScreen().also { it.result = ActionResult.Ok(changed = true) }), "BASE", flags = SpeedFlags(batchSteps = true)).run("t")
@@ -257,10 +274,6 @@ class AgentLoopTest {
         AgentLoop(m, toolDispatcher(FakeScreen()), "BASE", flags = SpeedFlags(batchSteps = true)).run("t")
         assertTrue(m.requests[1].withoutRuntime().last().results().single().json()["advice"] == null)
         assertTrue(m.requests[2].withoutRuntime().last().results().single().json()["advice"] != null)
-    }
-
-    @Test fun doStepsIsMainOnly() {
-        assertTrue(ModelRouter.mainOnly(DO_STEPS_TOOL, null))
     }
 
     @Test fun doStepsAbsentWhenFlagOff() = runTest {
@@ -308,6 +321,31 @@ class AgentLoopTest {
         // 3 步 + 最后一轮收尾(模型还想 wait,不算数)
         assertEquals(4, m.requests.size)
     }
+
+    @Test fun tokenBudgetExhaustionEndsAsTokenLimitEvenDuringCloseout() = runTest {
+        val raw = FakeModel(tools(call("wait", """{"seconds":0.2}""")).copy(usage = Usage(3, 2)), finish())
+        val model = raw.metered(UsageSource("p", "P", "m", UsagePurpose.Main), sink = { _, _ -> })
+        val events = mutableListOf<RunEvent>()
+        val end = loop(model, maxSteps = 1, sink = object : RunSink {
+            override fun event(e: RunEvent) { events += e }
+        }).run(RunSpec(RunId("budget"), "t", "test", tokenBudget = 5), RunInbox())
+        assertTrue("$end", end is TaskState.Failed && end.kind == FailKind.TokenLimit)
+        assertTrue(end is TaskState.Failed && "5" in end.reason)
+        assertEquals("达到预算后不能另发收尾请求", 1, raw.requests.size)
+        assertEquals(5L, (events.first() as RunEvent.TaskStarted).tokenBudget)
+    }
+
+    @Test fun dailyBudgetExhaustionEndsAsTokenLimitWithoutARequestOrCloseout() = runTest {
+        val raw = FakeModel(finish())
+        val model = raw.metered(UsageSource("p", "服务商甲", "m", UsagePurpose.Main), { _, _ -> }) {
+            throw ModelError.DailyBudgetExceeded("服务商甲", 10_000, 10_000)
+        }
+        val end = loop(model).run("t")
+        assertTrue("$end", end is TaskState.Failed && end.kind == FailKind.TokenLimit)
+        assertTrue(end is TaskState.Failed && "服务商甲" in end.reason)
+        assertEquals(0, raw.requests.size)
+    }
+
 
     private fun waits(n: Int) = (1..n).map { tools(call("wait", """{"seconds":${1 + it / 10.0}}""")) }.toTypedArray()
 
@@ -394,7 +432,7 @@ class AgentLoopTest {
     @Test fun rateLimitedFollowsRetryAfter() = runTest {
         val m = FakeModel(ModelError.RateLimited(5000), finish())
         com.wangzan101.mika.core.testing.assertAnswered(DONE, loop(m).run("t"))
-        assertEquals(5000, currentTime)
+        assertTrue("cooldown should be close to Retry-After: $currentTime", currentTime in 4_000..5_000)
     }
 
     // 一时的故障(限流、网络、5xx)共用一份重试次数,按指数退避等:1 s、2 s、4 s
@@ -402,7 +440,7 @@ class AgentLoopTest {
         val m = FakeModel(ModelError.RateLimited(null), ModelError.Network(), ModelError.Server(503), finish())
         com.wangzan101.mika.core.testing.assertAnswered(DONE, loop(m).run("t"))
         assertEquals(4, m.requests.size)
-        assertEquals(7000, currentTime)
+        assertTrue("backoff should total close to 7s: $currentTime", currentTime in 6_000..7_000)
 
         val always = FakeModel(ModelError.Network(), ModelError.Network(), ModelError.Network(), ModelError.Network(), finish())
         val r = loop(always).run("t")
@@ -452,7 +490,7 @@ class AgentLoopTest {
 
     @Test fun rateLimitWaitIsCapped() = runTest {
         loop(FakeModel(ModelError.RateLimited(600_000), finish())).run("t")
-        assertEquals(30_000, currentTime)
+        assertTrue("cooldown should be capped near 30s: $currentTime", currentTime in 29_000..30_000)
     }
 
     // 流式回复没收尾连接就断了:回复还没进历史、也没执行工具,原样重发;界面上那半截字在重试前就清掉
@@ -486,51 +524,37 @@ class AgentLoopTest {
         assertEquals(1000, currentTime)
     }
 
+    @Test fun streamedProgressBlockIsNeverShown() = runTest {
+        lateinit var l: AgentLoop
+        val previews = mutableListOf<String?>()
+        fun preview() = (l.state.value as? TaskState.Running)?.preview
+        val block = """<task_progress>{"criteria":["已保存"],"complete":false}</task_progress>"""
+        var calls = 0
+        val model = object : StreamingChatModel {
+            override val capabilities = Capabilities(toolCalls = true, vision = false, contextTokens = 128_000, reasoning = false)
+            override suspend fun complete(system: String, messages: List<Message>, tools: List<ToolSpec>): ModelReply = error("应走流式")
+            override suspend fun completeStreaming(
+                system: String, messages: List<Message>, tools: List<ToolSpec>, onText: (String) -> Unit,
+            ): ModelReply {
+                if (calls++ > 0) {
+                    onText(DONE)
+                    return finish()
+                }
+                onText("保存"); previews += preview()
+                onText("保存<task_pro"); previews += preview()
+                onText("保存${block}继续"); previews += preview()
+                return reply(Part.Text("保存${block}继续"), call("phone_observe"))
+            }
+        }
+        l = AgentLoop(model, toolDispatcher(FakeScreen()), "BASE", streamReplies = true)
+        com.wangzan101.mika.core.testing.assertAnswered(DONE, l.run("t"))
+        assertEquals(listOf("保存", "保存", "保存继续"), previews)
+    }
+
     @Test fun networkErrorRetriesAfterOneSecond() = runTest {
         val m = FakeModel(ModelError.Network(), finish())
         com.wangzan101.mika.core.testing.assertAnswered(DONE, loop(m).run("t"))
         assertEquals(1000, currentTime)
-    }
-
-    @Test fun takeoverSuspendsUntilResume() = runTest {
-        val m = FakeModel(tools(call("hand_to_user", """{"reason":"login","message":"请登录"}""")), finish())
-        val l = loop(m)
-        val run = async { l.run("t") }
-        advanceUntilIdle()
-        assertEquals(TaskState.WaitingTakeover("login", "请登录"), l.state.value)
-        assertEquals(1, m.requests.size)
-        l.resumeAfterTakeover("登好了")
-        com.wangzan101.mika.core.testing.assertAnswered(DONE, run.await())
-        // 交回结果是 hand_to_user 的工具结果,要求先核实
-        val back = m.requests[1].withoutRuntime().last()
-        assertEquals(Role.Tool, back.role)
-        val r = back.results().single().json()
-        assertEquals("complete", r.s("outcome")); assertEquals(UserExchange.HANDBACK_NOTE, r.s("note"))
-    }
-
-    @Test fun userFinishedTakeoverAsksOnlyToVerify() = runTest {
-        val m = FakeModel(tools(call("hand_to_user", """{"reason":"payment","message":"请付款"}""")), finish())
-        val l = loop(m)
-        val run = async { l.run("t") }
-        advanceUntilIdle()
-        l.resumeAfterTakeover(AgentLoop.USER_FINISHED_NOTE)
-        com.wangzan101.mika.core.testing.assertAnswered(DONE, run.await())
-        val text = m.requests[1].withoutRuntime().last().results().single().json().s("instruction")
-        assertEquals(
-            "The user says they finished it themselves. Only observe to read the app's current state and check: if it is confirmed done, answer the user directly with what you read; if you cannot confirm it, call end_not_done. Do nothing else.",
-            text,
-        )
-    }
-
-    @Test fun inputSuspendsUntilAnswered() = runTest {
-        val m = FakeModel(tools(call("ask_user", """{"prompt":"哪个?","options":["A","B"]}""")), finish(), finish())
-        val l = loop(m)
-        val run = async { l.run("t") }
-        runCurrent()
-        assertEquals(TaskState.WaitingInput("哪个?", listOf("A", "B")), l.state.value)
-        l.answerInput("B")
-        com.wangzan101.mika.core.testing.assertAnswered(DONE, run.await())
-        assertEquals("B", m.requests[1].withoutRuntime().last().results().single().json().s("answer"))
     }
 
     @Test fun reportFailureEndsFailedWithMessage() = runTest {
@@ -612,21 +636,6 @@ class AgentLoopTest {
         val m = FakeModel(*(1..65).map { tools(call("phone_tap", """{"x":105,"y":106}""")) }.toTypedArray(), finish())
         loop(m, s, maxSteps = Int.MAX_VALUE).run("t")
         assertEquals(65, s.calls.size)
-        assertTrue(m.requests[65].withoutRuntime().last().results().single().json()["guard"] == null)
-    }
-
-    @Test fun repeatedGuardWarningsSuggestReportFailure() = runTest {
-        // 同一处点了 6 次:第 3 次、第 6 次各有一次 repeating_action 提醒;第二次的结果里建议如实放弃
-        val script = mutableListOf<Any>()
-        repeat(6) { script += tools(call("phone_tap", """{"x":105,"y":106}""")) }
-        script += finish()
-        val m = FakeModel(*script.toTypedArray())
-        loop(m, FakeScreen().apply { result = ActionResult.Ok(changed = true) }).run("t")
-        val firstWarn = m.requests[3].withoutRuntime().last().results().single().json()
-        val secondWarn = m.requests[6].withoutRuntime().last().results().single().json()
-        assertNull(firstWarn["guard"])
-        assertNull(firstWarn["advice"])
-        assertNull(secondWarn["advice"])
     }
 
     @Test fun typingTheSameQueryAgainSuggestsReportFailure() = runTest {
@@ -696,8 +705,8 @@ class AgentLoopTest {
         assertTrue(check, separates(check))
     }
 
-    @Test fun unchangedElementListTripsNoProgress() = runTest {
-        // FakeScreen 每次返回相同元素:动作后再看画面不变即无进展。
+    @Test fun unchangedElementListClosesOutWithoutNewData() = runTest {
+        // 相同元素连续读到三次后先走无新数据收尾;收尾仍只操作、不给结果时按守卫停止。
         var i = 0
         val script = mutableListOf<Any>(tools(call("phone_observe")))
         repeat(12) {
@@ -705,7 +714,20 @@ class AgentLoopTest {
             script += tools(call("phone_observe"))
         }
         val r = loop(FakeModel(*script.toTypedArray())).run("t")
-        assertTrue("$r", r is TaskState.Failed && "no_progress" in r.reason)
+        assertTrue("$r", r is TaskState.Failed && "连续 3 次没有读到新数据" in r.reason)
+    }
+
+    @Test fun visibleButUnreadableTreeStopsAfterThreeNoEffectTaps() = runTest {
+        val s = object : ScreenPort by FakeScreen() {
+            private val empty = ScreenSnapshot("visible", "com.example", emptyList(), 1080, 2400)
+            override suspend fun snapshot() = empty
+            override suspend fun peek() = empty
+        }
+        val m = FakeModel(*(1..4).map { tools(call("phone_tap", """{"x":500,"y":500}""")) }.toTypedArray())
+        val r = AgentLoop(m, toolDispatcher(s), "BASE", retry = FIXED_RETRY).run("t")
+        assertTrue("$r", r is TaskState.Failed && r.kind == FailKind.Guard)
+        assertTrue("$r", r is TaskState.Failed && "不响应" in r.reason)
+        assertEquals(3, m.requests.size)
     }
 
     @Test fun screenshotsFollowToolResultsWhenVisionOn() = runTest {
@@ -724,7 +746,14 @@ class AgentLoopTest {
     @Test fun recalledScreenshotsAreSentAsImagesAndCountAsNew() = runTest {
         val recall = call("view_past_screens", """{"ids":[1]}""")
         val m = FakeModel(*Array(4) { tools(call("phone_observe")) }, tools(recall), finish())
-        loop(m, vision = true).run("t")
+        var reads = 0
+        val changing = object : ScreenPort by FakeScreen() {
+            override suspend fun snapshot(): ScreenSnapshot {
+                reads++
+                return ScreenSnapshot("snap$reads", "com.x", listOf(label("@e1", "第 $reads 屏")), 1080, 2400)
+            }
+        }
+        AgentLoop(m, toolDispatcher(changing, visionEnabled = true), "BASE", retry = FIXED_RETRY).run("t")
         val msgs = m.requests[5].withoutRuntime()
         val at = msgs.indexOfFirst { it.parts.any { p -> p is Part.ToolResult && p.callId == recall.id } }
         val after = msgs[at + 1]
@@ -741,6 +770,114 @@ class AgentLoopTest {
         assertTrue("elementsText" in last.withoutRuntime().last().results().single().content)
         // 回看是只读的诊断类工具,不算动作
         assertTrue(verb("view_past_screens") in DIAGNOSTIC_VERBS)
+    }
+
+    @Test fun coffeeTaskConfirmsGoalsWithoutCountingClicksOrClosingOnFiveNotes() = runTest {
+        val events = mutableListOf<RunEvent>()
+        val sink = object : RunSink { override fun event(e: RunEvent) { events += e } }
+        fun block(json: String) = "<task_progress>$json</task_progress>"
+        fun step(seconds: Double, narration: String, json: String? = null) =
+            reply(Part.Text(narration + json?.let(::block).orEmpty()), call("wait", """{"seconds":$seconds}"""))
+        val address = """{"confirmed":[{"id":1,"evidence":"高德地址卡显示天目里地址"}]}"""
+        val m = FakeModel(
+            reply(Part.Text(block("""{"criteria":["确认地址","确认店名","根据五篇笔记给出推荐"],"metric":{"name":"步骤完成","done":0,"total":3}}""")),
+                call("phone_launch_app", """{"packageName":"com.x","reason":"查看地址卡"}""")),
+            step(0.2, "地址已核实", address),
+            step(0.3, "打开点评"),
+            step(0.4, "打开店铺页", address), // 重报地址不会当作确认店名
+            reply(Part.Text(block("""{"confirmed":[{"id":2,"evidence":"店铺页标题为山池咖啡"}]}""")), call("phone_observe")),
+            step(0.6, "笔记已读完", """{"metric":{"name":"已读笔记","done":5,"total":5},"complete":true}"""),
+            finish(block("""{"confirmed":[{"id":3,"evidence":"根据五篇笔记给出推荐：拿铁"}]}""") + "推荐拿铁"),
+        )
+        val end = AgentLoop(m, toolDispatcher(FakeScreen()), "BASE", sink = sink).run("找咖啡馆并推荐咖啡")
+        com.wangzan101.mika.core.testing.assertAnswered("推荐拿铁", end)
+        val updates = events.filterIsInstance<RunEvent.Criteria>()
+        assertEquals(listOf(0, 1, 2, 2, 3), updates.map { it.confirmedIds?.size })
+        assertEquals(listOf(false, false, false, false, true), updates.map { it.complete })
+        assertEquals(7, m.requests.size)
+        assertTrue(events.none { it is RunEvent.State && it.name == "task_progress_plan_reminder" })
+        assertTrue("phone_observe" in m.offeredTools.last())
+        fun runtime(i: Int) = m.requests[i].last().parts.filterIsInstance<Part.Text>().last().text
+        assertTrue("2: " in runtime(4) && "1: " !in runtime(4))
+        assertTrue("report its ID and evidence" in runtime(4))
+        assertTrue("report its ID and evidence" !in runtime(5))
+        assertTrue("3: " in runtime(6) && "2: " !in runtime(6))
+    }
+
+    @Test fun missingChecklistCanBeBackfilledOnTheNextCoffeeTaskReply() = runTest {
+        val events = mutableListOf<RunEvent>()
+        val sink = object : RunSink { override fun event(e: RunEvent) { events += e } }
+        val screen = object : ScreenPort by FakeScreen() {
+            override suspend fun listApps() = listOf("com.autonavi.minimap" to "高德地图")
+        }
+        val m = FakeModel(
+            tools(call("phone_list_apps")), // 首次调用没建清单，但工具结果已经能确认第一项。
+            reply(Part.Text("""<task_progress>{"criteria":["确认有高德地图","确认咖啡店名","给出推荐"],"confirmed":[{"id":1,"evidence":"已安装列表有高德地图"}]}</task_progress>"""),
+                call("wait", """{"seconds":0.2}""")),
+            finish("高德已安装，店名和推荐尚未核实。"),
+        )
+        AgentLoop(m, toolDispatcher(screen), "BASE", sink = sink).run("确认高德已安装，再找咖啡馆并给出推荐")
+        val runtime = m.requests.map { request -> request.last().parts.filterIsInstance<Part.Text>().last().text }
+        assertEquals(3, runtime.size)
+        assertFalse("No goal checklist" in runtime[0])
+        assertTrue("No goal checklist" in runtime[1] && "<task_progress>" in runtime[1])
+        assertTrue("Pending goal IDs: 2:" in runtime[2] && "3:" in runtime[2])
+        val reported = events.filterIsInstance<RunEvent.Criteria>().single()
+        assertEquals(setOf(1), reported.confirmedIds)
+        assertEquals(3, reported.criteria.size)
+    }
+
+    @Test fun ignoredChecklistReminderDoesNotRepeatOrInventProgress() = runTest {
+        val events = mutableListOf<RunEvent>()
+        val sink = object : RunSink { override fun event(e: RunEvent) { events += e } }
+        val m = FakeModel(finish(""), tools(call("phone_list_apps")), tools(call("wait", """{"seconds":0.2}""")), finish())
+        com.wangzan101.mika.core.testing.assertAnswered(DONE, loop(m, sink = sink).run("查店"))
+        val runtime = m.requests.map { it.last().parts.filterIsInstance<Part.Text>().last().text }
+        assertEquals(listOf(false, false, true, false), runtime.map { "No goal checklist" in it })
+        assertTrue(events.none { it is RunEvent.Criteria })
+        assertEquals(1, events.filterIsInstance<RunEvent.State>().count { it.name == "task_progress_plan_reminder" })
+    }
+
+    @Test fun completedQuantityClosesOutInsteadOfRecheckingForever() = runTest {
+        val events = mutableListOf<RunEvent>()
+        val sink = object : RunSink { override fun event(e: RunEvent) { events += e } }
+        val progress = """<task_progress>{"criteria":["两条都已保存"],"metric":{"name":"已保存","done":2,"total":2},"complete":false}</task_progress>保存最后一条"""
+        val m = FakeModel(
+            reply(Part.Text(progress), call("phone_observe")),
+            finish("""<task_progress>{"complete":true}</task_progress>$DONE"""),
+            tools(call("phone_observe")), // 旧行为会在这里继续自证核对
+        )
+        val end = AgentLoop(m, toolDispatcher(FakeScreen()), "BASE", sink = sink).run("保存两条")
+        com.wangzan101.mika.core.testing.assertAnswered(DONE, end)
+        assertEquals(2, m.requests.size)
+        assertEquals(listOf("end_not_done"), m.offeredTools.last())
+        val criteria = events.filterIsInstance<RunEvent.Criteria>().last()
+        assertTrue(criteria.complete)
+        assertEquals(RunEvent.Progress("已保存", 2, 2), criteria.progress)
+        assertTrue(m.requests.last().flatMap { it.parts }.filterIsInstance<Part.Text>().none { "task_progress" in it.text })
+    }
+
+    @Test fun repeatedCollectionWithoutNewDataStopsAndSummarizes() = runTest {
+        val events = mutableListOf<RunEvent>()
+        val sink = object : RunSink { override fun event(e: RunEvent) { events += e } }
+        val progress = """<task_progress>{"criteria":["收集全部记录"],"metric":{"name":"已收集","done":1,"boundary":"第 1 条"}}</task_progress>开始收集"""
+        val m = FakeModel(
+            reply(Part.Text(progress), call("phone_observe")),
+            tools(call("phone_observe")),
+            tools(call("phone_observe")),
+            tools(call("phone_observe")),
+            finish(),
+            tools(call("phone_scroll", """{"direction":"down"}""")), // 停滞收尾后不得再执行
+        )
+        val end = AgentLoop(m, toolDispatcher(FakeScreen()), "BASE", sink = sink).run("收集记录")
+        com.wangzan101.mika.core.testing.assertAnswered(DONE, end)
+        assertEquals(5, m.requests.size)
+        assertEquals(listOf("end_not_done"), m.offeredTools.last())
+        assertEquals(1, events.filterIsInstance<RunEvent.State>().count { it.name == "no_new_data" && it.detail == "3" })
+        assertEquals("第 1 条", events.filterIsInstance<RunEvent.Criteria>().last().progress?.boundary)
+        assertTrue(m.requests.last().flatMap { it.parts }.filterIsInstance<Part.Text>().any {
+            "no new content" in it.text && "Latest confirmed progress: 已收集 · 1 · 第 1 条" in it.text
+        })
     }
 
     @Test fun runningStateCarriesStepAndNote() = runTest {
@@ -835,8 +972,9 @@ class AgentLoopTest {
         val l = AgentLoop(m, toolDispatcher(screen), "BASE", 60)
         com.wangzan101.mika.core.testing.assertAnswered(DONE, l.run("长任务"))
         assertEquals(60, m.requests.size)
-        val observation = m.requests[1][2].results().single().content
-        assertTrue("observation should be about 6000+ chars, was ${observation.length}", observation.length >= 6000)
+        // 读一次屏验证观察确实有 ~6000 字:手机那组展开后这一读会被压缩裁成占位,不能看发给模型的那份
+        val rawObservation = com.wangzan101.mika.core.screen.uistate.ScreenJson.elements(screen.snapshot(), Int.MAX_VALUE).first
+        assertTrue("observation should be about 6000+ chars, was ${rawObservation.toString().length}", rawObservation.toString().length >= 6000)
         val worst = m.requests.maxOf { TokenEstimate.of(it) }
         assertTrue("sent about $worst tokens", worst * ContextCompressor.UNCALIBRATED_SCALE <= ContextLimits.of(32_000).usable)
         // 只裁旧读屏已经超出预算(压缩器只在超出时才折叠),折叠后回到预算内

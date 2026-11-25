@@ -7,8 +7,6 @@ import com.wangzan101.mika.core.model.Role
 import com.wangzan101.mika.core.model.StopReason
 import com.wangzan101.mika.core.tool.FakeScreen
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,7 +20,7 @@ class AgentLoopFrameTest {
     private fun finish() = com.wangzan101.mika.core.testing.answerReply("done")
     private fun images(msgs: List<Message>) = msgs.flatMap { it.parts }.filterIsInstance<Part.Image>()
 
-    @Test fun actionResultFollowedByFrameAndOnlyLatestImageSent() = runTest {
+    @Test fun actionResultFollowedByFrameAndSentFramesAreKeptInOrder() = runTest {
         val tap = call("phone_tap", """{"x":500,"y":500}""")
         val m = FakeModel(tools(call("phone_observe")), tools(tap), *(1..5).map { tools(call("phone_tap", """{"x":${it * 100},"y":300}""")) }.toTypedArray(), finish())
         AgentLoop(m, toolDispatcher(FakeScreen(), visionEnabled = true), "BASE").run("t")
@@ -40,7 +38,7 @@ class AgentLoopFrameTest {
         assertEquals((1..6).toList(), images(m.requests[6]).map { it.screenshotId })
         val seventh = m.requests[7]
         assertEquals((1..7).toList(), images(seventh).map { it.screenshotId })
-        assertTrue(seventh.none { msg -> msg.parts.any { it is Part.Text && it.text.startsWith("(更早的画面已省略") } })
+        assertTrue(seventh.none { msg -> msg.parts.any { it is Part.Text && it.text.startsWith(HistoryPruner.olderImage(0).substringBefore(";")) } })
     }
 
     @Test fun textOnlyMainGetsNoFrames() = runTest {
@@ -71,7 +69,7 @@ class AgentLoopFrameTest {
     }
 
     @Test fun adaptiveBatchExecutesTwoActionsInOneModelRoundWithoutImages() = runTest {
-        val screen = FakeScreen().apply { result = com.wangzan101.mika.core.uistate.ActionResult.Ok(changed = true) }
+        val screen = FakeScreen().apply { result = com.wangzan101.mika.core.screen.uistate.ActionResult.Ok(changed = true) }
         val batch = call("do_steps", """{"steps":[{"tool":"phone_back","args":{}},{"tool":"phone_back","args":{}}]}""")
         val m = FakeModel(tools(batch), finish())
         AgentLoop(m, toolDispatcher(screen, visionEnabled = true, adaptiveVision = true, inlineScreen = true), "BASE",

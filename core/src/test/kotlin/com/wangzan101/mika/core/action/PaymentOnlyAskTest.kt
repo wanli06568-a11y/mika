@@ -4,7 +4,7 @@ import com.wangzan101.mika.core.agent.AgentLoop
 import com.wangzan101.mika.core.agent.FakeModel
 import com.wangzan101.mika.core.agent.SpeedFlags
 import com.wangzan101.mika.core.agent.TaskState
-import com.wangzan101.mika.core.gate.ConfirmationGate
+import com.wangzan101.mika.core.safety.gate.ConfirmationGate
 import com.wangzan101.mika.core.model.ChatModel
 import com.wangzan101.mika.core.model.Message
 import com.wangzan101.mika.core.model.ModelReply
@@ -12,13 +12,13 @@ import com.wangzan101.mika.core.model.ToolSpec
 import com.wangzan101.mika.core.model.Part
 import com.wangzan101.mika.core.model.Role
 import com.wangzan101.mika.core.model.StopReason
-import com.wangzan101.mika.core.record.RunEvent
-import com.wangzan101.mika.core.record.RunSink
-import com.wangzan101.mika.core.uistate.ActionResult
-import com.wangzan101.mika.core.uistate.ScreenPort
-import com.wangzan101.mika.core.uistate.ScreenSnapshot
-import com.wangzan101.mika.core.uistate.UiElement
-import com.wangzan101.mika.core.uistate.WebInfo
+import com.wangzan101.mika.core.run.record.RunEvent
+import com.wangzan101.mika.core.run.record.RunSink
+import com.wangzan101.mika.core.screen.uistate.ActionResult
+import com.wangzan101.mika.core.screen.uistate.ScreenPort
+import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
+import com.wangzan101.mika.core.screen.uistate.UiElement
+import com.wangzan101.mika.core.screen.uistate.WebInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -52,6 +52,20 @@ private val checkoutPage = listOf(
     el("@e2", "text", "合计 ¥25", listOf(0, 800, 600, 860)),
     el("@e3", "button", "提交订单", listOf(600, 900, 990, 990)),
     el("@e4", "button", "立即支付", listOf(0, 900, 590, 990)),
+)
+
+/** 普通提交页:待遇是区间金额,不是这次操作要付的钱。 */
+private val applicationPage = listOf(
+    el("@e1", "text", "示例对象", listOf(0, 0, 999, 80)),
+    el("@e2", "text", "150-200元/天", listOf(0, 200, 999, 260)),
+    el("@e3", "button", "立即沟通", listOf(600, 900, 990, 990)),
+)
+
+/** 捐赠按钮是明确的金额动作,页面是否有合计都要拦。 */
+private val donationPage = listOf(
+    el("@e1", "text", "公益项目", listOf(0, 0, 999, 80)),
+    el("@e2", "text", "150-200元", listOf(0, 200, 999, 260)),
+    el("@e3", "button", "确认捐赠", listOf(600, 900, 990, 990)),
 )
 
 private class Chat(var app: String = "com.chat", var web: WebInfo? = null, var page: List<UiElement> = chatPage()) : ScreenPort {
@@ -138,6 +152,48 @@ class PaymentOnlyAskTest {
         assertTrue(r.s("message"), "request_confirmation" in r.s("message"))
         val audit = sink.all.filterIsInstance<RunEvent.Approval>().single()
         assertEquals(listOf("true", "required"), listOf(audit.payment.toString(), audit.decision))
+    }
+
+    @Test fun salaryRangeDoesNotCauseAConfirmationLoop() = runTest {
+        val s = Chat(page = applicationPage); val sink = Events()
+        val m = FakeModel(OBSERVE, tap("@e3"), FINISH)
+        loop(m, s, sink = sink).run("t")
+        assertEquals(listOf("@e3"), s.taps)
+        assertEquals("true", m.result(2).s("ok"))
+        assertTrue(sink.all.none { it is RunEvent.Confirmation })
+    }
+
+    @Test fun browsingFinancialJobTitlesDoesNotRequirePaymentConfirmation() = runTest {
+        for (title in listOf("跨境支付产品经理", "付款专员", "转账会计", "结算会计")) {
+            val s = Chat(app = "com.example.jobs", page = applicationPage.map {
+                if (it.ref == "@e1") it.copy(name = title, role = "link") else it
+            })
+            val sink = Events()
+            val m = FakeModel(OBSERVE, tap("@e1"), FINISH)
+            loop(m, s, sink = sink).run("查看岗位详情")
+            assertEquals(title, listOf("@e1"), s.taps)
+            assertEquals("true", m.result(2).s("ok"))
+            assertTrue(sink.all.none { it is RunEvent.Confirmation })
+        }
+    }
+
+    @Test fun financialJobTitleAndSalaryDoNotTurnContactIntoPayment() = runTest {
+        val s = Chat(page = applicationPage.map {
+            if (it.ref == "@e1") it.copy(name = "跨境支付产品经理") else it
+        })
+        val m = FakeModel(OBSERVE, tap("@e3"), FINISH)
+        loop(m, s).run("t")
+        assertEquals(listOf("@e3"), s.taps)
+        assertEquals("true", m.result(2).s("ok"))
+    }
+
+    @Test fun donationStillRequiresUserTakeover() = runTest {
+        val s = Chat(page = donationPage)
+        val m = FakeModel(OBSERVE, tap("@e3"), GIVE_UP)
+        loop(m, s).run("t")
+        assertTrue(s.taps.isEmpty())
+        assertEquals("confirmation_required", m.result(2).s("error"))
+        assertTrue(m.result(2).s("message"), "hand_to_user" in m.result(2).s("message"))
     }
 
     @Test fun payingIsHandedToTheUser() = runTest {

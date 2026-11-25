@@ -9,7 +9,7 @@ import com.wangzan101.mika.cap.phone.a11y.DeviceSupport
 import com.wangzan101.mika.core.eval.APP_CAPABILITIES
 import com.wangzan101.mika.core.eval.AppCapabilities
 import com.wangzan101.mika.core.eval.PROBE_ALLOWLIST
-import com.wangzan101.mika.core.uistate.ActionResult
+import com.wangzan101.mika.core.screen.uistate.ActionResult
 import com.wangzan101.mika.cap.phone.display.AgentDisplay
 import com.wangzan101.mika.core.cap.web.WebUrlPolicy
 import com.wangzan101.mika.cap.web.PageScript
@@ -89,7 +89,7 @@ class EvalProbes(private val sh: (String) -> String, private val loggedIn: File)
             InstrumentationRegistry.getInstrumentation().targetContext.getSystemService(DisplayManager::class.java)
                 .getDisplay(Display.DEFAULT_DISPLAY).getRealMetrics(it)
         }
-        val display = AgentDisplay(shell, metrics.widthPixels, metrics.heightPixels, metrics.densityDpi)
+        val display = AgentDisplay(shell, metrics.widthPixels, metrics.heightPixels, metrics.densityDpi, InstrumentationRegistry.getInstrumentation().targetContext.getSystemService(android.hardware.display.DisplayManager::class.java))
         try {
             val screen = AndroidScreen(DeviceSupport.service(), shell, DeviceSupport.ready(display))
             if (deepLink == null) {

@@ -1,17 +1,17 @@
 package com.wangzan101.mika.about
 
-import com.wangzan101.mika.core.adb.ConnectCandidates
-import com.wangzan101.mika.core.record.Redactor
-import com.wangzan101.mika.core.shell.BuiltinShellStatus
-import com.wangzan101.mika.core.shell.PairingDiscovery
-import com.wangzan101.mika.core.shell.PhoneSetupFlow
-import com.wangzan101.mika.core.shell.A11yLossRecord
-import com.wangzan101.mika.core.shell.HelperRestart
-import com.wangzan101.mika.core.shell.HelperRestoreReport
-import com.wangzan101.mika.core.shell.RecoveryCapability
-import com.wangzan101.mika.core.shell.RecoveryConsent
-import com.wangzan101.mika.core.shell.SetupInputs
-import com.wangzan101.mika.core.shell.SetupStep
+import com.wangzan101.mika.core.device.adb.ConnectCandidates
+import com.wangzan101.mika.core.run.record.Redactor
+import com.wangzan101.mika.core.device.shell.BuiltinShellStatus
+import com.wangzan101.mika.core.device.shell.PairingDiscovery
+import com.wangzan101.mika.core.device.shell.PhoneSetupFlow
+import com.wangzan101.mika.core.device.shell.A11yLossRecord
+import com.wangzan101.mika.core.device.shell.HelperRestart
+import com.wangzan101.mika.core.device.shell.HelperRestoreReport
+import com.wangzan101.mika.core.device.shell.RecoveryCapability
+import com.wangzan101.mika.core.device.shell.RecoveryConsent
+import com.wangzan101.mika.core.device.shell.SetupInputs
+import com.wangzan101.mika.core.device.shell.SetupStep
 import com.wangzan101.mika.settings.AccessibilityState
 import com.wangzan101.mika.settings.ChatGptSignInFailureRecord
 import java.net.URI
@@ -66,6 +66,10 @@ data class DiagnosticsSnapshot(
         val adbKey: String? = null,
         /** 这个进程里最近一次任务结束时 Mika 屏上的 App 留下、关掉了几个(只有个数,不列包名);还没有过为 null。 */
         val appsAfterTask: String? = null,
+        /** 最近启动助手到达的固定阶段;这次进程还没启动过为 null。 */
+        val helperLaunchStage: String? = null,
+        /** 本次启动尝试的 Binder 交接拒绝;NotShell 只带固定调用方类别,没有具体 UID。 */
+        val helperHandoffRejection: String? = null,
     )
 
     data class Recovery(
@@ -104,7 +108,8 @@ data class DiagnosticsSnapshot(
 
     /**
      * [choice] 是用户的选择(auto、system、off,或服务商模型「模型 @ 地址」);[systemAvailable]、[onDevice] 是系统说的能力,
-     * [silent] 是记成了不响应;[remembered] 是点名试通过的识别服务;[services] 是手机上登记的识别服务,每个一行。
+     * [silent] 是记成了不响应;[remembered] 是点名试通过的识别服务;[services] 是手机上登记的识别服务,每个一行
+     * (带着它所在的应用有没有录音权限);[defaultService] 是系统设的默认识别服务(没设、读不出来为 null)。
      */
     data class Speech(
         val choice: String,
@@ -113,6 +118,7 @@ data class DiagnosticsSnapshot(
         val silent: Boolean,
         val remembered: String?,
         val services: List<String>,
+        val defaultService: String? = null,
     )
 }
 
@@ -173,6 +179,7 @@ object Diagnostics {
             line("speech to text", v.choice)
             line("built-in recognition", if (!v.systemAvailable) "none" else "present" + (if (v.onDevice) ", on-device" else "") + (if (v.silent) ", marked no response" else ""))
             v.remembered?.let { line("recognition service used", it) }
+            line("default recognition service", v.defaultService ?: "not set")
             line("recognition services", if (v.services.isEmpty()) "none" else "${v.services.size}")
             v.services.forEach { appendLine("- $it") }
         }
@@ -201,6 +208,7 @@ object Diagnostics {
         line("helper restart", when (i.restart) {
             HelperRestart.Wireless -> "wireless debugging (paired)"
             HelperRestart.UsbCommand -> "USB start command"
+            HelperRestart.Shizuku -> "Shizuku"
             HelperRestart.None -> "not set up"
         })
         line("setup", "phase=${view.phase}" + (view.current?.let { ", current=${step(it)}" } ?: ""))
@@ -210,6 +218,8 @@ object Diagnostics {
         if (i.accessibilitySkipped) line("accessibility step", "skipped")
         if (i.repair) line("repair", "yes")
         line("developer options", onOff(i.developerOptions))
+        if (i.developerSettingsMissing) line("developer options page", "missing")
+        if (i.wirelessMissing) line("wireless debugging setting", "missing")
         line("USB debugging", onOff(i.usbDebugging))
         line("wireless debugging", p.wirelessDebuggingSetting?.let(::onOff) ?: "unreadable")
         line("accessibility", when (p.accessibility) {
@@ -236,6 +246,8 @@ object Diagnostics {
         line("attention channel", importance(p.attentionChannelImportance))
         line("Wi-Fi", when (p.wifiConnected) { true -> "connected"; false -> "not connected"; null -> "unknown" })
         line("last error", p.lastError?.takeIf { it.isNotBlank() }?.take(MAX_ERROR) ?: "none")
+        line("helper launch stage", p.helperLaunchStage ?: "not tried in this session")
+        line("helper handoff rejection", p.helperHandoffRejection ?: "none")
         line("adb key status", p.adbKey ?: "unknown")
         line("app copies", p.appCopies ?: "unknown")
         p.appsAfterTask?.let { line("apps after task", it) }

@@ -1,10 +1,12 @@
 package com.wangzan101.mika.cap.web
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import com.wangzan101.mika.core.cap.web.DownloadAddressPolicy
 import com.wangzan101.mika.cap.sandbox.JVM_GATE
 import okhttp3.Dns
@@ -14,9 +16,9 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okio.Buffer
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -50,6 +52,9 @@ class WebDownloadsTest {
 
     @After
     fun tearDown() {
+        // 有的用例只看登记、不等下载跑完:先等在途下载收尾再关服务器,
+        // 否则下载撞上断开的连接走出错分支(android.util.Log 在 JVM 里会抛),异常漏到同进程后面的测试里。
+        runBlocking { withTimeoutOrNull(10_000) { scope.coroutineContext[Job]!!.children.forEach { it.join() } } }
         scope.cancel()
         server.shutdown()
     }
@@ -178,8 +183,6 @@ class WebDownloadsTest {
     @Test
     fun onlyWebAddressesAreFetched() {
         val d = downloads()
-        val info = d.list().firstOrNull()
-        assertNull(info)
         val path = d.start("file:///etc/passwd", "UA", null, null, null)
         assertEquals("failed", d.list().single { it.file == path }.status)
         assertTrue(cookieCalls.isEmpty())
@@ -197,6 +200,44 @@ class WebDownloadsTest {
         val big = WebDownloads(ws, JVM_GATE, SandboxTree(), OkHttpClient(), { null }, scope, maxBlobBytes = 4)
         val refused = big.save("blob:x", null, null, ByteArray(10))
         assertEquals("too_large", big.list().single { it.file == refused }.error)
+    }
+
+    @Test
+    fun dataUrlNonBase64PayloadUsesUrlByteSemantics() {
+        val d = downloads()
+        fun check(payload: String, name: String, expected: ByteArray, base64: Boolean = false) {
+            val marker = if (base64) ";base64" else ""
+            val path = d.dataUrl("data:application/octet-stream$marker,$payload", null, suggested = name)
+            assertEquals(payload, "done", d.list().single { it.file == path }.status)
+            assertArrayEquals(payload, expected, File(ws, "downloads/$name").readBytes())
+        }
+        check("a+b", "literal-plus.bin", byteArrayOf(0x61, 0x2B, 0x62))
+        check("a%2Bb", "escaped-plus.bin", byteArrayOf(0x61, 0x2B, 0x62))
+        check("%20", "escaped-space.bin", byteArrayOf(0x20))
+        check("a b", "literal-space.bin", byteArrayOf(0x61, 0x20, 0x62))
+        check("%FF%80", "non-utf8.bin", byteArrayOf(0xFF.toByte(), 0x80.toByte()))
+        check("A+%20%FF雪 post", "mixed.bin", byteArrayOf(
+            0x41, 0x2B, 0x20, 0xFF.toByte(), 0xE9.toByte(), 0x9B.toByte(), 0xAA.toByte(),
+            0x20, 0x70, 0x6F, 0x73, 0x74))
+        // 未转义 Unicode 明确按 UTF-8 写出,不经过 %HH 的字符串解码
+        check("雪+😀", "unicode.bin", byteArrayOf(
+            0xE9.toByte(), 0x9B.toByte(), 0xAA.toByte(), 0x2B,
+            0xF0.toByte(), 0x9F.toByte(), 0x98.toByte(), 0x80.toByte()))
+        // Base64 路径不变,控制用例同时覆盖 NUL、非 UTF-8 与加号字节
+        check("AP8r", "base64.bin", byteArrayOf(0x00, 0xFF.toByte(), 0x2B), base64 = true)
+    }
+
+    @Test
+    fun dataUrlRejectsMalformedPercentEscapes() {
+        val d = downloads()
+        for (payload in listOf("%", "%0", "%GG", "%0G", "%G0", "abc%2")) {
+            val path = d.dataUrl("data:application/octet-stream,$payload", null, suggested = "bad.bin")
+            val info = d.list().last()
+            assertEquals(payload, path, info.file)
+            assertEquals(payload, "failed", info.status)
+            assertEquals(payload, "bad_data_url", info.error)
+        }
+        assertFalse(File(ws, "downloads/bad.bin").exists())
     }
 
     /** 页面在链接上给的名字(<a download>)对每种下载都用上,清洗规则照旧;响应头里的名字优先,网址最后。 */

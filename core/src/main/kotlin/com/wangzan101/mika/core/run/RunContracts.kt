@@ -21,8 +21,15 @@ data class RunSpec(
     val readOnly: Boolean = false,
     val parent: RunId? = null,
     val stepBudget: Int? = null,
+    /** 主循环、旁路调用和子任务共享的已报告 Token 预算；null 不限制。 */
+    val tokenBudget: Long? = null,
+    /** 由同一批次并行派发的子任务，宿主为它单独分配有状态的资源。 */
+    val parallelChild: Boolean = false,
 ) {
-    init { require(goal.isNotBlank() && threadId.isNotBlank()) }
+    init {
+        require(goal.isNotBlank() && threadId.isNotBlank())
+        require(tokenBudget == null || tokenBudget > 0)
+    }
 }
 
 /** 从本次对话送给运行的输入。取消走控制通道,不会等在插话队列里。 */

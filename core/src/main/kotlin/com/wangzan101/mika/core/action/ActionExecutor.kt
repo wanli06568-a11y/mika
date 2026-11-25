@@ -1,23 +1,24 @@
 package com.wangzan101.mika.core.action
 
 import com.wangzan101.mika.core.tool.Risk
-import com.wangzan101.mika.core.gate.ConfirmationGate
-import com.wangzan101.mika.core.gate.Irreversible
-import com.wangzan101.mika.core.guard.DIAGNOSTIC_VERBS
-import com.wangzan101.mika.core.guard.GuardVerdict
-import com.wangzan101.mika.core.guard.OperationGuards
-import com.wangzan101.mika.core.guard.PAGE_READ_VERBS
-import com.wangzan101.mika.core.guard.GuardScope
-import com.wangzan101.mika.core.guard.elementsHash
-import com.wangzan101.mika.core.guard.resultFingerprint
+import com.wangzan101.mika.core.safety.gate.ConfirmationGate
+import com.wangzan101.mika.core.safety.gate.Irreversible
+import com.wangzan101.mika.core.safety.gate.TargetAppRestoreFailed
+import com.wangzan101.mika.core.safety.guard.DIAGNOSTIC_VERBS
+import com.wangzan101.mika.core.safety.guard.GuardVerdict
+import com.wangzan101.mika.core.safety.guard.OperationGuards
+import com.wangzan101.mika.core.safety.guard.PAGE_READ_VERBS
+import com.wangzan101.mika.core.safety.guard.GuardScope
+import com.wangzan101.mika.core.safety.guard.elementsHash
+import com.wangzan101.mika.core.safety.guard.resultFingerprint
 import com.wangzan101.mika.core.model.Part
-import com.wangzan101.mika.core.record.Redactor
-import com.wangzan101.mika.core.record.RunEvent
-import com.wangzan101.mika.core.replay.Anchors
-import com.wangzan101.mika.core.replay.effectiveWrite
-import com.wangzan101.mika.core.uistate.Described
-import com.wangzan101.mika.core.uistate.ScreenSnapshot
-import com.wangzan101.mika.core.uistate.interfaces
+import com.wangzan101.mika.core.run.record.Redactor
+import com.wangzan101.mika.core.run.record.RunEvent
+import com.wangzan101.mika.core.learn.replay.Anchors
+import com.wangzan101.mika.core.learn.replay.effectiveWrite
+import com.wangzan101.mika.core.screen.uistate.Described
+import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
+import com.wangzan101.mika.core.screen.uistate.interfaces
 import com.wangzan101.mika.core.tool.ActionPass
 import com.wangzan101.mika.core.tool.ToolDispatcher
 import com.wangzan101.mika.core.tool.ToolExecution
@@ -34,7 +35,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import com.wangzan101.mika.core.tool.SubActions
-import com.wangzan101.mika.core.guard.OffScreenGuard
+import com.wangzan101.mika.core.safety.guard.OffScreenGuard
 import com.wangzan101.mika.core.run.RunProvenance
 import com.wangzan101.mika.core.run.SKIPPED_FOR_NEW_MESSAGE
 import com.wangzan101.mika.core.run.waitOrSteer
@@ -60,6 +61,7 @@ class ActionExecutor(
     autonomous: Boolean = false,
     /** 同一网站、App 里连着做对外动作(发送、提交)时两次之间的间隔(见 [OutwardPacing]);默认不等。 */
     private val pacing: OutwardPacing = OutwardPacing.Off,
+    private val onScreenAction: ((Verb?, JsonObject, ToolExecution) -> Unit)? = null,
 ) {
     private val decision = ConfirmDecision(tools, confirmations, approvals, recorder = recorder, provenance = provenance, selfPackage = selfPackage, autonomous = autonomous)
     private val pass = ActionPass()
@@ -75,6 +77,20 @@ class ActionExecutor(
 
     /** [reads]:页面脚本一次调用里的读单独计数的范围(来源要求隔离时);那里的动作仍按任务计。 */
     private suspend fun run(call: Part.ToolCall, origin: Origin, followUp: FollowUp, reads: GuardScope?): ActionOutcome {
+        val control = tools.manualControl ?: return runAutomatic(call, origin, followUp, reads)
+        return try { control.plan(tools) { runAutomatic(call, origin, followUp, reads) } }
+        catch (e: com.wangzan101.mika.core.run.ManualControl.Interrupted) {
+            val content = buildJsonObject {
+                put("ok", false); put("error", com.wangzan101.mika.core.run.ManualControl.CHANGED)
+                put("message", e.message); put("executed", false)
+            }
+            if (origin.policy.recordsRefusal) followUp.refused(content)
+            recorder.result(origin.step, call.name, tools.verb(call.name), content, content, null, null, 0, origin.policy.source, call.id)
+            ActionOutcome.Refused(com.wangzan101.mika.core.run.ManualControl.CHANGED, content, emptyList())
+        }
+    }
+
+    private suspend fun runAutomatic(call: Part.ToolCall, origin: Origin, followUp: FollowUp, reads: GuardScope?): ActionOutcome {
         val args = parseArgs(call.argsJson)
         // 不动屏幕的工具(沙箱一类):不进屏幕守卫,由各自的守卫另管
         val offScreen = tools.offScreen(call.name)
@@ -87,6 +103,15 @@ class ActionExecutor(
         tools.aim(call.name, args)
         try {
             return aimed(call, origin, followUp, reads, args, offScreen, verb)
+        } catch (e: com.wangzan101.mika.core.device.access.AppAccessDenied) {
+            val content = buildJsonObject {
+                put("ok", false); put("error", e.code); put("message", e.message); put("retryable", false)
+                e.packageName?.let { put("package", it) }
+            }
+            // 单步:作为这次工具调用的结果交给模型,让它换路线或向用户说明;批和脚本按 Refused 自己处理
+            if (origin.policy.recordsRefusal) followUp.refused(content)
+            recorder.result(origin.step, call.name, verb, content, content, null, null, 0, origin.policy.source, call.id)
+            return ActionOutcome.Refused(e.code, content, emptyList())
         } finally {
             // 成功与否由分发器记;这里只结束这一层
             tools.release(false)
@@ -100,6 +125,7 @@ class ActionExecutor(
         var call = given
         var args = givenArgs
         var note: JsonObject? = null
+        tools.interfaces.checkAppAccess(tools.declared(call.name))
         when (val d = tools.interfaces.described(tools.declared(call.name), args)) {
             is Described.Failed -> return ran(Step(call, args, origin, emptyList(), writing = false, offScreen, verb, null, followUp, reads, preset = d.result))
             is Described.Resolved -> { args = d.args; call = call.copy(argsJson = d.args.toString()); note = d.note }
@@ -115,13 +141,38 @@ class ActionExecutor(
         if (guards.stop != null) return refuse("guard_stopped", origin, before)
         if (policy.stopOnGuardWarning && before.isNotEmpty()) return refuse("guard_warning", origin, before)
         val writing = tools.writesScreen(call.name)
-        if (writing && !policy.gatedByCaller) gate()
+        if (writing && !policy.gatedByCaller) try {
+            gate()
+        } catch (_: com.wangzan101.mika.core.safety.gate.ScreenRecoveryRequired) {
+            // 等关卡时锁过屏:这一步按的是锁屏前的屏幕,不做;让模型重读现在的屏幕再决定
+            val notice = ToolExecution(buildJsonObject {
+                put("ok", false); put("error", "screen_changed_during_lock"); put("executed", false)
+                put("message", "The phone locked and was unlocked while the task was running. This pending action was not executed. Read the current screen and verify whether the previous action already completed before taking another action.")
+            })
+            return ran(Step(call, args, origin, before, writing = false, offScreen, verb, null, followUp, reads, preset = notice))
+        } catch (e: TargetAppRestoreFailed) {
+            val failure = ToolExecution(buildJsonObject {
+                put("ok", false); put("error", TargetAppRestoreFailed.CODE); put("message", e.message)
+                put("package", e.packageName); put("executed", false); put("recoverable", true); put("counts_as_failure", false)
+            })
+            return ran(Step(call, args, origin, before, writing = false, offScreen, verb, null, followUp, reads, preset = failure))
+        }
         // 没有可用的同意就不执行,也不计入失败熔断
-        val d = decision.judge(call.name, args, origin)
+        var d = decision.judge(call.name, args, origin)
+        // 不在屏上、工具声明要问的一步(会改动东西的 root 命令):调用方问得到人就当场问,同意了按这次同意再判一次;
+        // 问不到人(这次运行不能问、调用方不是模型单步)就不做,照被拦下记
+        val ask = if (d is Decision.Required || d is Decision.Denied) tools.approvalRisk(call.name, args)?.ask else null
+        if (ask != null) {
+            val hit = Irreversible(ask.action, ask.content)
+            val answer = (if (d is Decision.Required) followUp.approve(ask) else null)
+                ?: return declined(call, args, origin, before, hit, ToolExecution(Refusals.unavailable()), followUp, "approval_unavailable")
+            if (answer.content["ok"] != JsonPrimitive(true)) return declined(call, args, origin, before, hit, answer, followUp, "confirmation_declined")
+            d = decision.judge(call.name, args, origin)
+        }
         when (d) {
             is Decision.Required -> return blocked(call, args, origin, before, d.hit, null, followUp)
             is Decision.Mismatch -> return blocked(call, args, origin, before, d.hit, d.reason, followUp)
-            Decision.Denied -> return refuse("approval_unavailable", origin, before)
+            is Decision.Denied -> return approvalUnavailable(call, args, origin, before, d.hit, followUp)
             Decision.Unresolved -> return refuse("target_unresolved", origin, before)
             Decision.OwnApp -> return ownApp(call, args, origin, before, followUp)
             else -> Unit
@@ -151,7 +202,13 @@ class ActionExecutor(
         site?.let(tools::outwardStart)
         var done = false
         try {
-            val outcome = if (policy.actionCapMs == null) ran(step) else withContext(NonCancellable) { ran(step) }
+            val outcome = if (policy.actionCapMs == null) ran(step) else {
+                // 先在可取消区取得执行权，再保护脚本动作与记录；不能在 NonCancellable 内等人工交回。
+                suspend fun finishAction() = withContext(NonCancellable) { ran(step) }
+                tools.withScreenControl(call.name, successful = {
+                    it is ActionOutcome.Ran && it.exec.content["ok"] != JsonPrimitive(false)
+                }) { finishAction() }
+            }
             if (screenPaced && outcome is ActionOutcome.Ran) tools.afterWrite(call.name, outcome.exec.content)
             if (site != null && outcome is ActionOutcome.Ran && outcome.exec.content["ok"] != JsonPrimitive(false)) {
                 done = true
@@ -207,11 +264,15 @@ class ActionExecutor(
         if (changes && s.preset == null && !failed) recorder.noteChange(mark)
         val durationMs = recorder.now() - started
         val resolved = s.followUp.resolve(raw) ?: return ActionOutcome.Cancelled(s.before)
+        tools.interfaces.checkAppAccess(tools.declared(call.name), after = true)
 
         val after = subVerdicts.toMutableList()
         after += if (s.offScreen) offScreen?.result(call.name, s.args, resolved.content).orEmpty() else guards.result(call.name, resolved.content)
         // 动作报回的实际效果先记(没有效果、换了地方),接着的画面就不再按指纹重复记
-        ((resolved.content["effect"] as? JsonObject)?.get("kind") as? JsonPrimitive)?.takeIf { !s.offScreen }?.let { after += guards.effect(it.content) }
+        (resolved.content["effect"] as? JsonObject)?.takeIf { !s.offScreen }?.let { effect ->
+            val kind = (effect["kind"] as? JsonPrimitive)?.content ?: return@let
+            after += guards.effect(kind, (effect["treeBlind"] as? JsonPrimitive)?.booleanOrNull == true)
+        }
         val elements = resolved.screenElements ?: resolved.content["elements"] as? JsonArray
         val beforeFrameProgress = guards.progressVersion
         elementsHash(elements)?.let { after += guards.frame("$n:${call.id}", it) }
@@ -230,6 +291,8 @@ class ActionExecutor(
         }
         val (exec, content) = s.followUp.present(resolved, s.before + after)
 
+        if (!s.offScreen) onScreenAction?.invoke(s.verb, s.args, exec)
+
         // 画面:模型单步交给调用方按它的顺序存;子步界面变了才当场存;回放不存
         val picture = if (policy.frames == Frames.Caller && s.verb != Verb.ViewPastScreens && !s.offScreen) exec.image ?: exec.frame else null
         val shotId = when (policy.frames) {
@@ -238,6 +301,12 @@ class ActionExecutor(
             Frames.None -> null
         }
         recorder.result(n, call.name, s.verb, content, exec.record, exec.changed, shotId, durationMs, policy.source, call.id, exec.waitMs)
+        if (recorder.savesScreens) exec.playback?.let { capture ->
+            val beforeId = capture.before?.let(recorder::saveFrame)
+            val afterId = capture.after?.let(recorder::saveFrame)
+            recorder.event(RunEvent.TaskPlayback(recorder.now(), n, call.name, call.id, beforeId, afterId,
+                capture.mark, exec.content["ok"] == JsonPrimitive(true), policy.source))
+        }
         ActivityRecord.of(tools, call.name, s.args, exec, n, policy.source, call.id, recorder.now(), s.outward)?.let(recorder::event)
         if (policy.frames == Frames.WhenChanged && shotId != null) recorder.event(RunEvent.Media(recorder.now(), shotId, n, RunEvent.placeLabel(exec.place)))
         val seen = if (policy.routeTargets) routeTarget(call, s.verb, s.origin, exec) else null
@@ -292,6 +361,31 @@ class ActionExecutor(
 
     private fun refuse(code: String, origin: Origin, before: List<GuardVerdict>) =
         ActionOutcome.Refused(code, Refusals.content(code, origin.policy.refusals, before, null, null), before)
+
+    private fun approvalUnavailable(
+        call: Part.ToolCall, args: JsonObject, origin: Origin, before: List<GuardVerdict>, hit: Irreversible, followUp: FollowUp,
+    ): ActionOutcome {
+        val code = "approval_unavailable"
+        val content = Refusals.content(code, origin.policy.refusals, before, hit, null)
+        if (origin.policy.recordsRefusal) {
+            followUp.refused(content)
+            recorder.result(origin.step, call.name, tools.verb(call.name), content, tools.portRecord(call.name, args), null, null, 0, origin.policy.source, call.id)
+        }
+        return ActionOutcome.Refused(code, content, before, hit)
+    }
+
+    /** 要问的一步没有同意(用户没同意,或问不到人):[answer] 就是结果,照被拦下一样记。 */
+    private fun declined(
+        call: Part.ToolCall, args: JsonObject, origin: Origin, before: List<GuardVerdict>, hit: Irreversible, answer: ToolExecution, followUp: FollowUp,
+        code: String,
+    ): ActionOutcome {
+        recorder.confirmation(hit, if (code == "confirmation_declined") "declined" else "denied")
+        if (origin.policy.recordsRefusal) {
+            followUp.refused(answer.content)
+            recorder.result(origin.step, call.name, tools.verb(call.name), answer.content, tools.portRecord(call.name, args), null, null, 0, origin.policy.source, call.id)
+        }
+        return ActionOutcome.Refused(code, answer.content, before, hit)
+    }
 
     private fun blocked(
         call: Part.ToolCall, args: JsonObject, origin: Origin, before: List<GuardVerdict>, hit: Irreversible, reason: String?, followUp: FollowUp,

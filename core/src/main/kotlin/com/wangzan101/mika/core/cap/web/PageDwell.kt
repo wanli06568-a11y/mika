@@ -4,10 +4,10 @@ import com.wangzan101.mika.core.net.UrlHost
 import com.wangzan101.mika.core.run.waitOrSteer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import com.wangzan101.mika.core.uistate.DwellInterrupted
-import com.wangzan101.mika.core.uistate.IdleScroll
-import com.wangzan101.mika.core.uistate.PageLimitReached
-import com.wangzan101.mika.core.uistate.PlacePace
+import com.wangzan101.mika.core.screen.uistate.DwellInterrupted
+import com.wangzan101.mika.core.screen.uistate.IdleScroll
+import com.wangzan101.mika.core.screen.uistate.PageLimitReached
+import com.wangzan101.mika.core.screen.uistate.PlacePace
 
 /**
  * 一个任务里按 [PagePacing] 停留:看着页面的地址([seen])认出来了新的一页,往下滚时页面自己又拉来一批内容([loadedMore])
@@ -79,7 +79,9 @@ internal class PageDwell(
     suspend fun before(target: String? = null, port: WebPort? = null, gate: Boolean = true): Long {
         val site = target ?: synchronized(this) { lastUrl } ?: return 0
         val p = paceOf(site)
-        if (gate && siteKey(site) != outwardNow && pacing.capReached(site, p)) throw PageLimitReached(hostOf(site), pacing.pagesOn(site), pacing.capFor(p))
+        if (gate && siteKey(site) != outwardNow && pacing.capReached(site, p)) {
+            throw PageLimitReached(hostOf(site), pacing.pagesOn(site), pacing.capFor(p) ?: 0, PageLimitReached.Scope.WEB_PAGES)
+        }
         val wait = pacing.waitBefore(site, clock())
         if (wait <= 0) return 0
         if (port != null && idle != null) idleWait(port, idle, wait) else pause(wait)

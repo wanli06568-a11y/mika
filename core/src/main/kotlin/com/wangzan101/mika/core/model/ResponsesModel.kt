@@ -13,10 +13,9 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
-import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * 请求时带的 Bearer 令牌。[fresh] 为真表示上一个被拒了(HTTP 401),要先换一个新的;换不到抛 [ModelError]。
@@ -34,11 +33,17 @@ interface BearerToken {
     }
 }
 
+/** OpenAI Responses 的显式速度档位;不选时由服务端决定。 */
+enum class OpenAiServiceTier(val requestValue: String) {
+    Fast("priority"),
+    Ultrafast("ultrafast"),
+}
+
 /**
  * OpenAI Responses 接口(`POST {base}/responses`),一律流式、不在服务端存对话(`store:false`):每次把要用的上下文都放在
  * `input` 数组里发,系统提示词放 `instructions`,对话里的系统消息改成 developer 消息(system 消息条目有的服务端不收)。
  * 工具是 function 工具(`strict:false`,Mika 的参数 schema 不按严格模式写);结果按 `function_call_output` 回给模型。
- * 默认只发这几项和 `include`;用户选了思考档位才发 `reasoning.effort`。温度、输出上限不发(套餐接口不收)。
+ * 思考强度和速度仅在用户选择时分别发 `reasoning.effort`、`service_tier`。温度、输出上限不发(套餐接口不收)。
  *
  * 推理模型的思考:请求加密后的思考内容(`include: reasoning.encrypted_content`),原样存在这一回合第一个工具调用的
  * [Part.ToolCall.opaque] 里,回放时放回工具调用前面,模型接着上一步的思路做;只给文字回答的回合不需要接着想,不存。
@@ -60,6 +65,7 @@ class ResponsesModel(
     /** null 使用服务端默认;服务端拒绝所选档位时照常报错,不悄悄换档重试。 */
     private val reasoningEffort: String? = null,
     private val accountLogin: String? = null,
+    private val serviceTier: OpenAiServiceTier? = null,
 ) : StreamingChatModel {
     override val name: String get() = model
     private val endpoint = baseUrl.trim().trimEnd('/') + "/responses"
@@ -102,15 +108,18 @@ class ResponsesModel(
             put("store", false)
             put("stream", true)
             reasoningEffort?.let { effort -> putJsonObject("reasoning") { put("effort", effort) } }
+            serviceTier?.let { put("service_tier", it.requestValue) }
             if (includeReasoning) putJsonArray("include") { add(ENCRYPTED_REASONING) }
         }
 
-    private fun request(bearer: String?, system: String, messages: List<Message>, tools: List<ToolSpec>, includeReasoning: Boolean): Request =
+    private suspend fun request(bearer: String?, system: String, messages: List<Message>, tools: List<ToolSpec>, includeReasoning: Boolean): Request =
         Request.Builder().url(endpoint)
             .withHeaders(headers)
-            .apply { if (!bearer.isNullOrEmpty()) header("Authorization", "Bearer $bearer") }
+            .apply { if (!bearer.isNullOrEmpty()) headerOrReject("Authorization", "Bearer $bearer") }
             .header("Accept", "text/event-stream")
-            .post(body(system, messages, tools, includeReasoning).toString().toRequestBody("application/json".toMediaType()))
+            .postInference(InferenceProtocol.Responses, body(system, messages, tools, includeReasoning)) {
+                if (chatGptPlan || endpoint.toHttpUrlOrNull()?.host == "api.openai.com") "openai" else "openai_compatible"
+            }
             .build()
 
     private fun toolJson(t: ToolSpec): JsonObject = buildJsonObject {
@@ -177,36 +186,42 @@ class ResponsesModel(
     }
 
     /** 流里的 `response.failed` / `error`,以及 HTTP 出错时内容里的 `error.code`。认不出的代码为 null。 */
-    private fun errorOf(code: String?, message: String, param: String?): ModelError? = when (code) {
-        "subscription_sharing_usage_limit_exceeded" -> ModelError.ChatGptLimitReached()
-        "subscription_sharing_user_not_eligible" -> ModelError.ChatGptNotEligible(message.take(200))
-        // 服务端一时不可用:保留登录,过一会儿再试
-        "subscription_sharing_usage_unavailable", "subscription_sharing_user_unavailable" -> ModelError.Server(503)
-        "subscription_sharing_unsupported_capability" -> ModelError.BadResponse("服务端不支持请求里的 ${param ?: "某项内容"}")
-        "subscription_sharing_route_not_supported" -> ModelError.BadResponse("服务端不支持这个接口")
-        "subscription_sharing_invalid_user", "chatpass_v2_scope_not_authorized", "chatpass_v2_invalid_authorization_context" ->
-            ModelError.Auth()
-        "context_length_exceeded" -> ModelError.ContextTooLong()
-        "insufficient_quota" -> ModelError.QuotaExceeded()
-        "rate_limit_exceeded" -> if (chatGptPlan) ModelError.ChatGptLimitReached() else ModelError.RateLimited(null)
-        "model_not_found" -> ModelError.ModelNotFound(model, ModelAccessErrors.clip(message))
-        "server_error" -> ModelError.Server(500)
-        else -> null
+    private fun errorOf(code: String?, message: String, param: String?): ModelError? {
+        if (serviceTier != null && param == "service_tier") {
+            return ModelError.ServiceTierRejected(ModelAccessErrors.clip(message))
+        }
+        return when (code) {
+            "subscription_sharing_usage_limit_exceeded" -> ModelError.ChatGptLimitReached()
+            "subscription_sharing_user_not_eligible" -> ModelError.ChatGptNotEligible(message.take(200))
+            // 服务端一时不可用:保留登录,过一会儿再试
+            "subscription_sharing_usage_unavailable", "subscription_sharing_user_unavailable" -> ModelError.Server(503)
+            "subscription_sharing_unsupported_capability" -> ModelError.BadResponse("服务端不支持请求里的 ${param ?: "某项内容"}")
+            "subscription_sharing_route_not_supported" -> ModelError.BadResponse("服务端不支持这个接口")
+            "subscription_sharing_invalid_user", "chatpass_v2_scope_not_authorized", "chatpass_v2_invalid_authorization_context" ->
+                ModelError.Auth()
+            "context_length_exceeded" -> ModelError.ContextTooLong()
+            "insufficient_quota" -> ModelError.QuotaExceeded()
+            "rate_limit_exceeded" -> if (chatGptPlan) ModelError.ChatGptLimitReached() else ModelError.RateLimited(null)
+            "model_not_found" -> ModelError.ModelNotFound(model, ModelAccessErrors.clip(message))
+            "server_error" -> ModelError.Server(500)
+            else -> null
+        }
     }
 
     private fun httpError(status: Int, retryAfter: String?, body: String, err: ErrorBody?): ModelError =
         err?.let { errorOf(it.code, it.message, it.param) }
             // 账号登录已经核对过身份:没有认得出的错误代码的 403 是档位不够,不当成 Key 不对或某个模型没开通
             ?: (if (status == 403 && accountLogin != null) ModelError.AccountPlanNotAllowed(accountLogin, err?.message.orEmpty().take(200)) else null)
+            ?: ModelHttp.reasoningEffortRejected(status, body)
             ?: ModelAccessErrors.of(status, body, model) ?: when {
             status == 401 -> ModelError.Auth()
             status == 403 -> if (chatGptPlan) ModelError.ChatGptNotEligible(err?.message.orEmpty().take(200)) else ModelError.Auth()
             status == 429 -> if (chatGptPlan) ModelError.ChatGptLimitReached() else ModelError.RateLimited(HttpSupport.retryAfterMs(retryAfter))
             status == 402 -> ModelError.QuotaExceeded()
-            status == 400 && (body.contains("context_length") || body.contains("maximum context")) -> ModelError.ContextTooLong()
+            ModelHttp.contextTooLong(status, body) -> ModelError.ContextTooLong()
             status == 404 -> ModelError.ModelNotFound(model, ModelAccessErrors.jsonDetail(body))
             status in 500..599 -> ModelError.Server(status)
-            else -> ModelError.BadResponse("HTTP $status ${body.take(200)}")
+            else -> if (status >= 400) ModelError.Server(status, ModelAccessErrors.detail(body)) else ModelError.BadResponse("HTTP $status ${body.take(200)}")
         }
 
     private companion object {
@@ -231,8 +246,8 @@ private class ResponsesStream(
     private var final: JsonObject? = null
     private var incomplete = false
 
-    fun accept(data: String) {
-        if (data == "[DONE]") return
+    fun accept(data: String): Boolean {
+        if (data == "[DONE]") return false
         val root = try { json.parseToJsonElement(data) as? JsonObject } catch (e: Exception) { null }
             ?: throw ModelError.BadResponse("流式响应不是合法 JSON")
         when (root.str("type")) {
@@ -249,6 +264,7 @@ private class ResponsesStream(
             "response.failed" -> throw failure((root["response"] as? JsonObject)?.get("error") as? JsonObject)
             "error" -> throw failure(root["error"] as? JsonObject ?: root)
         }
+        return final != null
     }
 
     private fun failure(e: JsonObject?): ModelError {
@@ -322,9 +338,9 @@ private class ResponsesStream(
         val u = el as? JsonObject ?: return null
         fun int(o: JsonObject?, k: String) = (o?.get(k) as? JsonPrimitive)?.intOrNull
         val input = int(u, "input_tokens") ?: return null
-        val cached = int(u["input_tokens_details"] as? JsonObject, "cached_tokens") ?: 0
+        val cached = int(u["input_tokens_details"] as? JsonObject, "cached_tokens")
         val output = int(u, "output_tokens") ?: 0
         val reasoning = (int(u["output_tokens_details"] as? JsonObject, "reasoning_tokens") ?: 0).coerceIn(0, output)
-        return Usage(input, output, cached.coerceAtMost(input), reasoning)
+        return Usage(input, output, (cached ?: 0).coerceAtMost(input), reasoning, cacheReported = cached != null)
     }
 }

@@ -82,7 +82,7 @@ fun SearchField(
 ) {
     val c = MikaTheme.colors
     Row(
-        Modifier.fillMaxWidth().height(40.dp).keepsKeyboard().background(c.fill, MikaShapes.Button).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().height(40.dp).keepsKeyboard().background(if (LocalPlainList.current) c.surface else c.fill, MikaShapes.Button).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -91,7 +91,7 @@ fun SearchField(
             if (value.isEmpty()) Text(placeholder, style = MikaType.Body, color = c.ink3)
             BasicTextField(
                 value, onValueChange, modifier.fillMaxWidth(), singleLine = true,
-                textStyle = MikaType.Body.copy(color = c.ink), cursorBrush = SolidColor(c.accent),
+                textStyle = MikaType.Body.copy(color = c.ink, textDirection = androidx.compose.ui.text.style.TextDirection.Content), cursorBrush = SolidColor(c.accent),
                 keyboardOptions = if (onSubmit != null) KeyboardOptions(imeAction = ImeAction.Go) else KeyboardOptions.Default,
                 keyboardActions = KeyboardActions(onGo = { onSubmit?.invoke() }),
             )

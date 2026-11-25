@@ -1,10 +1,12 @@
 package com.wangzan101.mika.core.agent
 
-import com.wangzan101.mika.core.knowledge.GuideCatalog
-import com.wangzan101.mika.core.memory.MemoryItem
-import com.wangzan101.mika.core.memory.MemoryPersistence
-import com.wangzan101.mika.core.memory.MemoryStore
-import com.wangzan101.mika.core.memory.UserUtterances
+import com.wangzan101.mika.core.cap.root.RootPort
+import com.wangzan101.mika.core.cap.root.RootRun
+import com.wangzan101.mika.core.learn.knowledge.GuideCatalog
+import com.wangzan101.mika.core.learn.memory.MemoryItem
+import com.wangzan101.mika.core.learn.memory.MemoryPersistence
+import com.wangzan101.mika.core.learn.memory.MemoryStore
+import com.wangzan101.mika.core.learn.memory.UserUtterances
 import com.wangzan101.mika.core.model.ModelReply
 import com.wangzan101.mika.core.model.Part
 import com.wangzan101.mika.core.model.StopReason
@@ -13,14 +15,14 @@ import com.wangzan101.mika.core.cap.sandbox.SandboxStatus
 import com.wangzan101.mika.core.testing.PromptSurface
 import com.wangzan101.mika.core.tool.FakeScreen
 import com.wangzan101.mika.core.tool.ToolDispatcher
-import com.wangzan101.mika.core.vision.JvmTestImageOps
-import com.wangzan101.mika.core.vision.VisionService
-import com.wangzan101.mika.core.vision.says
+import com.wangzan101.mika.core.screen.vision.JvmTestImageOps
+import com.wangzan101.mika.core.screen.vision.VisionService
+import com.wangzan101.mika.core.screen.vision.says
 import com.wangzan101.mika.core.cap.web.FakeWebPort
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import com.wangzan101.mika.core.assembly.toolDispatcher
-import com.wangzan101.mika.core.knowledge.KnowledgeStore
+import com.wangzan101.mika.core.learn.knowledge.KnowledgeStore
 
 /**
  * 模型能看到的全部提示词表面:每种能力组合的完整系统提示词、每个工具的定义(名字、说明、参数 schema)、
@@ -46,13 +48,23 @@ class PromptSurfaceTest {
             toolDispatcher(FakeScreen(), web = FakeWebPort(), sandbox = FakeSandbox(SandboxStatus.Ready(network = true)), workspace = { "w" })
         }),
         "phone-sandbox-preparing" to Combo({ toolDispatcher(FakeScreen(), sandbox = FakeSandbox(SandboxStatus.NotInstalled), workspace = { "w" }) }),
+        // 已 root 的手机上用户打开了 root 命令
+        "phone-root" to Combo({ toolDispatcher(FakeScreen(), root = object : RootPort {
+            override suspend fun run(command: String, timeoutMs: Long): RootRun = RootRun.Unavailable
+        }) }),
         "everything" to MemoryStore(Mem(), clock = { 1L }, ids = { "m" }).let { mem ->
             Combo({
                 toolDispatcher(
                     FakeScreen(), visionEnabled = true, skills = GuideCatalog.loadBundled(), vision = VisionService(says(), JvmTestImageOps),
                     web = FakeWebPort(), inlineScreen = true, deepLinks = true,
                     memory = mem, utterances = UserUtterances(), sandbox = FakeSandbox(SandboxStatus.Ready(network = false)), workspace = { "w" },
-                    personalSkills = com.wangzan101.mika.core.skills.InMemoryPersonalSkills(),
+                    personalSkills = com.wangzan101.mika.core.learn.skills.InMemoryPersonalSkills(),
+                    // 子任务和之前几轮的记录:之前有记过运行的一轮时才有 history_read
+                    runSpec = com.wangzan101.mika.core.run.RunSpec(com.wangzan101.mika.core.run.RunId("t"), "t", "thread",
+                        priorTurns = listOf(Turn("之前", "好", "succeeded", runId = "r1"))),
+                    childHost = com.wangzan101.mika.core.run.ChildRunHost { spec, _ ->
+                        com.wangzan101.mika.core.run.ChildResult(spec.id, com.wangzan101.mika.core.run.ChildPhase.Completed, "") },
+                    runRecords = NoRecords,
                 )
             }, SpeedFlags(inlineScreen = true, batchSteps = true, deepLinks = true), mem)
         },
@@ -107,12 +119,40 @@ class PromptSurfaceTest {
         PromptSurface.check("roles", PromptSurface.roles())
     }
 
+    /** 人格层:固定头尾和正文的全文,审改动时直接看差在哪。没有人格时其余金样不受影响。 */
+    @Test fun personaLayer() {
+        PromptSurface.check("persona/layer", com.wangzan101.mika.core.prompt.PersonaPrompt.layer("测试人格", "先给结论,再展开;少用感叹号。")!!)
+    }
+
+    /** 改了称呼之后模型多看到、看到不一样的那几段:身份那一段、「Mika 是 App 的名字」的说明、人格层的固定头。 */
+    @Test fun personaRenamed() {
+        val identity = SystemPrompt.identity("辉夜").substringBefore("\n\nPrinciples:")
+        val layer = com.wangzan101.mika.core.prompt.PersonaPrompt.layer("测试人格", "先给结论。", assistant = "辉夜")!!.substringBefore("\n\nWhat the persona may change")
+        PromptSurface.check("persona/renamed", identity + "\n\n---\n\n" + layer)
+    }
+
+    /** 带选项的人格层:固定头尾 + 选项的句子 + 用户写的。 */
+    @Test fun personaLayerWithOptions() {
+        val style = com.wangzan101.mika.core.prompt.PersonaStyle(
+            base = com.wangzan101.mika.core.prompt.PersonaStyle.Base.Crisp,
+            emoji = com.wangzan101.mika.core.prompt.PersonaStyle.Level.Less,
+            length = com.wangzan101.mika.core.prompt.PersonaStyle.Level.Less,
+            progress = com.wangzan101.mika.core.prompt.PersonaStyle.Level.Less,
+        )
+        PromptSurface.check("persona/layer-options", com.wangzan101.mika.core.prompt.PersonaPrompt.layer("测试人格", "先给结论,再展开;少用感叹号。", style)!!)
+    }
+
     @Test fun feedbackFromTools() {
         PromptSurface.check("feedback-tools", runBlocking { PromptSurfaceFeedback.tools() })
     }
 
     @Test fun feedbackFromLoop() {
         PromptSurface.check("feedback-loop", PromptSurfaceFeedback.loop())
+    }
+
+    private object NoRecords : com.wangzan101.mika.core.run.record.RunRecords {
+        override suspend fun summary(runId: String): com.wangzan101.mika.core.run.record.RunSummary? = null
+        override suspend fun events(runId: String) = emptyList<com.wangzan101.mika.core.run.record.RunEvent>()
     }
 
     /** 只回一个 finish:记下开工那次请求的系统提示词和工具。 */

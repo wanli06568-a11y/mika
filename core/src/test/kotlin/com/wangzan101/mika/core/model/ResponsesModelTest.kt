@@ -39,6 +39,38 @@ class ResponsesModelTest {
 
     private fun sentBody(): JsonObject = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
 
+    @Test fun apiAndChatGptRequestsSendTheSelectedServiceTier() = runTest {
+        for (plan in listOf(false, true)) {
+            for ((tier, expected) in listOf(null to null, OpenAiServiceTier.Fast to "priority", OpenAiServiceTier.Ultrafast to "ultrafast")) {
+                server.enqueue(stream(completed()))
+                ResponsesModel(
+                    server.url("/v1").toString(), BearerToken.fixed("k"), "gpt-x", caps, OkHttpClient(),
+                    chatGptPlan = plan, reasoningEffort = "low", serviceTier = tier,
+                ).complete("", user, emptyList())
+                val body = sentBody()
+                assertEquals(expected, body["service_tier"]?.jsonPrimitive?.content)
+                assertEquals("low", body["reasoning"]?.jsonObject?.get("effort")?.jsonPrimitive?.content)
+            }
+        }
+    }
+
+    @Test fun serviceTierRejectionDoesNotRetryAtADifferentSpeed() = runTest {
+        val errors = listOf(false to "invalid_request_error", true to "subscription_sharing_unsupported_capability")
+        for ((plan, code) in errors) {
+            server.enqueue(MockResponse().setResponseCode(400).setBody("""
+                {"error":{"code":"$code","param":"service_tier","message":"Tier is unavailable"}}
+            """.trimIndent()))
+            val model = ResponsesModel(
+                server.url("/v1").toString(), BearerToken.fixed("k"), "gpt-x", caps, OkHttpClient(),
+                chatGptPlan = plan, serviceTier = OpenAiServiceTier.Ultrafast,
+            )
+            val error = runCatching { model.complete("", user, emptyList()) }.exceptionOrNull()
+            assertEquals("Tier is unavailable", (error as? ModelError.ServiceTierRejected)?.detail)
+            assertEquals("ultrafast", sentBody()["service_tier"]?.jsonPrimitive?.content)
+        }
+        assertEquals(errors.size, server.requestCount)
+    }
+
     @Test fun requestKeepsOnlyAllowedFieldsAndPutsSystemPromptInInstructions() = runTest {
         server.enqueue(stream(completed()))
         val history = listOf(
@@ -173,6 +205,15 @@ class ResponsesModelTest {
         assertEquals("The model `x` does not exist", expect<ModelError.ModelNotFound> { model().complete("s", user, emptyList()) }.detail)
         server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error":{"message":"none of group/rpa's models is ready"}}"""))
         assertEquals("none of group/rpa's models is ready", expect<ModelError.ModelNotFound> { model().complete("s", user, emptyList()) }.detail)
+    }
+
+    /** 超出上下文的 400 和 OpenAI 兼容接口同一条规则:本机跑的服务也开这个接口,原话说的是上下文的大小。 */
+    @Test fun contextTooLongIsRecognizedLikeTheCompatibleApi() = runTest {
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"error":{"code":400,"message":"request (25123 tokens) exceeds the available context size (16384 tokens), try increasing it","type":"exceed_context_size_error","n_prompt_tokens":25123,"n_ctx":16384}}"""))
+        expect<ModelError.ContextTooLong> { model().complete("s", user, emptyList()) }
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"error":{"message":"This model's maximum context length is 16384 tokens."}}"""))
+        expect<ModelError.ContextTooLong> { model().complete("s", user, emptyList()) }
+        assertEquals(2, server.requestCount)
     }
 
     @Test fun planHttpErrorsAreNotRetryable() = runTest {

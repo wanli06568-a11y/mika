@@ -9,19 +9,27 @@ import com.wangzan101.mika.core.workspace.GatedFile
 import com.wangzan101.mika.core.workspace.WorkspaceFileGate
 import com.wangzan101.mika.core.workspace.SandboxError
 import com.wangzan101.mika.core.workspace.SandboxPaths
+import com.wangzan101.mika.settings.NetProxyStore
 import com.wangzan101.mika.core.cap.sandbox.SandboxPort
+import com.wangzan101.mika.core.cap.sandbox.SandboxProcess
+import com.wangzan101.mika.core.cap.sandbox.SandboxShell
 import com.wangzan101.mika.core.cap.sandbox.PhoneCommandHandler
 import com.wangzan101.mika.core.cap.sandbox.SandboxStatus
-import com.wangzan101.mika.core.knowledge.ScriptEntry
-import com.wangzan101.mika.core.knowledge.ScriptManifest
+import com.wangzan101.mika.core.learn.knowledge.ScriptEntry
+import com.wangzan101.mika.core.learn.knowledge.ScriptManifest
 import com.wangzan101.mika.core.cap.sandbox.ShareRules
 import com.wangzan101.mika.core.workspace.WorkspacePathCheck
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -54,6 +62,8 @@ internal val FALLBACK_DNS = listOf("1.1.1.1", "8.8.8.8")
 private const val TAG = "AndroidSandbox"
 internal const val SHARE_MAX_FILES = 20
 internal const val SHARE_MAX_BYTES = 500L shl 20
+/** 打开用户终端前要求的最低剩余空间(和 run_command 一致)。 */
+private const val MIN_FREE_BYTES = 500L shl 20
 
 /**
  * 一个任务(一个 AndroidSandbox)的导出额度,share_file 与 `mika share` 共用。
@@ -107,8 +117,11 @@ class AndroidSandbox internal constructor(
     private val startPreparing: () -> Job? = { null },
     /** 用户的联网设置;不给时按就绪状态里的。 */
     private val allowNetwork: (() -> Boolean)? = null,
+    /** 网络代理(设置 › 网络代理,见 [NetProxyStore]);空串不用。只在允许联网的命令里给。 */
+    private val proxy: () -> String = { "" },
     /** APK 内的桥客户端；已有运行环境也要随 APK 更新。 */
     private val clientScript: () -> ByteArray? = { null },
+    override val folderFiles: com.wangzan101.mika.core.cap.sandbox.FolderFiles? = null,
 ) : SandboxPort {
     override val tree get() = dirs.tree
 
@@ -118,13 +131,17 @@ class AndroidSandbox internal constructor(
         skillFiles = { SkillsSync.bundled },
         startPreparing = { RuntimePreparer.ensure(context, retryFailed = true) },
         allowNetwork = { state.networkAllowed },
+        proxy = { NetProxyStore.get(context).get() },
         clientScript = { context.assets.open("sandbox/mika").use { it.readBytes() } },
+        folderFiles = GrantedFolderFiles(context.applicationContext),
     )
 
     private val quota = ShareQuota()
 
     private class SizeEntry(val bytes: Long, val at: Long)
     private val sizes = ConcurrentHashMap<String, SizeEntry>()
+
+    private fun dir(workspace: String): File = dirs.workspace(WorkspaceKey.parse(workspace))
 
     override fun status(): SandboxStatus = currentStatus()
 
@@ -156,7 +173,7 @@ class AndroidSandbox internal constructor(
         // 建目录到命令结束都在许可里:命令也往工作区里写,重置要等它跑完再删
         val o = tree.shared {
             val ws = withContext(Dispatchers.IO) {
-                dirs.workspace(workspace).also {
+                dir(workspace).also {
                     dirs.ensureBindSources(it)
                     syncClientScript()
                     // cwd 在工作区里不存在就建上(逐段、不跟随链接);建不了的不建,让 PRoot 自己报错
@@ -168,12 +185,12 @@ class AndroidSandbox internal constructor(
             // 命令结束(含超时、被杀、取消)就关掉桥:旧的名字和令牌不再能用
             val session = if (bridges) bridgeFor(workspace, network, onProgress, phone).open() else null
             try {
-                launch(cmd, ProcRunner.env(dirs, session?.name, session?.token, workspace), timeoutSec * 1000L + FALLBACK_GRACE_MS)
+                launch(cmd, ProcRunner.env(dirs, session?.name, session?.token, workspace, if (network) proxy() else ""), timeoutSec * 1000L + FALLBACK_GRACE_MS)
             } finally {
                 session?.close()
             }
         }
-        sizes.remove(workspace)
+        sizes.remove(dir(workspace).name)
         val text = String(o.output, Charsets.UTF_8)
         if (o.exitCode == EXIT_LAUNCHER_ERROR) {
             val reason = text.trimEnd().lineSequence().lastOrNull().orEmpty()
@@ -190,10 +207,129 @@ class AndroidSandbox internal constructor(
         )
     }
 
+    /**
+     * 在沙箱里启动长驻 stdio 进程。和一次性命令一样先准备运行环境、建工作区、写 resolv.conf;不提供手机工具桥
+     * (stdio server 只拿它自己的 stdin/stdout)。
+     *
+     * 进程存活期间拿着树的租约([SandboxTree.lease]),不是普通的 shared:要独占的(换根文件系统、重置、清工作区)
+     * 一来就先停掉进程、收回许可,不会被一个任务里开着的 server 挡上一个小时;之后再调这个进程就报连接已断。
+     * 建目录到启动这一段另拿一次短的 shared,独占的要等它做完才删,启动完再核一次有没有被收回。
+     */
+    override suspend fun openProcess(workspace: String, argv: List<String>, cwd: String?, environment: Map<String, String>): SandboxProcess {
+        val network = (status() as? SandboxStatus.Ready)?.network == true
+        val rel = cwd?.takeIf { it.isNotEmpty() }?.let { c ->
+            val n = SandboxPaths.normalize(c)?.takeIf(SandboxPaths::isWritable)
+                ?: throw SandboxError("path_outside_workspace", "cwd must be a directory inside /workspace.", recoverable = true)
+            n.removePrefix(SandboxPaths.WORKSPACE).trimStart('/')
+        }.orEmpty()
+        prepare()
+        val started = java.util.concurrent.atomic.AtomicReference<Process?>(null)
+        val lease = tree.lease(onRevoke = { started.get()?.let(::stopNow) })
+        try {
+            val process = tree.shared {
+                val ws = withContext(Dispatchers.IO) {
+                    dir(workspace).also {
+                        dirs.ensureBindSources(it)
+                        syncClientScript()
+                        rel.takeIf { c -> c.isNotEmpty() }?.let { c -> runCatching { files.mkdirs(it, c) } }
+                        if (network) writeResolvConf()
+                    }
+                }
+                val cmd = ProcRunner.argv(dirs, ws, rel, 3600, network, standIns(), argv)
+                val env = ProcRunner.env(dirs, null, null, workspace, if (network) proxy() else "", extra = environment)
+                val p = withContext(launcherThread + NonCancellable) {
+                    ProcessBuilder(cmd).redirectErrorStream(false).apply {
+                        environment().clear()
+                        environment().putAll(env)
+                    }.start()
+                }
+                started.set(p)
+                // 收回落在拿到租约和登记进程之间时 onRevoke 没看见它:这里补停
+                if (lease.revoked) {
+                    stopNow(p)
+                    throw SandboxError("sandbox_busy", "The sandbox is being reset; try again later.", recoverable = true)
+                }
+                p
+            }
+            return SandboxProcessHandle(process, lease)
+        } catch (e: Throwable) {
+            started.get()?.let(::stopNow)
+            lease.close()
+            throw e
+        }
+    }
+
+    suspend fun openShell(key: WorkspaceKey, cols: Int = 80, rows: Int = 24): SandboxShell = openShell(key.wire, cols, rows)
+
+    /**
+     * 用户自己打开的终端:在 [workspace] 里起一个带伪终端的 `/bin/sh`。和一次性命令同一套启动器、
+     * 同一份工作区、同一个联网状态;不接手机桥,不设时限,由用户关掉或树锁收回结束。
+     */
+    override suspend fun openShell(workspace: String, cols: Int, rows: Int): SandboxShell {
+        val ready = status() as? SandboxStatus.Ready
+            ?: throw SandboxError("sandbox_unavailable", "The Linux environment is not ready yet.", recoverable = true)
+        if (freeBytes() < MIN_FREE_BYTES) {
+            throw SandboxError("storage_low", "The phone has less than 500 MB free, so the terminal cannot open.", recoverable = false)
+        }
+        val network = ready.network
+        val c = cols.coerceIn(1, 1000)
+        val r = rows.coerceIn(1, 1000)
+        prepare()
+        val sizeFile = File(dirs.tmp, "pty-${java.util.UUID.randomUUID()}.size")
+        val started = java.util.concurrent.atomic.AtomicReference<Process?>(null)
+        val revoked = MutableStateFlow(false)
+        val exited = CompletableDeferred<Int>()
+        val lease = tree.lease(onRevoke = {
+            revoked.value = true
+            started.get()?.let(::stopNow)
+        })
+        try {
+            val process = tree.shared {
+                val ws = withContext(Dispatchers.IO) {
+                    sizeFile.parentFile?.mkdirs()
+                    sizeFile.writeText("$c $r")
+                    dir(workspace).also {
+                        dirs.ensureBindSources(it)
+                        syncClientScript()
+                        if (network) writeResolvConf()
+                    }
+                }
+                val cmd = ProcRunner.argv(
+                    dirs, ws, "", 0, network, standIns(), listOf("/bin/sh"),
+                    pty = true, ptyCols = c, ptyRows = r, ptySizePath = sizeFile,
+                )
+                val env = ProcRunner.env(dirs, null, null, workspace, if (network) proxy() else "", pty = true)
+                val p = withContext(launcherThread + NonCancellable) {
+                    ProcessBuilder(cmd).redirectErrorStream(true).apply {
+                        environment().clear()
+                        environment().putAll(env)
+                    }.start().also(started::set)
+                }
+                if (lease.revoked) {
+                    stopNow(p)
+                    throw SandboxError("sandbox_busy", "The sandbox is being reset; try again later.", recoverable = true)
+                }
+                p
+            }
+            thread(isDaemon = true, name = "mika-terminal-wait") {
+                val code = runCatching { process.waitFor() }.getOrDefault(-1)
+                lease.close()
+                synchronized(sizeFile) { runCatching { sizeFile.delete() } }
+                exited.complete(code)
+            }
+            return SandboxShellHandle(process, exited, revoked.asStateFlow(), sizeFile)
+        } catch (e: Throwable) {
+            started.get()?.let(::stopNow)
+            lease.close()
+            runCatching { sizeFile.delete() }
+            throw e
+        }
+    }
+
     override fun hostPath(workspace: String, sandboxPath: String, forWrite: Boolean): File? {
         val p = SandboxPaths.normalize(sandboxPath) ?: return null
         return when {
-            SandboxPaths.isWritable(p) -> SandboxPaths.resolveHost(dirs.workspace(workspace), p.removePrefix(SandboxPaths.WORKSPACE).trimStart('/'))
+            SandboxPaths.isWritable(p) -> SandboxPaths.resolveHost(dir(workspace), p.removePrefix(SandboxPaths.WORKSPACE).trimStart('/'))
             forWrite -> null
             else -> SandboxPaths.resolveHost(dirs.skills, p.removePrefix(SandboxPaths.SKILLS).trimStart('/'))
         }
@@ -203,10 +339,12 @@ class AndroidSandbox internal constructor(
 
     // 只有写(调用方持有 SandboxTree 的许可)才建工作区目录:读和查路径不持有许可,建了会和重置的删除撞上
     override fun hostRoot(workspace: String, normalized: String, forWrite: Boolean): Pair<File, String>? = when {
-        SandboxPaths.isWritable(normalized) -> dirs.workspace(workspace).also { if (forWrite) it.mkdirs() } to normalized.removePrefix(SandboxPaths.WORKSPACE).trimStart('/')
+        SandboxPaths.isWritable(normalized) -> dir(workspace).also { if (forWrite) it.mkdirs() } to normalized.removePrefix(SandboxPaths.WORKSPACE).trimStart('/')
         forWrite -> null
         else -> dirs.skills to normalized.removePrefix(SandboxPaths.SKILLS).trimStart('/')
     }
+
+    fun uploadCheck(key: WorkspaceKey, sandboxPath: String): WorkspacePathCheck = uploadCheck(key.wire, sandboxPath)
 
     /** web_upload 的路径检查:只认这个工作区里过得了关口的普通文件;技能目录和工作区外都算越界。 */
     fun uploadCheck(workspace: String, sandboxPath: String): WorkspacePathCheck {
@@ -265,19 +403,23 @@ class AndroidSandbox internal constructor(
 
     override fun freeBytes(): Long = dirs.root.takeIf { it.exists() }?.usableSpace ?: dirs.root.parentFile?.usableSpace ?: 0L
 
+    fun workspaceBytes(key: WorkspaceKey): Long = workspaceBytes(key.wire)
+
     /** 不跟随链接地累加;缓存一分钟,本工作区跑过命令后作废。 */
     override fun workspaceBytes(workspace: String): Long {
+        val ws = dir(workspace)
+        val cacheKey = ws.name
         val now = System.currentTimeMillis()
-        sizes[workspace]?.takeIf { now - it.at < SIZE_CACHE_MS }?.let { return it.bytes }
-        val bytes = treeBytes(dirs.workspace(workspace).toPath())
-        sizes[workspace] = SizeEntry(bytes, now)
+        sizes[cacheKey]?.takeIf { now - it.at < SIZE_CACHE_MS }?.let { return it.bytes }
+        val bytes = treeBytes(ws.toPath())
+        sizes[cacheKey] = SizeEntry(bytes, now)
         return bytes
     }
 
     /** 经关口在 .mika/ 里新建(不覆盖已有的);.mika 被换成链接等时抛出,不写任何东西。 */
     @Synchronized
     override fun saveOutput(workspace: String, text: String): String {
-        val root = dirs.workspace(workspace).apply { mkdirs() }
+        val root = dir(workspace).apply { mkdirs() }
         var next = (files.list(root, ".mika").mapNotNull { OUT_NAME.matchEntire(it)?.groupValues?.get(1)?.toIntOrNull() }.maxOrNull() ?: 0) + 1
         repeat(100) {
             val rel = ".mika/out-$next.txt"
@@ -428,5 +570,69 @@ class AndroidSandbox internal constructor(
             p.destroy()
             thread(isDaemon = true, name = "mika-sandbox-reaper") { if (!p.waitFor(DESTROY_GRACE_MS, TimeUnit.MILLISECONDS)) p.destroyForcibly() }
         }
+    }
+}
+
+/** 先 SIGTERM 启动器(它会清掉整棵进程树),[DESTROY_GRACE_MS] 内没退就 SIGKILL;阻塞着等到进程没了。 */
+private fun stopNow(p: Process) {
+    runCatching { p.outputStream.close() }
+    p.destroy()
+    if (!p.waitFor(DESTROY_GRACE_MS, TimeUnit.MILLISECONDS)) {
+        p.destroyForcibly()
+        p.waitFor(DESTROY_GRACE_MS, TimeUnit.MILLISECONDS)
+    }
+}
+
+/** [AndroidSandbox.openProcess] 的长驻进程:关闭时先 SIGTERM 启动器(它会清掉整棵进程树),再兜底 SIGKILL,并交还租约。 */
+private class SandboxProcessHandle(
+    private val process: Process,
+    private val lease: com.wangzan101.mika.core.workspace.SandboxTree.Lease,
+) : SandboxProcess {
+    override val stdin: java.io.OutputStream get() = process.outputStream
+    override val stdout: java.io.InputStream get() = process.inputStream
+    override val stderr: java.io.InputStream get() = process.errorStream
+
+    override fun close() {
+        runCatching { process.outputStream.close() }
+        runCatching { process.destroy() }
+        // 进程树退干净了才交还租约:还在写工作区的进程不该和重置撞上(重置会先收回、自己停进程,不等这里)
+        thread(isDaemon = true, name = "mika-sandbox-stdio-reaper") {
+            try {
+                if (!process.waitFor(DESTROY_GRACE_MS, TimeUnit.MILLISECONDS)) process.destroyForcibly()
+            } finally {
+                lease.close()
+            }
+        }
+        runCatching { process.inputStream.close() }
+        runCatching { process.errorStream.close() }
+    }
+}
+
+/** 关闭时先 SIGTERM 启动器，再兜底 SIGKILL。等待线程在进程退出后交还租约。 */
+private class SandboxShellHandle(
+    private val process: Process,
+    override val exited: Deferred<Int>,
+    override val revoked: StateFlow<Boolean>,
+    private val sizeFile: File,
+) : SandboxShell {
+    override val input: java.io.OutputStream get() = process.outputStream
+    override val output: java.io.InputStream get() = process.inputStream
+
+    override fun resize(cols: Int, rows: Int) {
+        if (cols !in 1..1000 || rows !in 1..1000) return
+        synchronized(sizeFile) {
+            if (process.isAlive) runCatching { sizeFile.writeText("$cols $rows") }
+        }
+    }
+
+    override fun close() {
+        // Android's destroy() signals the process before closing its pipes, but it can
+        // still wait on a writer during stream cleanup. Arm the watchdog before calling it.
+        thread(isDaemon = true, name = "mika-terminal-reaper") {
+            if (!process.waitFor(DESTROY_GRACE_MS, TimeUnit.MILLISECONDS)) process.destroyForcibly()
+        }
+        runCatching { process.destroy() }
+        runCatching { process.outputStream.close() }
+        runCatching { process.inputStream.close() }
     }
 }

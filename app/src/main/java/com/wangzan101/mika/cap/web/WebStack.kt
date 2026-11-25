@@ -6,13 +6,14 @@ import com.wangzan101.mika.core.cap.web.WebUrlPolicy
 import android.os.SystemClock
 import android.util.Log
 import androidx.webkit.WebViewAssetLoader
+import com.wangzan101.mika.core.run.ResourceScope
 import com.wangzan101.mika.takeover.HandoverActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import com.wangzan101.mika.core.workspace.WorkspaceFileGate
-import okhttp3.OkHttpClient
+import com.wangzan101.mika.core.net.NetProxy
 import java.io.File
 import com.wangzan101.mika.core.workspace.SandboxTree
 
@@ -40,7 +41,7 @@ class WebStack private constructor(
 
     /** 下载与上传;没有工作区时为空(两者都报不可用)。 */
     val files: WebFiles? = workspace?.let { w ->
-        val downloads = WebDownloads(w.dir, w.gate, w.tree, OkHttpClient(), cookies = { url -> WebTab.cookieManager().getCookie(url) }, scope = transfers)
+        val downloads = WebDownloads(w.dir, w.gate, w.tree, NetProxy.shared.client(), cookies = { url -> WebTab.cookieManager().getCookie(url) }, scope = transfers)
         WebFiles(context, w.dir, downloads, w.gate, transfers)
     }
 
@@ -193,6 +194,16 @@ class WebStack private constructor(
 
     companion object {
         private const val TAG = "MikaWebStack"
+
+        /** 并行子任务各用一套后台浏览器，第一次导航或读网址时才建，子任务结束即关。 */
+        internal fun childPort(
+            context: Context, childId: String, widthPx: Int, heightPx: Int, densityDpi: Int,
+            resources: ResourceScope, assetLoaders: List<WebViewAssetLoader> = emptyList(),
+        ): LazyWebPort = LazyWebPort {
+            resources.acquire(Dispatchers.Main, WebStack::close) {
+                create(context, childId, widthPx, heightPx, densityDpi, assetLoaders, keeper = null)
+            }.screen
+        }
 
         /** 建一套;系统 WebView 不可用等原因建不起来时抛出,调用方就只给手机界面。主线程调用。 */
         fun create(

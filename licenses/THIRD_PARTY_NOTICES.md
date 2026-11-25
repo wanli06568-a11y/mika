@@ -1,5 +1,29 @@
 # Third-party notices
 
+## 通话功能（calls/）实现
+
+- Source: https://github.com/DzsGatsby/FlashPhone（Mika 的 Apache-2.0 fork）
+- License: Apache-2.0
+- Usage: 通话功能（拨号、接听、挂断、AI 接听、人工接管、PCM 音频桥、实时语音客户端）按上游
+  Apache-2.0 许可并入,涉及:
+  - `app/src/main/java/com/wangzan101/mika/calls/`
+  - `app/src/main/java/com/wangzan101/mika/cap/phone/shell/ShellCallAudio.kt`
+  - `core/src/main/kotlin/com/wangzan101/mika/core/calls/`
+  - `app/src/test/java/com/wangzan101/mika/calls/`
+  - `app/src/test/java/com/wangzan101/mika/cap/phone/shell/ShellCallAudioTest.kt`
+  - `app/src/test/java/com/wangzan101/mika/ui/CallDeviceReadinessTest.kt`
+  - `core/src/test/kotlin/com/wangzan101/mika/core/mcp/McpCallToolsTest.kt`
+- Modifications: 默认问候语等产品文案按 Mika 调整为「Mika AI 电话助手」,相关测试断言随之同步。
+- Additional port: FlashPhone v1.1.6–v1.1.12 (through `8bcd8d89a20141f47d4d24c61debc42dabaa2676`):
+  foreground voice briefing (`calls/briefing/`, `ui/CallVoiceBriefingHost.kt`), call-bound DTMF
+  (`CallDtmfExecutor`, `ui/CallDtmfKeypad.kt`), protocol/ASR fixes and their unit/UI tests.
+  Adapted to Mika voice profiles, provider interface, existing task form, theme and translations;
+  FlashPhone standalone navigation, recording and remote-device services are not included.
+- Follow-up port: FlashPhone v1.1.13 (`554e69207de151329f71821f915cde997f8e69fc`),
+  per-carrier-call task binding and compact latest-transcript context; adapted to Mika's
+  existing call card and transcript role labels, with ownership/lifetime regressions.
+- Service: 实时语音经火山引擎（Volcengine）的 WebSocket 接口,凭证由用户在通话设置页填写。
+
 ## scrcpy
 
 - Project: https://github.com/Genymobile/scrcpy
@@ -95,6 +119,20 @@ The Apache Software Foundation (https://www.apache.org/).
 - License: Apache-2.0(依据各自 POM)
 - Usage: 以库的形式依赖,打进 APK。
 
+## OpenTelemetry
+
+- Project: https://github.com/open-telemetry/opentelemetry-proto-java
+- Artifacts: OTLP trace, common, resource and collector schemas from `io.opentelemetry.proto:opentelemetry-proto:1.11.1-alpha` (build-time only).
+- License: Apache-2.0
+- Usage: Generate lite OTLP trace messages.
+
+## Protocol Buffers
+
+- Project: https://github.com/protocolbuffers/protobuf
+- Artifact: `com.google.protobuf:protobuf-javalite:4.36.2`
+- License: BSD-3-Clause (see `app/src/main/assets/licenses/Protocol-Buffers.txt`).
+- Usage: Official OTLP messages.
+
 ## OkHttp
 
 - Project: https://square.github.io/okhttp/
@@ -119,6 +157,7 @@ The Apache Software Foundation (https://www.apache.org/).
     `compose.material:material-icons-core`、`material-ripple`(以上各含 `-android` 变体)
   - `compose.material3:material3:1.3.1`
   - `activity:activity`、`activity-ktx`、`activity-compose`:1.9.3
+  - `window:window`、`window-core`:1.3.0(折叠姿态与铰链信息)
   - `lifecycle:*`(common、common-java8、livedata-core、process、runtime、runtime-compose、runtime-ktx、viewmodel、
     viewmodel-ktx、viewmodel-savedstate):2.8.3
   - `core:core`、`core-ktx`:1.13.1;`annotation:annotation`:1.8.1;`annotation-experimental`:1.4.1;
@@ -189,6 +228,13 @@ The Apache Software Foundation (https://www.apache.org/).
 - License: 0BSD(BSD Zero Clause License);Copyright (C) The XZ for Java authors and contributors
 - Usage: 首次启动时解压自带的运行环境。
 
+## ZXing
+
+- Project: https://github.com/zxing/zxing
+- Artifact: `com.google.zxing:core:3.5.3`
+- License: Apache-2.0(依据 Maven POM)
+- Usage: 以库的形式依赖,未修改其代码;只用于在 Android 本机生成微信绑定二维码。
+
 ## commonmark-java
 
 - Project: https://github.com/commonmark/commonmark-java
@@ -222,4 +268,77 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+## xterm.js
+
+- Project: https://github.com/xtermjs/xterm.js
+- Version: `@xterm/xterm` 5.5.0, `@xterm/addon-fit` 0.10.0
+- License: MIT
+- Usage: 用户终端页面的终端仿真器，随 APK 打包在 `app/src/main/assets/terminal/`。
+
+```
+Copyright (c) 2017-2019, The xterm.js authors (https://github.com/xtermjs/xterm.js)
+Copyright (c) 2014-2016, SourceLair Private Company (https://www.sourcelair.com)
+Copyright (c) 2012-2013, Christopher Jeffrey (https://github.com/chjj/)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+## Shizuku API
+
+- Project: https://github.com/RikkaApps/Shizuku-API
+- Artifacts: `dev.rikka.shizuku:api:13.1.5`, `dev.rikka.shizuku:provider:13.1.5`
+- License: Apache-2.0
+- Usage: Library dependency used to optionally bind a local privileged user service when Shizuku is already installed, running, and authorized by the user.
+## MCP 服务品牌 logo（mcp/mcp-logos.json）
+
+- Source: https://www.npmjs.com/package/simple-icons（Simple Icons, 钉死版本 16.38.1 + 14.11.0 + 11.15.0）
+- License: CC0 1.0（图标字形本体）;各品牌标志（GitHub、Slack、OpenAI、Google、Notion 等）仍归各自品牌所有,仅在此用于「可连接的服务」标识。
+- Usage: `app/src/main/assets/mcp/mcp-logos.json` 里的品牌轮廓 path 与官方品牌色,由 `tools/mcp/build_logos.py` 生成,供 `McpLogos` 在服务目录/列表/管理页渲染为自着色矢量图标。
+
+## MCP 服务品牌 logo 补充集（mcp/mcp-logos.json）
+
+- Source: https://www.npmjs.com/package/@lobehub/icons-static-svg（Lobe Icons, 钉死版本 1.106.0）,只补上一节图标集没有的 AI/搜索服务（Cohere、Groq、xAI、Tencent Cloud 等）
+- License: MIT;各品牌标志仍归各自品牌所有,仅在此用于「可连接的服务」标识。
+- Usage: 同上,由 `tools/mcp/build_logos.py` 取单色 path 写进 `app/src/main/assets/mcp/mcp-logos.json`。
+
+```text
+MIT License
+
+Copyright (c) 2023 LobeHub
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```

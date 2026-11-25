@@ -1,6 +1,5 @@
 package com.wangzan101.mika.voice
 
-import com.wangzan101.mika.core.model.ModelError
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
@@ -30,8 +29,19 @@ sealed interface SpeechFailure {
     data object NoPermission : SpeechFailure
     data object Busy : SpeechFailure
     data object Network : SpeechFailure
+    /** 本机录音器起不来(服务商转写用的录音):可能被别的应用占着;识别服务初始化失败另行说明。 */
     data object MicUnavailable : SpeechFailure
-    data class Provider(val error: ModelError) : SpeechFailure
+    /**
+     * 识别服务报录音出错(ERROR_AUDIO):录音权限给了也可能录不到,例如系统的麦克风使用总开关关着,
+     * 或系统权限管理里单独关掉了麦克风。界面据此说明该去哪里看。
+     */
+    data object AudioError : SpeechFailure
+    /**
+     * 识别服务说没有权限,而且查得出来是它自己(另一个应用)没有录音权限,不是 Mika 没有(见 [SpeechServiceMic])。
+     * 界面据此说明,并带用户去那个应用的设置页。
+     */
+    data class ServiceNoPermission(val service: SpeechServiceTarget) : SpeechFailure
+    data class Provider(val error: Exception) : SpeechFailure
     data class Unavailable(val why: SpeechEngineSpec.Why) : SpeechFailure
 }
 
@@ -39,8 +49,14 @@ interface SpeechSession {
     /** 只给一个收集者;每个事件只送一次,[SpeechEvent.Final]/[SpeechEvent.Failed] 之后或 [cancel] 之后流就结束。 */
     val events: Flow<SpeechEvent>
 
-    /** 能边说边出字(系统 true,服务商 false)。 */
+    /** 能边说边出字(系统、原生流式 ASR 为 true,整段文件转写为 false)。 */
     val live: Boolean
+
+    /**
+     * 按住多久都行:边说边传、不攒整段录音的流式识别,不受按住说话的 60 秒封顶,也不倒数。
+     * 默认 false(手机自带识别、整段转写和其余引擎照旧封顶)。
+     */
+    val unlimited: Boolean get() = false
 
     /** 松开:收尾并给 Final。 */
     fun release()

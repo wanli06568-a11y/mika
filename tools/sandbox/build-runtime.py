@@ -9,7 +9,8 @@ from their signed metadata, so apk inside the runtime sees a consistent database
 Usage:
   build-runtime.py --resolve   re-resolve the package closure from the signed v3.22 APKINDEX, rewrite runtime/sources.lock
   build-runtime.py             build from runtime/sources.lock; write the asset, BundledRuntime.kt and runtime/packages.json
-  build-runtime.py --check     build into a temp dir and compare with the committed BundledRuntime.kt; exit 1 on mismatch
+  build-runtime.py --check     build into a temp dir and compare every committed artifact with it;
+                               exit 1 on a mismatch or on a missing artifact
 
 Every download is https only and verified: the minirootfs by SHA-256; each .apk by SHA-256 from the lock,
 by its own RSA signature (keys from the pinned minirootfs), by its control checksum (the APKINDEX `C:` value),
@@ -31,6 +32,7 @@ import tarfile
 import tempfile
 import urllib.request
 import zlib
+import zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 HERE = os.path.join(ROOT, "tools", "sandbox", "runtime")
@@ -40,10 +42,28 @@ ASSET = os.path.join(ROOT, "app", "src", "main", "assets", "runtime", "rootfs.ta
 KOTLIN = os.path.join(ROOT, "app", "src", "main", "java", "com", "wangzan101", "mika", "cap", "sandbox", "BundledRuntime.kt")
 CLIENT = os.path.join(ROOT, "app", "src", "main", "assets", "sandbox", "mika")
 CACHE = os.path.join(ROOT, "build", "sandbox-runtime", "dl")
-CDN = "https://dl-cdn.alpinelinux.org/alpine"
+CDN = os.environ.get("ALPINE_CDN", "https://dl-cdn.alpinelinux.org/alpine")
+MIRROR_CN = os.environ.get("ALPINE_MIRROR_CN", "")
+MIRROR_BACKUP = os.environ.get("ALPINE_MIRROR_BACKUP", "")
+PROXY = os.environ.get("HTTP_PROXY", os.environ.get("HTTPS_PROXY", ""))
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+def _opener(url):
+    """Open a URL, routing through PROXY when set.  Adds a browser User-Agent so that
+    Chinese alpine mirrors (Tsinghua / Aliyun) don't 403 a bare urllib client."""
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
+    if PROXY:
+        proxy = urllib.request.ProxyHandler({"http": PROXY, "https": PROXY})
+        opener = urllib.request.build_opener(proxy)
+    else:
+        opener = urllib.request.build_opener()
+    return opener.open(req, timeout=120)
 ARCH = "aarch64"
 # What `apk add` would be asked for. Keep in sync with core SANDBOX_PACKAGES (a JVM test checks it).
-WANT = ["python3", "nodejs", "py3-pillow", "py3-pypdf", "tzdata"]
+# Base set: Python/Node + npm + Pillow + pypdf + tzdata + the pip toolchain.
+# Doc set: poppler-utils (PDF->text/image), a CJK font + fontconfig (CJK output).
+# Everyday CLI: curl/unzip/zip/git/jq for fetch/unpack/repo work in scripts.
+WANT = ["python3", "nodejs", "npm", "py3-pillow", "py3-pypdf", "tzdata", "py3-pip", "py3-setuptools", "py3-wheel", "py3-packaging", "poppler-utils", "font-wqy-zenhei", "fontconfig", "curl", "unzip", "zip", "git", "jq"]
 # Install scripts and triggers that a real `apk add` would run on the phone, pinned by SHA-256 of the script, and why
 # the runtime is already right without running them. Any other install script or trigger stops the build.
 SCRIPTS_NOT_RUN = {
@@ -53,7 +73,29 @@ SCRIPTS_NOT_RUN = {
     # from ca-certificates-bundle, built from the same Mozilla list at the same version
     "ca-certificates/.trigger": ("1bf77c8eae3220b1bd7dd86561d0899315f51d72257c1aeb4066072ed4304fe5",
                                  "same CA list as ca-certificates-bundle"),
+    "fontconfig/.trigger": ("672cb2670f1085f515f5710e01c5a747830f14acc5fa20ded1fb7d46b282719d",
+                             "only runs fc-cache --system-only to rebuild the font cache"),
+    "mkfontscale/.trigger": ("7d6b49d96c7e0a5dee3882cd19f96c39194bdda1bbdee11e2efeb71deb443cd0",
+                            "only runs mkfontscale to rebuild font-scale databases; fonts remain importable without it"),
 }
+
+
+
+
+def _openssl_path():
+    """Find a usable openssl binary: Windows PATH, then common install locations."""
+    import shutil
+    found = shutil.which("openssl")
+    if found:
+        return found
+    candidates = [
+        r"C:\Program Files\Git\usr\bin\openssl.exe",
+        r"C:\Program Files\Git\mingw64\bin\openssl.exe",
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    die("openssl not found on PATH or common locations; install Git for Windows or OpenSSL")
 
 
 def die(msg):
@@ -66,13 +108,33 @@ def fetch(url, dest):
         die(f"only https downloads allowed: {url}")
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     tmp = dest + ".part"
-    with urllib.request.urlopen(url, timeout=120) as r, open(tmp, "wb") as f:
-        while True:
-            b = r.read(1 << 20)
-            if not b:
-                break
-            f.write(b)
-    os.replace(tmp, dest)
+    # Primary: the pinned URL (official CDN).  If it 404s (package rotated off the CDN),
+    # retry the same path under the CN mirrors, then the proxy — same content, SHA still enforced.
+    attempts = [url]
+    if MIRROR_CN:
+        attempts.append(url.replace(CDN, MIRROR_CN, 1) if url.startswith(CDN) else url)
+    if MIRROR_BACKUP:
+        attempts.append(url.replace(CDN, MIRROR_BACKUP, 1) if url.startswith(CDN) else url)
+    last_err = None
+    for candidate in dict.fromkeys(attempts):  # dedupe, keep order
+        try:
+            with _opener(candidate) as r, open(tmp, "wb") as f:
+                while True:
+                    b = r.read(1 << 20)
+                    if not b:
+                        break
+                    f.write(b)
+            os.replace(tmp, dest)
+            if candidate != url:
+                print(f"build-runtime: fell back to {candidate} for {os.path.basename(dest)}")
+            return
+        except Exception as e:
+            last_err = e
+            if "404" in str(e):
+                continue  # try next mirror
+            break
+    os.remove(tmp) if os.path.exists(tmp) else None
+    die(f"all download attempts failed for {url}: {last_err}")
 
 
 def sha256(data):
@@ -126,7 +188,8 @@ def rsa_verify(keys, sig_name, sig, signed):
         open(k, "wb").write(keys[m.group(2)])
         open(s, "wb").write(sig)
         open(b, "wb").write(signed)
-        r = subprocess.run(["openssl", "dgst", digest, "-verify", k, "-signature", s, b], capture_output=True)
+        openssl = _openssl_path()
+        r = subprocess.run([openssl, "dgst", digest, "-verify", k, "-signature", s, b], capture_output=True)
     if r.returncode != 0:
         die(f"bad signature ({sig_name})")
 
@@ -208,11 +271,27 @@ def resolve():
         for pr in p.get("p", "").split():
             provides.setdefault(re.split(r"[<>=~]", pr)[0], []).append(p)
     have = set()
+    lagging = {}
     for p in base:
         have.add(p["P"])
         have.update(re.split(r"[<>=~]", pr)[0] for pr in p.get("p", "").split())
         if p["P"] in index and index[p["P"]]["V"] != p["V"]:
-            die(f"minirootfs has {p['P']} {p['V']} but the index has {index[p['P']]['V']}: pin a newer minirootfs")
+            # Tolerate a minirootfs lagging the rolling branch index: overwrite this base entry
+            # with the index copy (adds the APKINDEX `C:` checksum, `p`/`i`/`o` etc.) so the
+            # closure below is computed against the version the branch actually has. The runtime
+            # still ships the minirootfs version -- build() refuses a lock entry that is already
+            # in the minirootfs, so nothing here can upgrade it. What that costs the result is
+            # checked after the closure is known.
+            ip = index[p['P']]
+            old = p["V"]  # read first: q is p's own record, so the version is gone after q.clear()
+            q = next(x for x in base if x['P'] == p['P'])
+            q.clear()
+            for k, v in ip.items():
+                q[k] = v
+            q['_repo'] = ip.get('_repo', 'main')
+            lagging[p['P']] = (old, ip['V'])
+            print(f"build-runtime: minirootfs {p['P']} {old} -> index {ip['V']} "
+                  f"(closure uses the index version, the runtime keeps {old})")
     chosen = []
 
     def add(p):
@@ -247,6 +326,22 @@ def resolve():
             if cond and p["P"] not in have and all(re.split(r"[<>=~]", c)[0] in have for c in cond):
                 add(p)
                 changed = True
+
+    # A lagging minirootfs leaves its own version in the runtime, so anything in the resolved set
+    # that pins that package to an exact version cannot be satisfied by what ships. The lock would
+    # build, the package database would look consistent, and the only failure would be inside the
+    # runtime on the phone.
+    for p in chosen:
+        for dep in p.get("D", "").split():
+            em = re.fullmatch(r"([^<>=~]+)=([^=<>\s]+)", dep)
+            if not em:
+                continue
+            name, want = em.groups()
+            if name in lagging and lagging[name][0] != want:
+                old, new = lagging[name]
+                die(f"{p['P']} needs {name}={want}, but the runtime would ship {name} {old} from the "
+                    f"minirootfs and a lock entry cannot replace it; point the alpine line at a "
+                    f"minirootfs release that carries {name} {new}")
 
     lines = [
         "# Runtime bundled in the APK. Generated by build-runtime.py --resolve; edit only the alpine line by hand.",
@@ -366,6 +461,8 @@ def installed_entry(index_lines, members):
     return "\n".join(out) + "\n\n"
 
 
+PIP_LOCK = os.path.join(HERE, "pip-requires.lock")
+
 def index_header(p, info, payload_size):
     """The installed-db header for a package, rebuilt from its signed .PKGINFO (same fields apk writes)."""
     g = lambda k: info.get(k, [""])[0]
@@ -422,6 +519,17 @@ def build(out_asset):
                          "url": p.get("U", ""), "repo": "main", "commit": p.get("c", "")})
     manifest.sort(key=lambda e: e["name"])
 
+    # Remove PEP668 EXTERNALLY-MANAGED marker so pip can install into system
+    # site-packages directly (required for on-demand package installs). The directory is read from
+    # the image: python3 comes from WANT, and its minor version moves with Alpine, so a path pinned
+    # here leaves the real marker in place and turns into "pip refuses to install" on the phone.
+    tree.entries.pop(f"{python_lib(tree)}/EXTERNALLY-MANAGED", None)
+
+    # Bake the pinned pip wheels into site-packages (SHA-256-verified, reproducible).
+    pip_wheels = bake_pip_wheels(tree, epoch)
+    if pip_wheels:
+        print(f"build-runtime: baked {len(pip_wheels)} pinned wheels: {', '.join(pip_wheels)}")
+
     def gen(path, data, mode=0o644):
         ti = tarfile.TarInfo(path)
         ti.size = len(data)
@@ -443,8 +551,39 @@ def build(out_asset):
     gen("lib/apk/db/scripts.tar", sbuf.getvalue())
     gen("etc/apk/world", ("\n".join(world) + "\n").encode())
     b = branch(alpine["version"])
-    gen("etc/apk/repositories", f"{CDN}/{b}/main\n{CDN}/{b}/community\n".encode())
+    # apk source list: official first, CN mirror second, optional backup third.
+    # Alpine's `apk` tries them in order and falls back when one is slow/blocked.
+    repos = [f"{CDN}/{b}/main", f"{CDN}/{b}/community"]
+    if MIRROR_CN:
+        repos.append(f"{MIRROR_CN}/{b}/main")
+        repos.append(f"{MIRROR_CN}/{b}/community")
+    if MIRROR_BACKUP:
+        repos.append(f"{MIRROR_BACKUP}/{b}/main")
+        repos.append(f"{MIRROR_BACKUP}/{b}/community")
+    gen("etc/apk/repositories", ("\n".join(repos) + "\n").encode())
     gen("etc/hosts", b"127.0.0.1 localhost\n::1 localhost\n")
+    # Package-manager source configs: CN mirrors first, official fallback.  pip.conf lives in /etc/pip/pip.conf
+    # (honored by root pip); .npmrc at / so the sandbox's npm uses npmmirror.  These are static text, so they
+    # work even when the proxy is not configured (NO_PROXY keeps CN mirror traffic direct).
+    gen("etc/pip/pip.conf", """[global]
+index-url = https://pypi.tuna.tsinghua.edu.cn/simple
+trusted-host = pypi.tuna.tsinghua.edu.cn
+""".encode(), 0o644)
+    gen(".npmrc", b"registry=https://registry.npmmirror.com\n")
+    gen("root/.npmrc", b"registry=https://registry.npmmirror.com\n")
+    # Proxy environment for the sandbox's network tools (curl, pip, npm, apk).
+    # When PROXY is set, bake it into /etc/profile.d so the phone's network commands
+    # use it without the user having to configure it.  CN mirrors stay direct via NO_PROXY.
+    if PROXY:
+        proxy_script = f"""#!/bin/sh
+# Mika sandbox network config (auto-generated).
+# Domestic CN package mirrors go direct; only non-CN hosts use the proxy.
+export HTTP_PROXY="{PROXY}"
+export HTTPS_PROXY="{PROXY}"
+export NO_PROXY="mirrors.aliyun.com,registry.npmmirror.com,registry.npm.taobao.org,pypi.tuna.tsinghua.edu.cn,pypi.mirrors.ustc.edu.cn,*.cn,localhost,127.0.0.1"
+export no_proxy="$NO_PROXY"
+"""
+        gen("etc/profile.d/99-proxy.sh", proxy_script.encode(), 0o755)
     gen("usr/local/bin/mika", open(CLIENT, "rb").read(), 0o755)
 
     buf = io.BytesIO()
@@ -476,6 +615,85 @@ def version_id(r):
     return f"{r['alpine']}-{r['sha256'][:12]}"
 
 
+def read_pip_lock():
+    """Wheels to bake into site-packages. Every field is verified at build time (SHA-256), so the
+    build is reproducible offline: re-download only these exact files."""
+    path = PIP_LOCK
+    # Required, not optional: a checkout that lost this file would otherwise build a runtime with
+    # no site-packages at all, rewrite the asset and BundledRuntime.kt from it, and say nothing.
+    if not os.path.isfile(path):
+        die("runtime/pip-requires.lock is missing; it lists the wheels baked into site-packages")
+    data = json.load(open(path, encoding="utf-8"))
+    if data.get("spec") != "mika.pip-requires/v1":
+        die(f"{path}: unknown spec {data.get('spec')}")
+    # `license` is required, not decorative: runtime-sources.py reads it to decide which wheels the GPL
+    # source pack has to ship the source of, and a wheel with no license would be silently skipped there.
+    for w in data.get("wheels", []):
+        for field in ("pkg", "version", "filename", "sha256", "url", "license"):
+            if not w.get(field):
+                die(f"{path}: wheel entry missing {field}")
+    return data["wheels"]
+
+
+def python_lib(tree):
+    """The runtime's CPython library directory, read from the image rather than pinned in code."""
+    found = sorted({name.split("/")[2] for name in tree.entries
+                    if name.startswith("usr/lib/python3.") and name.count("/") >= 2})
+    if len(found) != 1:
+        die(f"expected one usr/lib/python3.* directory in the runtime, found {', '.join(found) or 'none'}")
+    return "usr/lib/" + found[0]
+
+
+def wheel_requires(filename):
+    """The CPython a wheel is built for, as (minor, exact), or None when any Python 3 will do.
+
+    `cp312`-`cp312` runs on 3.12 alone; `cp311`-`abi3` is the stable ABI, so 3.11 and later; a
+    `py3`/`none` wheel names no version at all. A wheel's own tags are the authority here, so the
+    check needs no table kept in step with the lock.
+    """
+    parts = filename[:-len(".whl")].split("-") if filename.endswith(".whl") else filename.split("-")
+    if len(parts) < 3:
+        return None
+    python, abi = parts[-3], parts[-2]
+    m = re.fullmatch(r"cp3(\d+)", python)
+    if not m:
+        return None
+    return int(m.group(1)), abi != "abi3"
+
+
+def bake_pip_wheels(tree, epoch):
+    """Unpack each pinned wheel into site-packages. A wheel is a zip of the installed layout
+    (package dir + .dist-info), so unzip == install for both pure and native wheels; no pip runs.
+    Every wheel is SHA-256-verified against the lock, and each non-regular member is rejected."""
+    wheels = read_pip_lock()
+    lib = python_lib(tree)
+    sp = f"{lib}/site-packages"
+    minor = int(lib.rpartition(".")[2])
+    for w in wheels:
+        name = w["filename"]
+        # A wheel built for one CPython lands in site-packages either way and only fails at import
+        # on the phone, where nothing in the build would have said why.
+        need = wheel_requires(name)
+        if need is not None:
+            need_minor, exact = need
+            if (minor != need_minor if exact else minor < need_minor):
+                die(f"{name} needs CPython 3.{need_minor}{'' if exact else ' or newer'}, "
+                    f"the runtime has 3.{minor}: re-resolve the wheels in runtime/pip-requires.lock")
+        data = cached(w["url"], f"pip-{name}", w["sha256"])
+        zf = zipfile.ZipFile(io.BytesIO(data))
+        for zi in zf.infolist():
+            if zi.is_dir():
+                continue
+            dest = f"{sp}/{zi.filename}"
+            mode = 0o755 if (zi.external_attr >> 16) & 0o755 else 0o644
+            ti = tarfile.TarInfo(dest)
+            ti.size = zi.file_size
+            ti.mode = mode
+            ti.mtime = epoch
+            tree.put(norm(ti, epoch), zf.read(zi))
+    return [(f"{w['pkg']}=={w['version']}") for w in wheels]
+
+
 def kotlin(r):
     asset_path = os.path.relpath(ASSET, os.path.join(ROOT, "app", "src", "main", "assets")).replace(os.sep, "/")
     return f"""package com.wangzan101.mika.cap.sandbox
@@ -495,6 +713,12 @@ object BundledRuntime {{
 """
 
 
+def manifest(r):
+    """The committed packages.json, byte for byte: the asset, the Kotlin file and this are one build's output."""
+    return json.dumps({"version": version_id(r), "alpine": r["alpine"], "packages": r["packages"]},
+                      indent=1, ensure_ascii=False) + "\n"
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     g = ap.add_mutually_exclusive_group()
@@ -507,18 +731,23 @@ def main():
     if a.check:
         with tempfile.TemporaryDirectory() as d:
             r = build(os.path.join(d, "rootfs.tar.xz"))
-        committed = open(KOTLIN, encoding="utf-8").read() if os.path.isfile(KOTLIN) else ""
+        # --check proves the committed artifacts match a rebuild, so an absent one fails here:
+        # skipping its comparison would report "ok" for an artifact it never looked at.
+        for path in (KOTLIN, ASSET, MANIFEST):
+            if not os.path.isfile(path):
+                die(f"{os.path.relpath(path, ROOT)} is missing; --check compares it with a rebuild")
+        committed = open(KOTLIN, encoding="utf-8").read()
         if kotlin(r) != committed:
             die(f"rebuilt runtime {r['sha256']} differs from BundledRuntime.kt")
-        if os.path.isfile(ASSET) and sha256(open(ASSET, "rb").read()) != r["sha256"]:
+        if sha256(open(ASSET, "rb").read()) != r["sha256"]:
             die("assets/runtime/rootfs.tar.xz differs from the rebuild")
+        if open(MANIFEST, encoding="utf-8").read() != manifest(r):
+            die(f"{os.path.relpath(MANIFEST, ROOT)} differs from the rebuild")
         print(f"ok {version_id(r)} ({r['bytes']} bytes)")
         return
     r = build(ASSET)
     open(KOTLIN, "w", encoding="utf-8").write(kotlin(r))
-    json.dump({"version": version_id(r), "alpine": r["alpine"], "packages": r["packages"]},
-              open(MANIFEST, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
-    open(MANIFEST, "a").write("\n")
+    open(MANIFEST, "w", encoding="utf-8").write(manifest(r))
     print(f"built {version_id(r)}: {r['bytes']} bytes compressed, {r['fileBytes']} bytes of files, {r['entries']} entries")
 
 

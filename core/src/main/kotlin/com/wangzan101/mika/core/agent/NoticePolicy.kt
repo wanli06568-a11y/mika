@@ -1,8 +1,8 @@
 package com.wangzan101.mika.core.agent
 
-import com.wangzan101.mika.core.guard.DIAGNOSTIC_VERBS
-import com.wangzan101.mika.core.observation.Place
-import com.wangzan101.mika.core.observation.PlaceKind
+import com.wangzan101.mika.core.safety.guard.DIAGNOSTIC_VERBS
+import com.wangzan101.mika.core.screen.observation.Place
+import com.wangzan101.mika.core.screen.observation.PlaceKind
 import com.wangzan101.mika.core.prompt.Feedback
 import com.wangzan101.mika.core.tool.Verb
 
@@ -37,7 +37,8 @@ internal object NoticePolicy {
      */
     fun knowledgeAfter(verb: Verb?, place: Place?, ok: Boolean): List<KnowledgeLookup> = when {
         place == null -> emptyList()
-        place.kind == PlaceKind.App && (verb == Verb.Observe || verb == Verb.ListElements) -> listOf(KnowledgeLookup.App(place.name))
+        // 看界面、列元素、或打开一个 App:到了那个 App 就找它的资料。打开时没在开局 top 3 里的,在这里补进来(同一份不会重复注入)。
+        place.kind == PlaceKind.App && (verb == Verb.Observe || verb == Verb.ListElements || verb == Verb.LaunchApp) -> listOf(KnowledgeLookup.App(place.name))
         place.kind == PlaceKind.Site && verb in SITE_RESULT_VERBS && ok -> listOf(KnowledgeLookup.Site(place.name.lowercase().removePrefix("www.")))
         else -> emptyList()
     }

@@ -17,10 +17,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * OpenAI Chat Completions 兼容端点(DeepSeek/Qwen/Kimi/GLM/OpenRouter/本地服务等)。差异只放在 [capabilities]。
@@ -43,11 +41,16 @@ class OpenAiCompatModel(
     private val headers: Map<String, String> = emptyMap(),
     /** 用户选的思考强度(`reasoning_effort`);null 不发。 */
     private val reasoningEffort: String? = null,
+    private val keySupplier: (() -> String?)? = null,
+    /** 密钥被上游拒绝(429/401/403)时带上 HTTP 状态码回调;接线处按状态决定冷却(429)还是标耗尽(401/403)。 */
+    private val onKeyRejected: ((key: String, retryAfterMs: Long?, status: Int) -> Unit)? = null,
 ) : StreamingChatModel {
     override val name: String get() = model
     private val endpoint = baseUrl.trimEnd('/') + "/chat/completions"
     private val declaredVia = ReasoningVia.ofField(reasoningField)
     private val json = Json { ignoreUnknownKeys = true }
+
+    private fun resolveKey(): String? = keySupplier?.invoke()?.takeIf { it.isNotBlank() } ?: apiKey
 
     private companion object {
         val MARKABLE_ROLES = setOf("system", "user", "tool")
@@ -57,12 +60,15 @@ class OpenAiCompatModel(
     }
 
     override suspend fun complete(system: String, messages: List<Message>, tools: List<ToolSpec>): ModelReply {
-        val (status, retryAfter, text) = HttpSupport.execute(http, request(system, messages, tools, stream = false))
+        val response = requestWithKeyRotation(::resolveKey, onKeyRejected) { key ->
+            HttpSupport.execute(http, request(system, messages, tools, stream = false, key = key))
+        }
+        val (status, retryAfter, text) = response
         if (status !in 200..299) throw mapError(status, retryAfter, text)
         // 有的兼容端点不守 OpenAI 的默认值:没让流式也照样回 SSE(本地、局域网上的自建服务常见)。按流读完再拼,别把 `data:` 当成坏 JSON。
         if (!looksLikeEvents(text)) return parse(text)
         val stream = OpenAiStream({}, ::parseUsage, ::thinking)
-        eventsOf(text).forEach(stream::accept)
+        response.replay(eventsOf(text), stream::accept)
         return stream.finish()
     }
 
@@ -70,11 +76,15 @@ class OpenAiCompatModel(
         system: String, messages: List<Message>, tools: List<ToolSpec>, onText: (String) -> Unit,
     ): ModelReply {
         var stream = OpenAiStream(onText, ::parseUsage, ::thinking)
-        var response = HttpSupport.stream(http, request(system, messages, tools, stream = true), stream::accept)
-        if (response.status == 400 && response.body.contains("stream_options")) {
-            // 一些兼容端点能流式生成，却没有用量选项。
+        val response = requestWithKeyRotation(::resolveKey, onKeyRejected) { key ->
             stream = OpenAiStream(onText, ::parseUsage, ::thinking)
-            response = HttpSupport.stream(http, request(system, messages, tools, stream = true, includeUsage = false), stream::accept)
+            var raw = HttpSupport.stream(http, request(system, messages, tools, stream = true, key = key), stream::accept)
+            if (raw.status == 400 && raw.body.contains("stream_options")) {
+                // 一些兼容端点能流式生成，却没有用量选项。
+                stream = OpenAiStream(onText, ::parseUsage, ::thinking)
+                raw = HttpSupport.stream(http, request(system, messages, tools, stream = true, includeUsage = false, key = key), stream::accept)
+            }
+            raw
         }
         val (status, retryAfter, text) = response
         if (status !in 200..299) {
@@ -90,15 +100,18 @@ class OpenAiCompatModel(
         return stream.finish()
     }
 
-    private fun request(system: String, messages: List<Message>, tools: List<ToolSpec>, stream: Boolean, includeUsage: Boolean = true): Request {
+    private suspend fun request(system: String, messages: List<Message>, tools: List<ToolSpec>, stream: Boolean, includeUsage: Boolean = true, key: String? = resolveKey()): Request {
         val payload = buildJsonObject {
             put("model", model)
             reasoningEffort?.let { put("reasoning_effort", it) }
             // 思考只在带工具的请求里回传(工具调用一步接一步时要接着想);不带工具的旁路调用不需要
             val replayReasoning = tools.isNotEmpty()
+            // 末尾每次都变的 uncached 消息不参与标记:移动的缓存标记落在它们前面
+            val stable = messages.size - messages.takeLastWhile { it.uncached }.size
             val wire = listOf(buildJsonObject { put("role", "system"); put("content", system) }) +
-                messages.flatMap { serialize(it, replayReasoning) }
-            put("messages", JsonArray(if (capabilities.promptCaching == PromptCaching.Explicit) withCacheMarks(wire) else wire))
+                messages.take(stable).flatMap { serialize(it, replayReasoning) }
+            val tail = messages.drop(stable).flatMap { serialize(it, replayReasoning) }
+            put("messages", JsonArray((if (capabilities.promptCaching == PromptCaching.Explicit) withCacheMarks(wire) else wire) + tail))
             if (tools.isNotEmpty()) putJsonArray("tools") { tools.forEach { add(toolJson(it)) } }
             if (stream) {
                 put("stream", true)
@@ -111,8 +124,8 @@ class OpenAiCompatModel(
         return Request.Builder().url(endpoint)
             .withHeaders(headers)
             .header("Accept", if (stream) "text/event-stream" else "application/json")
-            .apply { if (!apiKey.isNullOrEmpty()) header("Authorization", "Bearer $apiKey") }
-            .post(payload.toString().toRequestBody("application/json".toMediaType()))
+            .apply { if (!key.isNullOrEmpty()) headerOrReject("Authorization", "Bearer $key") }
+            .postInference(InferenceProtocol.Chat, payload)
             .build()
     }
 
@@ -314,10 +327,11 @@ class OpenAiCompatModel(
         val miss = int(u, "prompt_cache_miss_tokens")
         val inT = int(u, "prompt_tokens") ?: if (hit != null && miss != null) hit + miss else return null
         val outT = int(u, "completion_tokens") ?: 0
-        val cached = maxOf(int(u["prompt_tokens_details"] as? JsonObject, "cached_tokens") ?: 0, hit ?: 0).coerceAtMost(inT)
+        val detail = int(u["prompt_tokens_details"] as? JsonObject, "cached_tokens")
+        val cached = maxOf(detail ?: 0, hit ?: 0).coerceAtMost(inT)
         // completion_tokens 含思考;有的服务商在 completion_tokens_details.reasoning_tokens 里单独报
         val reasoning = (int(u["completion_tokens_details"] as? JsonObject, "reasoning_tokens") ?: 0).coerceIn(0, outT)
-        return Usage(inT, outT, cached, reasoning)
+        return Usage(inT, outT, cached, reasoning, cacheReported = detail != null || hit != null)
     }
 }
 
@@ -340,16 +354,17 @@ private class OpenAiStream(
     private var done = false
     private var chunks = 0
 
-    fun accept(data: String) {
-        if (data == "[DONE]") { done = true; return }
+    fun accept(data: String): Boolean {
+        if (data == "[DONE]") { done = true; return true }
         val root = try { json.parseToJsonElement(data).jsonObject }
         catch (e: Exception) { throw ModelError.BadResponse("流式响应不是合法 JSON", e) }
-        if (root["error"] != null) throw ModelError.BadResponse(root["error"].toString().take(200))
+        // 有的服务流式请求一开头就出错时回 200,也要按错误类型接入重试与备援
+        ModelHttp.streamError(root)?.let { throw it }
         chunks++
         usageOf(root["usage"])?.let { usage = it }
-        val choice = (root["choices"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return
+        val choice = (root["choices"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return false
         (choice["finish_reason"] as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotEmpty)?.let { reason = it }
-        val delta = choice["delta"] as? JsonObject ?: return
+        val delta = choice["delta"] as? JsonObject ?: return false
         ReasoningVia.fields.forEach { via ->
             (delta[via.field!!] as? JsonPrimitive)?.contentOrNull?.let { appendThinking(it, via) }
         }
@@ -371,6 +386,7 @@ private class OpenAiStream(
             (fn?.get("name") as? JsonPrimitive)?.contentOrNull?.let { call.name.append(it) }
             (fn?.get("arguments") as? JsonPrimitive)?.contentOrNull?.let { call.args.append(it) }
         }
+        return done
     }
 
     /** 一次回复里思考只按最先收到的位置记(同一家不会换位置;两个字段都给时只记一份)。 */

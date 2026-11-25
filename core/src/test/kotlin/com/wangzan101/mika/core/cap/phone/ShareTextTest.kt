@@ -6,10 +6,10 @@ import com.wangzan101.mika.core.prompt.Feedback
 import com.wangzan101.mika.core.tool.FAILURE_MESSAGES
 import com.wangzan101.mika.core.tool.FakeScreen
 import com.wangzan101.mika.core.tool.execute
-import com.wangzan101.mika.core.uistate.ActionResult
-import com.wangzan101.mika.core.uistate.ChoiceOption
-import com.wangzan101.mika.core.uistate.LaunchChoice
-import com.wangzan101.mika.core.uistate.ScreenPort
+import com.wangzan101.mika.core.screen.uistate.ActionResult
+import com.wangzan101.mika.core.screen.uistate.ChoiceOption
+import com.wangzan101.mika.core.screen.uistate.LaunchChoice
+import com.wangzan101.mika.core.screen.uistate.ScreenPort
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -62,6 +62,7 @@ class ShareTextTest {
         val screen = ShareScreen()
         val r = toolDispatcher(screen).execute(call("not a package", "hi"))
         assertEquals("false", r.content.s("ok"))
+        assertEquals("invalid_arguments", r.content.s("error"))
         assertTrue(screen.shared.isEmpty())
     }
 }

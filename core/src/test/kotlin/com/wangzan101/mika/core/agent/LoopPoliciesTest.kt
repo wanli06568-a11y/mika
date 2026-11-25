@@ -1,9 +1,9 @@
 package com.wangzan101.mika.core.agent
 
-import com.wangzan101.mika.core.observation.Place
+import com.wangzan101.mika.core.screen.observation.Place
 import com.wangzan101.mika.core.tool.placeAfter
-import com.wangzan101.mika.core.guard.GuardVerdict
-import com.wangzan101.mika.core.guard.Severity
+import com.wangzan101.mika.core.safety.guard.GuardVerdict
+import com.wangzan101.mika.core.safety.guard.Severity
 import com.wangzan101.mika.core.model.ModelError
 import com.wangzan101.mika.core.model.ToolSpec
 import com.wangzan101.mika.core.prompt.Feedback
@@ -80,6 +80,12 @@ class LoopPoliciesTest {
     @Test fun modelFailureReasons() {
         assertTrue("503" in StopRules.modelFailed(ModelError.Server(503)).reason)
         assertEquals("模型调用异常:boom", StopRules.modelFailed(IllegalStateException("boom")).reason)
+        val task = StopRules.modelFailed(ModelError.TaskBudgetExceeded(5, 5)) as TaskState.Failed
+        assertEquals(FailKind.TokenLimit, task.kind)
+        assertTrue(task.reason.contains("5"))
+        val daily = StopRules.modelFailed(ModelError.DailyBudgetExceeded("服务商甲", 10_000, 10_000)) as TaskState.Failed
+        assertEquals(FailKind.TokenLimit, daily.kind)
+        assertTrue(daily.reason.contains("服务商甲") && daily.reason.contains("本地日期"))
     }
 
     // ---- 卡住提醒 ----
@@ -138,6 +144,8 @@ class LoopPoliciesTest {
 
     @Test fun knowledgeLookups() {
         assertEquals(listOf(KnowledgeLookup.App("com.x")), NoticePolicy.knowledgeAfter(Verb.Observe, Place.app("com.x"), true))
+        // 打开一个 App 后也要补它的资料(没在开局 top 3 里的,靠这里补进来)
+        assertEquals(listOf(KnowledgeLookup.App("com.x")), NoticePolicy.knowledgeAfter(Verb.LaunchApp, Place.app("com.x"), true))
         assertEquals(listOf(KnowledgeLookup.Site("example.com")), NoticePolicy.knowledgeAfter(Verb.Observe, Place.site("WWW.Example.com"), true))
         assertEquals(listOf(KnowledgeLookup.Site("shop.example.com")), NoticePolicy.knowledgeAfter(Verb.Navigate, Place.site("shop.example.com"), true))
         assertEquals(emptyList<KnowledgeLookup>(), NoticePolicy.knowledgeAfter(Verb.Navigate, Place.site("shop.example.com"), false))
@@ -213,6 +221,7 @@ class LoopPoliciesTest {
 
     @Test fun retryAfterIsHonouredAndCapped() {
         assertEquals(5000L, fixed.delayFor(ModelError.RateLimited(5000), 0))
+        assertEquals(1_000L, fixed.delayFor(ModelError.RateLimited(0), 0))
         assertEquals(30_000L, fixed.delayFor(ModelError.RateLimited(600_000), 0))
         assertNull(fixed.delayFor(ModelError.RateLimited(5000), 3))
     }

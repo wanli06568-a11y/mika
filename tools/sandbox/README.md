@@ -7,7 +7,7 @@ Mika 只以子进程方式运行它们,不链接它们。
 |---|---|---|---|---|
 | `libproot.so` | PRoot 本体,静态链接 talloc | PRoot:`sources.lock` 里的 `proot` 源码包,加 `patches/proot-*.patch`;talloc:`sources.lock` 里的 `talloc` 源码包,只编 `talloc.c`,未修改 | PRoot 5.4.0、talloc 2.4.3 | GPL-2.0-or-later(PRoot)、LGPL-3.0-or-later(talloc) |
 | `libproot_loader.so` | PRoot 的载入器(静态、`-nostdlib`) | 同一个 PRoot 源码包 | 5.4.0 | GPL-2.0-or-later |
-| `libmikarun.so` | Mika 的沙箱启动器(超时、断网、清场) | `app/src/main/cpp/mikarun/mikarun.c` | 随 Mika | MIT |
+| `libmikarun.so` | Mika 的沙箱启动器(超时、断网、清场、伪终端) | `app/src/main/cpp/mikarun/mikarun.c` | 随 Mika | MIT |
 
 许可证全文和版权声明(`licenses/THIRD_PARTY_NOTICES.md`)都在仓库根目录的 `licenses/`。
 
@@ -17,6 +17,10 @@ Mika 只以子进程方式运行它们,不链接它们。
 `app/src/main/assets/runtime/rootfs.tar.xz`。手机首次启动 Mika 时在后台解到 `files/sandbox/rootfs`,不联网。
 
 - `runtime/sources.lock`:最小根文件系统的地址与 SHA-256,以及每个软件包的仓库、版本、APKINDEX 校验值、`.apk` 的 SHA-256。
+- `runtime/pip-requires.lock`:要烤进 `site-packages` 的 wheel(名称、版本、文件名、下载地址、SHA-256、许可)。构建时逐个核对 SHA-256
+  后直接解开,不运行 pip,所以离线和重编都不依赖 PyPI;换 Python 小版本后按 wheel 自己的 tag 重新求。这个文件和 `sources.lock`
+  一样是构建的必需输入,缺了构建失败。wheel 也是随 APK 发出去的代码,所以 `license` 是构建的必需字段(记的是 wheel 自己的
+  `METADATA` 声明的许可):许可为 GPL/LGPL/MPL 的 wheel,`runtime-sources.py` 会取同一版本的 sdist 放进源码包。
 - `build-runtime.py`:按 `sources.lock` 下载、校验后拼成 `rootfs.tar.xz`。全程不运行 apk:按 apk 的布局解开软件包,
   并用软件包签过名的元数据写出 `/lib/apk/db/installed`,所以运行环境里的 apk 看到的数据库是一致的。
   每个 `.apk` 都要核对:锁文件里的 SHA-256、它自己的 RSA 签名(公钥取自钉住的最小根文件系统)、控制段校验值与 APKINDEX 一致、
@@ -29,10 +33,14 @@ Mika 只以子进程方式运行它们,不链接它们。
 ```bash
 python3 tools/sandbox/build-runtime.py --resolve   # 换 Alpine 小版本或软件包后重新求依赖,改写 runtime/sources.lock
 python3 tools/sandbox/build-runtime.py             # 生成 rootfs.tar.xz、BundledRuntime.kt、packages.json
-python3 tools/sandbox/build-runtime.py --check     # 重新生成并与仓库里的产物比较,不一致退出 1
+python3 tools/sandbox/build-runtime.py --check     # 重新生成并与仓库里的产物比较,不一致或产物缺失退出 1
 ```
 
 `build-runtime.py` 里的 `WANT` 必须与 core 的 `SANDBOX_PACKAGES` 一致(`BundledRuntimeTest` 核对)。
+
+`--resolve` 按分支索引求依赖闭包。最小根文件系统比索引旧时,那个包在运行环境里仍是根文件系统的版本
+(锁文件里的一条 `apk` 不能替换根文件系统自带的包),所以有包要求它的精确版本时 `--resolve` 直接失败,
+并指出该换到哪个 minirootfs 版本。
 
 运行环境包含 `tzdata`。每次启动命令时,`ProcRunner.env` 都把手机当前的 IANA 时区写入 `TZ`,
 让命令行、Python 和 Node 的本地时间与手机一致,并保留夏令时和历史偏移规则;手机切换时区后,下一条命令随之更新。
@@ -62,6 +70,7 @@ tools/sandbox/build-native.sh --check   # 只重编并与仓库里的产物比�
 每次发布 APK,都要把 `sources.lock` 列出的源码包、`patches/`、编译脚本和许可证打包成 `mika-<版本>-gpl-sources.tar.gz`,和 APK 放在同一个发布页。在仓库根目录运行:
 
 ```bash
+set -euo pipefail   # 任何一步失败就停,不产出缺源码的包
 VERSION=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
 NAME=mika-$VERSION-gpl-sources
 OUT=build/gpl-sources/$NAME
@@ -73,7 +82,8 @@ while read -r name version url sum; do
 done < tools/sandbox/sources.lock
 cp -R tools/sandbox/patches tools/sandbox/sources.lock tools/sandbox/build-native.sh tools/sandbox/README.md "$OUT/"
 cp licenses/GPL-2.0.txt licenses/GPL-3.0.txt licenses/LGPL-3.0.txt "$OUT/"
-# 运行环境里每个 GPL/LGPL/MPL 软件包:Alpine 的构建配方(钉在软件包记录的 aports 提交)与上游源码,逐个按 SHA-512 核对
+# 运行环境里每个 GPL/LGPL/MPL 软件包:Alpine 的构建配方(钉在软件包记录的 aports 提交)与上游源码,逐个按 SHA-512 核对;
+# 烤进 site-packages 的 copyleft wheel(许可写在 runtime/pip-requires.lock)取同一版本的 sdist,按 PyPI 的 SHA-256 核对
 python3 tools/sandbox/runtime-sources.py "$OUT/runtime"
 cp tools/sandbox/build-runtime.py tools/sandbox/runtime-sources.py app/src/main/assets/runtime/packages.json "$OUT/runtime/"
 cp -R tools/sandbox/runtime "$OUT/runtime/lock"
@@ -81,4 +91,4 @@ COPYFILE_DISABLE=1 tar -czf "build/gpl-sources/$NAME.tar.gz" -C build/gpl-source
 ```
 
 运行后得到 `build/gpl-sources/mika-<版本>-gpl-sources.tar.gz`。上传前用 `tar -tzf` 看一眼,确认里面有两个源码包、`patches/`,
-以及 `runtime/` 下每个 GPL/LGPL/MPL 软件包的目录和 `runtime/SOURCES.txt`(gcc 等源码较大,整包约数百 MB)。
+以及 `runtime/` 下每个 GPL/LGPL/MPL 软件包的目录、每个 copyleft wheel 的目录和 `runtime/SOURCES.txt`(gcc 等源码较大,整包约数百 MB)。

@@ -1,17 +1,17 @@
 package com.wangzan101.mika.core.agent
 
 import com.wangzan101.mika.core.tool.execute
-import com.wangzan101.mika.core.guard.OperationGuards
+import com.wangzan101.mika.core.safety.guard.OperationGuards
 import com.wangzan101.mika.core.action.ActionExecutor
 import com.wangzan101.mika.core.action.ActionRecorder
-import com.wangzan101.mika.core.gate.ConfirmationGate
-import com.wangzan101.mika.core.record.RunEvent
-import com.wangzan101.mika.core.record.RunSink
-import com.wangzan101.mika.core.uistate.ActionResult
-import com.wangzan101.mika.core.uistate.Verification
-import com.wangzan101.mika.core.uistate.ScreenPort
-import com.wangzan101.mika.core.uistate.ScreenSnapshot
-import com.wangzan101.mika.core.uistate.UiElement
+import com.wangzan101.mika.core.safety.gate.ConfirmationGate
+import com.wangzan101.mika.core.run.record.RunEvent
+import com.wangzan101.mika.core.run.record.RunSink
+import com.wangzan101.mika.core.screen.uistate.ActionResult
+import com.wangzan101.mika.core.screen.uistate.Verification
+import com.wangzan101.mika.core.screen.uistate.ScreenPort
+import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
+import com.wangzan101.mika.core.screen.uistate.UiElement
 import com.wangzan101.mika.core.tool.FakeScreen
 import com.wangzan101.mika.core.tool.ToolDispatcher
 import com.wangzan101.mika.core.tool.Until
@@ -266,16 +266,6 @@ class BatchRunnerTest {
         val notRun = runner(toolDispatcher(BatchScreen(listOf("返回" to listOf(0, 900, 100, 999))))).run(steps(st("phone_back"), st("phone_tap", """{"x":500,"y":500}""")), "c2").content
         assertEquals("false", notRun["steps"]!!.jsonArray.last().jsonObject.s("executed"))
         assertTrue("was not run (target_unresolved)" in notRun.s("message"))
-    }
-
-    @Test fun confirmationStopCarriesGuardVerdicts() = runTest {
-        val guards = OperationGuards()
-        val tap = """{"x":900,"y":950}"""
-        val parsed = kotlinx.serialization.json.Json.parseToJsonElement(tap).jsonObject
-        repeat(2) { guards.beforeAction("phone_tap", parsed) }
-        val r = runner(toolDispatcher(BatchScreen(home)), guards).run(steps(st("phone_tap", tap), st("phone_back")), "c1").content
-        assertEquals("confirmation_required", r.s("error"))
-        assertTrue(r["steps"]!!.jsonArray.single().jsonObject["guard"] == null)
     }
 
     @Test fun withoutConfirmationToolMessageDoesNotAskForIt() = runTest {

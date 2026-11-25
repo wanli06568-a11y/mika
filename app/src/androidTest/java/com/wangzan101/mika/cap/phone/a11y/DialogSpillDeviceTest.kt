@@ -29,7 +29,7 @@ class DialogSpillDeviceTest {
             ctx.getSystemService(android.hardware.display.DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY).getRealMetrics(it)
         }
         val shell = DeviceSupport.shell()
-        val d = com.wangzan101.mika.cap.phone.display.AgentDisplay(shell, m.widthPixels, m.heightPixels, m.densityDpi)
+        val d = com.wangzan101.mika.cap.phone.display.AgentDisplay(shell, m.widthPixels, m.heightPixels, m.densityDpi, InstrumentationRegistry.getInstrumentation().targetContext.getSystemService(android.hardware.display.DisplayManager::class.java))
         DeviceSupport.Agent(d, AndroidScreen(DeviceSupport.service(), shell, DeviceSupport.ready(d)))
     }
     private val screen get() = agent.screen
@@ -93,7 +93,7 @@ class DialogSpillDeviceTest {
         delay(1_500)
         val now = screen.snapshot()
         delay(500)
-        val opened = now.opened ?: (r as? com.wangzan101.mika.core.uistate.ActionResult.Ok)?.opened
+        val opened = now.opened ?: (r as? com.wangzan101.mika.core.screen.uistate.ActionResult.Ok)?.opened
         val stillThere = DeviceSupport.service().windowsOn(Display.DEFAULT_DISPLAY)
             .any { it.root?.packageName?.toString() == DeviceSupport.TEST_PACKAGE }
         println(

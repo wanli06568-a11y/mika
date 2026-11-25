@@ -56,7 +56,7 @@ object DeviceSupport {
 
     fun newAgent(): Agent {
         val shell = shell()
-        val d = AgentDisplay(shell, 720, 1600, 320)
+        val d = AgentDisplay(shell, 720, 1600, 320, InstrumentationRegistry.getInstrumentation().targetContext.getSystemService(android.hardware.display.DisplayManager::class.java))
         return Agent(d, AndroidScreen(service(), shell, ready(d)))
     }
 
@@ -70,11 +70,14 @@ object DeviceSupport {
     private fun rebindAccessibility() {
         if (ScreenAccessibility.instance.value != null) return
         val key = "enabled_accessibility_services"
-        val mika = "${InstrumentationRegistry.getInstrumentation().targetContext.packageName}/${MikaAccessibilityService::class.java.name}"
+        val pkg = InstrumentationRegistry.getInstrumentation().targetContext.packageName
+        val full = "$pkg/${MikaAccessibilityService::class.java.name}"
+        // 组件名有「包名/.类名」与完整类名两种写法;App 自己的恢复(PermissionCommands.accessibilityService)写的是短形式,两种都要认,不然重绑被跳过
+        val short = "$pkg/" + MikaAccessibilityService::class.java.name.removePrefix("$pkg.")
         val enabled = sh("settings get secure $key").trim().split(':')
-        if (mika !in enabled) return
+        if (enabled.none { it == full || it == short }) return
         try {
-            sh("settings put secure $key ${enabled.filter { it != mika }.joinToString(":").ifEmpty { "\"\"" }}")
+            sh("settings put secure $key ${enabled.filter { it != full && it != short }.joinToString(":").ifEmpty { "\"\"" }}")
             Thread.sleep(500)
         } finally {
             sh("settings put secure $key ${enabled.joinToString(":")}")
@@ -101,9 +104,11 @@ object DeviceSupport {
     fun mainScreenState(shell: IMikaShell): String {
         val topDisplay = sh("dumpsys window").lines().map { it.trim() }
             .firstOrNull { it.startsWith("mTopFocusedDisplayId=") }
+        checkNotNull(topDisplay) { "mTopFocusedDisplayId not found in dumpsys window" }
         val section = sh("dumpsys window displays").substringAfter("Display: mDisplayId=0", "")
             .substringBefore("Display: mDisplayId=").lines().map { it.trim() }
         val focus = section.firstOrNull { it.startsWith("mCurrentFocus=") }
+        checkNotNull(focus) { "mCurrentFocus not found for display 0" }
         val focusedApp = section.firstOrNull { it.startsWith("mFocusedApp=") }
             ?.let { Regex("u0 (\\S+)").find(it)?.groupValues?.get(1) }
         return "$topDisplay $focus focusedApp=$focusedApp topTask=${shell.topTaskId(android.view.Display.DEFAULT_DISPLAY)}"

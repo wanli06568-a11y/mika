@@ -4,12 +4,12 @@ import android.graphics.Bitmap
 import android.util.Log
 import android.view.Display
 import android.view.accessibility.AccessibilityWindowInfo
-import com.wangzan101.mika.core.uistate.ScreenSnapshot
-import com.wangzan101.mika.core.uistate.normalize
-import com.wangzan101.mika.core.userscreen.CapturedScreen
-import com.wangzan101.mika.core.userscreen.UserScreen
-import com.wangzan101.mika.core.userscreen.UserScreenText
-import com.wangzan101.mika.vision.BitmapImageOps
+import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
+import com.wangzan101.mika.core.screen.uistate.normalize
+import com.wangzan101.mika.core.screen.user.CapturedScreen
+import com.wangzan101.mika.core.screen.user.UserScreen
+import com.wangzan101.mika.core.screen.user.UserScreenText
+import com.wangzan101.mika.media.BitmapImageOps
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -32,6 +32,15 @@ internal object MainScreenCapture {
         /** 前台是 Mika 自己:不截。 */
         data object Self : Result
         data object Unavailable : Result
+    }
+
+    /** 只查看窗口根的归属,不遍历文本;有未知归属时拒绝分享。 */
+    fun sourcePackages(service: ScreenAccessibility): Set<String>? {
+        val windows = service.windowsOn(Display.DEFAULT_DISPLAY).filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+        if (windows.isEmpty()) return null
+        val packages = windows.map { it.root?.packageName?.toString() }
+        if (packages.any { it.isNullOrBlank() }) return null
+        return packages.filterNotNull().toSet()
     }
 
     /** 截图(调用方已把浮层藏好)。读树要在截图的同一时刻:截完马上读。 */
@@ -71,7 +80,7 @@ internal object MainScreenCapture {
                     val ocr = if (snap != null && UserScreenText.needsOcr(snap)) recognize(bmp) else null
                     val (lines, fromOcr) = snap?.let {
                         UserScreenText.lines(it, ocr, top = normalize(topInset, bmp.height), bottom = normalize(bmp.height - bottomInset, bmp.height))
-                    } ?: (emptyList<com.wangzan101.mika.core.userscreen.ScreenLine>() to false)
+                    } ?: (emptyList<com.wangzan101.mika.core.screen.user.ScreenLine>() to false)
                     Result.Captured(CapturedScreen(jpeg, UserScreen("", now, pkg, label, lines = lines, fromOcr = fromOcr)))
                 } finally {
                     bmp.recycle()

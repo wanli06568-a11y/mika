@@ -52,6 +52,34 @@ class HistoryPrunerTest {
         assertTrue("@e1" in results(h).first { it.callId == "c1" }.content)
     }
 
+    @Test fun oldScreenDropsTreeAndOtherLargeStructuresNotJustElements() {
+        val long = "x".repeat(500)
+        val structured = listOf(
+            Message(Role.Assistant, listOf(Part.ToolCall("structured", "phone_observe", "{}")), Author.Mika),
+            Message(Role.Tool, listOf(Part.ToolResult("structured",
+                """{"ok":true,"snapshotId":"old","elements":$big,"tree":[{"id":1,"nodes":[{"role":"TextView","text":"$long"}]}],"screenMap":{"rows":["$long"]}}""",
+                false)), Author.Mika),
+        )
+        // c2 是线前保留的最近全屏,因此 structured 必须按旧界面缩短。
+        val h = listOf(task) + structured + obs("c2") + (1..6).flatMap { tap("t$it") }
+        val old = results(HistoryPruner.prune(h, TOOLS, cut)).single { it.callId == "structured" }.content
+        assertTrue(old, "\"snapshotId\":\"old\"" in old && "\"ok\":true" in old)
+        assertTrue(old, "\"elements\":\"${HistoryPruner.OMITTED}\"" in old)
+        assertTrue(old, "\"tree\":\"${HistoryPruner.OMITTED}\"" in old)
+        assertTrue(old, "\"screenMap\":\"${HistoryPruner.OMITTED}\"" in old)
+        assertTrue("old tree/read-aid payload survived pruning", long !in old)
+    }
+
+    @Test fun oldSmallTableIsOmittedAtTheSamePressureBoundaryAsElements() {
+        val packed = obs("p").map { m -> m.copy(parts = m.parts.map { p ->
+            if (p is Part.ToolResult) p.copy(content = """{"ok":true,"snapshotId":"s1","elementTables":[{"columns":["ref"],"rows":[["@e1"]]}]}""") else p
+        }) }
+        val h = listOf(task) + packed + obs("latest") + (1..5).flatMap { tap("t$it") }
+        val visible = results(HistoryPruner.prune(h, TOOLS, cut))
+        assertTrue(HistoryPruner.OMITTED in visible.first().content)
+        assertTrue("@e1" in visible[1].content)
+    }
+
     @Test fun smallResultsAndHeadUntouched() {
         val h = listOf(task) + (1..8).flatMap { obs("c$it") + tap("t$it") }
         val out = HistoryPruner.prune(h, TOOLS, cut)
@@ -107,17 +135,17 @@ class HistoryPrunerTest {
 
     // 缩短按结果里读到的观察是什么样的东西,缩短后留着结局和观察编号
     @Test fun shrinksByObservationFormAndKeepsOutcomeAndObsIds() {
-        fun round(id: String, tool: String, content: String, form: com.wangzan101.mika.core.observation.ObsForm, obsId: Int) = listOf(
+        fun round(id: String, tool: String, content: String, form: com.wangzan101.mika.core.screen.observation.ObsForm, obsId: Int) = listOf(
             Message(Role.Assistant, listOf(Part.ToolCall(id, tool, "{}")), Author.Mika),
-            Message(Role.Tool, listOf(Part.ToolResult(id, content, false, listOf(com.wangzan101.mika.core.observation.ReadTag(obsId, form)))), Author.Mika),
+            Message(Role.Tool, listOf(Part.ToolResult(id, content, false, listOf(com.wangzan101.mika.core.screen.observation.ReadTag(obsId, form)))), Author.Mika),
         )
         val long = "x".repeat(5000)
         val h = listOf(task) +
-            round("i", "phone_launch_app", """{"ok":true,"currentApp":"com.x","note":"${"y".repeat(400)}"}""", com.wangzan101.mika.core.observation.ObsForm.Interface, 1) +
-            round("p", "web_read_page", """{"ok":true,"url":"https://a.example.com/","text":"$long"}""", com.wangzan101.mika.core.observation.ObsForm.Page, 2) +
-            round("s", "web_read_page", """{"ok":true,"url":"https://a.example.com/","text":"短的正文"}""", com.wangzan101.mika.core.observation.ObsForm.Page, 3) +
-            round("m", "memory_search", """{"ok":true,"memories":[{"content":"$long"}]}""", com.wangzan101.mika.core.observation.ObsForm.UserSaid, 4) +
-            round("c", "run_command", """{"ok":false,"error":"exit_nonzero","message":"命令失败","exitCode":2,"output":"$long"}""", com.wangzan101.mika.core.observation.ObsForm.Command, 5) +
+            round("i", "phone_launch_app", """{"ok":true,"currentApp":"com.x","note":"${"y".repeat(400)}"}""", com.wangzan101.mika.core.screen.observation.ObsForm.Interface, 1) +
+            round("p", "web_read_page", """{"ok":true,"url":"https://a.example.com/","text":"$long"}""", com.wangzan101.mika.core.screen.observation.ObsForm.Page, 2) +
+            round("s", "web_read_page", """{"ok":true,"url":"https://a.example.com/","text":"短的正文"}""", com.wangzan101.mika.core.screen.observation.ObsForm.Page, 3) +
+            round("m", "memory_search", """{"ok":true,"memories":[{"content":"$long"}]}""", com.wangzan101.mika.core.screen.observation.ObsForm.UserSaid, 4) +
+            round("c", "run_command", """{"ok":false,"error":"exit_nonzero","message":"命令失败","exitCode":2,"output":"$long"}""", com.wangzan101.mika.core.screen.observation.ObsForm.Command, 5) +
             (1..6).flatMap { tap("t$it") }
         val rs = results(HistoryPruner.prune(h, TOOLS, cut)).associateBy { it.callId }
         // 界面状态一律缩短;页面、命令输出只在大时缩短;用户说的不缩

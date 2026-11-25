@@ -1,9 +1,9 @@
 package com.wangzan101.mika.core.action
 
-import com.wangzan101.mika.core.risk.IrrevAction
-import com.wangzan101.mika.core.gate.Irreversible
-import com.wangzan101.mika.core.uistate.ScreenSnapshot
-import com.wangzan101.mika.core.uistate.UiElement
+import com.wangzan101.mika.core.safety.gate.IrrevAction
+import com.wangzan101.mika.core.safety.gate.Irreversible
+import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
+import com.wangzan101.mika.core.screen.uistate.UiElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
@@ -39,8 +39,8 @@ class ClassifiedRiskTest {
         // 付款、下单就是花钱
         assertEquals(Risk(ActionRisk.Irreversible, payment = true), assess("phone_tap", Irreversible(IrrevAction.pay, "付款")))
         assertEquals(Risk(ActionRisk.Irreversible, payment = true), assess("phone_tap", Irreversible(IrrevAction.order, "提交订单")))
-        // 屏上有金额时对外、不可逆的动作按花钱算
-        assertEquals(Risk(ActionRisk.External, payment = true), assess("phone_tap", Irreversible(IrrevAction.submit, "提交"), on = shop))
+        // 屏上有金额时不可逆的动作(删除)按花钱算;发送、提交放开,不再按花钱
+        assertEquals(Risk(ActionRisk.External), assess("phone_tap", Irreversible(IrrevAction.submit, "提交"), on = shop))
         // 账号、密码、安全设置、密码框、看不清的都不是花钱
         for (tool in listOf("phone_tap", "phone_type_text")) assertEquals(false, assess(tool).payment)
         assertEquals(false, assess("phone_tap", Irreversible(IrrevAction.delete, "注销账号")).payment)
@@ -49,6 +49,25 @@ class ClassifiedRiskTest {
         val typed = screen.copy(elements = screen.elements + el("@e7", "EditText", "¥25", listOf(0, 600, 999, 700), editable = true))
         assertEquals(false, assess("phone_tap", Irreversible(IrrevAction.submit, "提交"), on = typed).payment)
         assertEquals(Risk(ActionRisk.Change), assess("phone_tap", on = shop))
+    }
+
+    @Test fun arbitraryAmountsDoNotTurnOrdinaryActionsIntoPayments() {
+        val salary = screen.copy(elements = screen.elements + listOf(
+            el("@e7", "TextView", "150-200元/天", listOf(0, 600, 999, 660)),
+            el("@e8", "Button", "提交", listOf(0, 700, 999, 760)),
+        ))
+        // 金额只是页面内容,不是这一步要付的钱;区间也不能把提交、联系或删除升级成付款
+        assertEquals(Risk(ActionRisk.External), assess("phone_tap", Irreversible(IrrevAction.submit, "提交"), on = salary))
+        assertEquals(Risk(ActionRisk.External), assess("phone_tap", Irreversible(IrrevAction.submit, "立即沟通"), on = salary))
+        assertEquals(Risk(ActionRisk.Irreversible), assess("phone_tap", Irreversible(IrrevAction.delete, "删除"), on = salary))
+        // 提交放开、不再看金额;合计、付款面板仍把删除升级成付款;明确下单、付款不依赖页面金额
+        assertEquals(false, assess("phone_tap", Irreversible(IrrevAction.submit, "提交"), on = shop).payment)
+        val unreadableTotal = screen.copy(elements = screen.elements + el("@e9", "TextView", "合计", listOf(0, 600, 999, 660)))
+        assertEquals(false, assess("phone_tap", Irreversible(IrrevAction.submit, "提交"), on = unreadableTotal).payment)
+        val paySheet = salary.copy(elements = salary.elements + el("@e9", "TextView", "付款方式", listOf(0, 800, 999, 860)))
+        assertEquals(false, assess("phone_tap", Irreversible(IrrevAction.submit, "提交"), on = paySheet).payment)
+        assertEquals(true, assess("phone_tap", Irreversible(IrrevAction.order, "提交订单"), on = salary).payment)
+        assertEquals(true, assess("phone_tap", Irreversible(IrrevAction.pay, "确认转账"), on = salary).payment)
     }
 
     @Test fun coordinateTapsUseTheSmallestElementThere() {

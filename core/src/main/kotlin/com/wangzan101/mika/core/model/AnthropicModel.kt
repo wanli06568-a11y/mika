@@ -14,10 +14,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -110,7 +108,7 @@ class AnthropicModel(
         return thinkingType != "disabled" && opaque !in staleThinking && SignedThinking.block(p, endpoint) != null
     }
 
-    private fun request(system: String, messages: List<Message>, tools: List<ToolSpec>, stream: Boolean): Request {
+    private suspend fun request(system: String, messages: List<Message>, tools: List<ToolSpec>, stream: Boolean): Request {
         val systemText = (listOf(system) + messages.filter { it.role == Role.System }
             .map { m -> m.parts.filterIsInstance<Part.Text>().joinToString("\n") { it.text } })
             .filter { it.isNotEmpty() }.joinToString("\n\n")
@@ -141,9 +139,9 @@ class AnthropicModel(
         }
         return Request.Builder().url(endpoint)
             .withHeaders(headers)
-            .header("x-api-key", apiKey)
+            .headerOrReject("x-api-key", apiKey)
             .header("anthropic-version", "2023-06-01")
-            .post(payload.toString().toRequestBody("application/json".toMediaType()))
+            .postInference(InferenceProtocol.Anthropic, payload)
             .build()
     }
 
@@ -151,11 +149,11 @@ class AnthropicModel(
         status == 401 || status == 403 -> ModelError.Auth()
         status == 402 || body.contains("credit balance is too low") -> ModelError.QuotaExceeded()
         status == 429 -> ModelError.RateLimited(HttpSupport.retryAfterMs(retryAfter))
-        status == 413 || body.contains("prompt is too long") -> ModelError.ContextTooLong()
+        status == 413 || body.contains("prompt is too long") || ModelHttp.contextTooLong(status, body) -> ModelError.ContextTooLong()
         status == 404 -> ModelError.ModelNotFound(model, ModelAccessErrors.jsonDetail(body))
         status == 529 || body.contains("overloaded_error") -> ModelError.Server(529)
         status in 500..599 -> ModelError.Server(status)
-        else -> ModelError.BadResponse("HTTP $status ${body.take(200)}")
+        else -> if (status >= 400) ModelError.Server(status, ModelAccessErrors.detail(body)) else ModelError.BadResponse("HTTP $status ${body.take(200)}")
     }
 
     private fun toolJson(t: ToolSpec, last: Boolean): JsonObject = buildJsonObject {
@@ -170,18 +168,23 @@ class AnthropicModel(
     private fun buildMessages(messages: List<Message>): JsonArray {
         // (role, blocks) 先按相邻同角色合并,再输出
         val merged = mutableListOf<Pair<String, MutableList<JsonObject>>>()
-        for (m in messages) {
-            if (m.role == Role.System) continue
+        // 对话缓存到最后一条 user 消息的最后一块为止,下一步的开头与它相同就从缓存取;助手消息可能以思考块结尾,不标。
+        // 末尾每次都变的 uncached 消息不算:标在它们前面,它们的块照常合进去、跟在标记后面。
+        val stable = messages.size - messages.takeLastWhile { it.uncached }.size
+        var mark: Pair<Int, Int>? = null
+        messages.forEachIndexed { index, m ->
+            if (m.role == Role.System) return@forEachIndexed
             val role = if (m.role == Role.Assistant) "assistant" else "user"
             val blocks = if (role == "assistant") assistantBlocks(m) else userBlocks(m)
-            if (blocks.isEmpty()) continue
+            if (blocks.isEmpty()) return@forEachIndexed
             if (merged.lastOrNull()?.first == role) merged.last().second += blocks else merged += role to blocks.toMutableList()
+            if (role == "user" && index < stable) mark = merged.lastIndex to merged.last().second.lastIndex
         }
-        // 对话缓存到最后一条 user 消息为止,下一步的开头与它相同就从缓存取;助手消息可能以思考块结尾,不标
-        val lastUser = merged.indexOfLast { it.first == "user" }
         return buildJsonArray {
             merged.forEachIndexed { i, (role, blocks) ->
-                val content = if (i == lastUser) blocks.dropLast(1) + JsonObject(blocks.last() + ("cache_control" to ephemeral)) else blocks
+                val content = mark?.takeIf { it.first == i }?.let { (_, at) ->
+                    blocks.mapIndexed { j, b -> if (j == at) JsonObject(b + ("cache_control" to ephemeral)) else b }
+                } ?: blocks
                 add(buildJsonObject { put("role", role); put("content", JsonArray(content)) })
             }
         }
@@ -269,9 +272,9 @@ class AnthropicModel(
         val u = el as? JsonObject ?: return null
         fun n(k: String) = (u[k] as? JsonPrimitive)?.intOrNull
         val inT = n("input_tokens") ?: return null
-        val cached = n("cache_read_input_tokens") ?: 0
+        val cached = n("cache_read_input_tokens")
         // Anthropic 的 input_tokens 不含缓存部分;统一成总输入口径。output_tokens 含思考但不单独报,reasoningTokens 记 0
-        return Usage(inT + cached + (n("cache_creation_input_tokens") ?: 0), n("output_tokens") ?: 0, cached)
+        return Usage(inT + (cached ?: 0) + (n("cache_creation_input_tokens") ?: 0), n("output_tokens") ?: 0, cached ?: 0, cacheReported = cached != null)
     }
 }
 
@@ -289,19 +292,19 @@ private class AnthropicStream(
     private val json = Json { ignoreUnknownKeys = true }
     private val blocks = sortedMapOf<Int, Block>()
     private val visible = StringBuilder()
-    private var usage: Usage? = null
+    private var usage: JsonObject? = null
     private var reason: String? = null
     private var stopped = false
 
-    fun accept(data: String) {
+    fun accept(data: String): Boolean {
         val root = try { json.parseToJsonElement(data).jsonObject }
         catch (e: Exception) { throw ModelError.BadResponse("流式响应不是合法 JSON", e) }
         when ((root["type"] as? JsonPrimitive)?.contentOrNull) {
-            "message_start" -> usage = usageOf((root["message"] as? JsonObject)?.get("usage"))
+            "message_start" -> usage = (root["message"] as? JsonObject)?.get("usage") as? JsonObject
             "content_block_start" -> {
-                val index = (root["index"] as? JsonPrimitive)?.intOrNull ?: return
-                val b = root["content_block"] as? JsonObject ?: return
-                val type = (b["type"] as? JsonPrimitive)?.contentOrNull ?: return
+                val index = (root["index"] as? JsonPrimitive)?.intOrNull ?: return false
+                val b = root["content_block"] as? JsonObject ?: return false
+                val type = (b["type"] as? JsonPrimitive)?.contentOrNull ?: return false
                 blocks[index] = Block(type,
                     id = (b["id"] as? JsonPrimitive)?.contentOrNull.orEmpty(),
                     name = (b["name"] as? JsonPrimitive)?.contentOrNull.orEmpty(),
@@ -315,9 +318,9 @@ private class AnthropicStream(
                 }
             }
             "content_block_delta" -> {
-                val index = (root["index"] as? JsonPrimitive)?.intOrNull ?: return
-                val block = blocks[index] ?: return
-                val delta = root["delta"] as? JsonObject ?: return
+                val index = (root["index"] as? JsonPrimitive)?.intOrNull ?: return false
+                val block = blocks[index] ?: return false
+                val delta = root["delta"] as? JsonObject ?: return false
                 when ((delta["type"] as? JsonPrimitive)?.contentOrNull) {
                     "text_delta" -> (delta["text"] as? JsonPrimitive)?.contentOrNull?.let {
                         block.text.append(it); visible.append(it); onText(visible.toString())
@@ -329,12 +332,15 @@ private class AnthropicStream(
             }
             "message_delta" -> {
                 reason = ((root["delta"] as? JsonObject)?.get("stop_reason") as? JsonPrimitive)?.contentOrNull ?: reason
-                val output = ((root["usage"] as? JsonObject)?.get("output_tokens") as? JsonPrimitive)?.intOrNull
-                if (output != null) usage = usage?.copy(outputTokens = output)
+                // 用量是累计值:带了整数的字段(输出,也可能有输入、缓存)覆盖 message_start 的,没带的、null 的沿用;收尾时再解析
+                (root["usage"] as? JsonObject)?.let { delta ->
+                    usage = JsonObject(usage.orEmpty() + delta.filterValues { (it as? JsonPrimitive)?.intOrNull != null })
+                }
             }
             "message_stop" -> stopped = true
-            "error" -> throw ModelError.BadResponse(root["error"].toString().take(200))
+            "error" -> throw ModelHttp.streamError(root) ?: ModelError.BadResponse(root["error"].toString().take(200))
         }
+        return stopped
     }
 
     fun finish(): ModelReply {
@@ -362,7 +368,7 @@ private class AnthropicStream(
             "max_tokens" -> StopReason.MaxTokens
             else -> StopReason.Other
         }
-        return ModelReply(parts, stop, usage)
+        return ModelReply(parts, stop, usageOf(usage))
     }
 }
 

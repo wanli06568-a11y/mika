@@ -1,9 +1,15 @@
 package com.wangzan101.mika.core.cap.sandbox
 
+import java.io.Closeable
 import java.io.File
-import com.wangzan101.mika.core.knowledge.ScriptEntry
+import java.io.InputStream
+import java.io.OutputStream
+import com.wangzan101.mika.core.learn.knowledge.ScriptEntry
+import com.wangzan101.mika.core.workspace.SandboxError
 import com.wangzan101.mika.core.workspace.WorkspaceFileGate
 import com.wangzan101.mika.core.workspace.SandboxTree
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.JsonObject
 
 /** 沙箱命令请求手机工具时,交回本任务的动作执行入口。 */
@@ -21,6 +27,8 @@ sealed interface SandboxStatus {
 
 /** Agent 接触 Linux 沙箱的唯一入口;路径都是沙箱里的路径([SandboxPaths])。 */
 interface SandboxPort {
+    val folderFiles: FolderFiles? get() = null
+
     /** 沙箱目录的树锁:往工作区写的都在它的许可里写。 */
     val tree: SandboxTree
 
@@ -31,6 +39,21 @@ interface SandboxPort {
 
     /** [cwd]:`/workspace` 下的相对路径,null 为 `/workspace` 本身。 */
     suspend fun run(workspace: String, argv: List<String>, cwd: String?, timeoutMs: Long, onProgress: (String) -> Unit): CommandResult
+
+    /**
+     * 启动一条长驻命令(stdio MCP server),stdin/stdout/stderr 直接接到进程。默认不支持;
+     * 实现必须把进程关在沙箱里,不能让它拿到 App 私有目录。[environment] 是显式追加的环境
+     * (秘密经这里进进程,不进 argv),实现按 allowlist 合并,不继承宿主/App 环境。
+     */
+    suspend fun openProcess(workspace: String, argv: List<String>, cwd: String? = null, environment: Map<String, String> = emptyMap()): SandboxProcess =
+        throw SandboxError("sandbox_stdio_unsupported", "This device cannot run stdio MCP servers.", recoverable = true)
+
+    /**
+     * 用户自己打开的终端:在 [workspace] 里起一个带伪终端的 shell。它不属于任何任务,不经过模型,
+     * 也不写运行记录;和 [run] 一样按当时的联网设置执行。默认不支持。
+     */
+    suspend fun openShell(workspace: String, cols: Int = 80, rows: Int = 24): SandboxShell =
+        throw SandboxError("sandbox_shell_unsupported", "This device cannot open a terminal.", recoverable = true)
 
     /** 当前任务提供手机工具入口时，命令可通过桥接调用；旧实现仍可只实现 [run]。 */
     suspend fun runWithPhone(workspace: String, argv: List<String>, cwd: String?, timeoutMs: Long,
@@ -71,4 +94,29 @@ interface SandboxPort {
 
     /** [skillPath] 下的 [file] 与打包的那份逐字节相同;不同就重新同步一次再核,仍不同为 false。 */
     suspend fun verifyScript(skillPath: String, file: String): Boolean = true
+}
+
+/** [SandboxPort.openProcess] 返回的长驻进程;关闭时整棵进程树结束。 */
+interface SandboxProcess : Closeable {
+    val stdin: OutputStream
+    val stdout: InputStream
+    val stderr: InputStream
+}
+
+/**
+ * 用户终端的会话:[input] 写进 shell 的 stdin,[output] 是 stdout 和 stderr 合并后的输出。
+ * 关闭时整棵进程树结束;树锁被重置/清理收回时 [revoked] 变为 true。
+ */
+interface SandboxShell : Closeable {
+    val input: OutputStream
+    val output: InputStream
+
+    /** shell 退出时的退出码;被信号杀死是 128 + 信号。 */
+    val exited: Deferred<Int>
+
+    /** 被 [SandboxTree] 的独占许可收回(重置、清工作区)后为 true。 */
+    val revoked: StateFlow<Boolean>
+
+    /** 改窗口大小;实现不支持时什么也不做。 */
+    fun resize(cols: Int, rows: Int) {}
 }

@@ -1,5 +1,6 @@
 package com.wangzan101.mika.cap.phone.a11y
 
+import android.view.accessibility.AccessibilityEvent
 import com.wangzan101.mika.cap.phone.a11y.MainScreenSpill.InUse
 import com.wangzan101.mika.cap.phone.a11y.MainScreenSpill.PullBack
 import org.junit.Assert.assertEquals
@@ -10,15 +11,20 @@ import org.junit.Test
 class MainScreenSpillTest {
     private val since = 10_000L
     private val window = 6_000L
-    private val home = setOf("com.home", "com.wangzan101.mika")
+    private val launchers = setOf("com.home")
+    private val home = launchers + "com.wangzan101.mika"
 
     private fun arrival(
         task: Int = 7, pkg: String? = "com.chat", at: Long = since + 500, from: Int = MainScreenSpill.NEW,
         sameTask: Boolean = false, standard: Boolean = true, now: Int = MainScreenSpill.MAIN, user: Int = 0,
     ) = MainScreenSpill.Arrival(task, pkg, user, at, from, sameTask, standard, now)
 
-    private fun decide(vararg a: MainScreenSpill.Arrival, topBefore: Int = 3, taps: List<MainScreenSpill.Tap> = emptyList()) =
-        MainScreenSpill.decide(a.toList(), since, window, topBefore, home, taps)
+    private fun decide(
+        vararg a: MainScreenSpill.Arrival,
+        topBefore: Int = 3,
+        taps: List<MainScreenSpill.Tap> = emptyList(),
+        userActiveBefore: Boolean = false,
+    ) = MainScreenSpill.decide(a.toList(), since, window, topBefore, home, taps, launchers, userActiveBefore)
 
     @Test fun newTaskOnTheMainScreenRightAfterTheActionIsPulledBack() {
         assertEquals(listOf(PullBack(arrival())), decide(arrival()))
@@ -55,8 +61,32 @@ class MainScreenSpillTest {
     @Test fun userTappingTheMainScreenMeansTheUserOpenedIt() {
         val other = MainScreenSpill.Tap(since + 400, "com.other")
         assertTrue(decide(arrival(at = since + 900), taps = listOf(other)).isEmpty())
-        // 动作之前的点按不算
-        assertEquals(1, decide(arrival(at = since + 900), taps = listOf(MainScreenSpill.Tap(since - 100, "com.other"))).size)
+    }
+
+    @Test fun userActivityJustBeforeTheActionIsConservative() {
+        // 动作开始前用户刚在主屏上动过手(两次动作之间点的,只有计数、没有具体时刻):归属说不清,不拉回、报成用户在用
+        val a = arrival(at = since + 900)
+        assertEquals(listOf(InUse(a)), decide(a, userActiveBefore = true))
+        // 动作之前没动过手:照常拉回
+        assertEquals(listOf(PullBack(a)), decide(a, userActiveBefore = false))
+    }
+
+    @Test fun systemTouchWithoutASemanticClickKeepsTheUsersAppOnTheMainScreen() {
+        // 系统若投递触摸事件，它是控件点击之外的补充证据
+        assertTrue(MainScreenSpill.isUserTap(AccessibilityEvent.TYPE_TOUCH_INTERACTION_START))
+        assertFalse(MainScreenSpill.isUserTap(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED))
+        val touch = MainScreenSpill.Tap(since + 400, null)
+        assertTrue(decide(arrival(at = since + 900), taps = listOf(touch)).isEmpty())
+    }
+
+    @Test fun returningHomeBeforeOpeningAnAppKeepsTheUsersAppOnTheMainScreen() {
+        val desktop = arrival(task = 2, pkg = "com.home", at = since + 200, from = MainScreenSpill.MAIN)
+        val opened = arrival(at = since + 900)
+        // 桌面和通知栏入口不发控件点击时，先有回桌面的主屏导航也足以证明是用户入口
+        assertTrue(decide(desktop, opened).isEmpty())
+        // Mika 自己的主屏页面不是桌面，不能把 Agent 的真实外溢当成用户操作
+        val mika = arrival(task = 2, pkg = "com.wangzan101.mika", at = since + 200, from = MainScreenSpill.MAIN)
+        assertEquals(listOf(PullBack(opened)), decide(mika, opened))
     }
 
     @Test fun userTappingThePopupItselfLeavesItThere() {

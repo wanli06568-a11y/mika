@@ -42,6 +42,10 @@
     <string name="err_payment">Payment is up to you</string>
     <string name="err_no_evidence">Result has no evidence</string>
     <string name="err_double_click">Double-tap not supported</string>
+    <string name="err_app_blocked">App is disabled</string>
+    <string name="err_app_unverified">Couldn’t identify the app</string>
+    <string name="err_app_unavailable">App access settings unavailable</string>
+    <string name="err_app_protected">Protected app can’t be automated</string>
     <string name="verify_passed">Check passed</string>
     <string name="verify_unverified">Couldn’t verify</string>
     <string name="verify_none">Not checked</string>
@@ -63,6 +67,7 @@
     <string name="timeline_check">Check</string>
     <string name="timeline_duration">Time taken</string>
     <string name="timeline_more">More details</string>
+    <string name="timeline_cost">Cost</string>
     <string name="expand">Expand</string>
     <string name="timeline_model_calls">Model calls</string>
     <plurals name="times">
@@ -87,4 +92,9 @@
     <string name="timeline_export_hint">Save the token usage of each model reply and context compaction events as JSONL.</string>
     <string name="timeline_exported">Usage records saved</string>
     <string name="timeline_export_failed">Couldn’t export the usage records. Check that the record is available and the destination is writable.</string>
+    <string name="timeline_running">Running</string>
+    <string name="timeline_step_limit">Steps</string>
+    <string name="timeline_step_limit_value">%1$d / %2$d</string>
+    <string name="timeline_token_budget">Token budget</string>
+    <string name="timeline_token_budget_value">%1$s / %2$s</string>
 </resources>

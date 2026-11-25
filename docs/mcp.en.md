@@ -85,7 +85,7 @@ adb shell am start-foreground-service -n com.wangzan101.mika/.mcp.McpService -a 
 
 Access switches, token copying and replacement, and remote wake/unlock are under "Advanced settings", collapsed by default. "CLI / Skill" and "MCP" share the USB / Wi-Fi / VPN connection selector. "CLI / Skill" has two steps: install and connect; connect verifies the connection. Network mode uses the HTTP origin and a token file, without MCP configuration.
 
-The token is stored encrypted on the phone, the same way as provider API keys. Turning the switch off closes the port (if USB mode is still on, only the listener on the phone itself stays).
+The token is stored encrypted on the phone, the same way as provider API keys. Turning the switch off closes the port (if USB mode is still on, only the listener on the phone itself stays). If the default port 8765 is taken by another service on the phone, change it under Advanced settings › Listening port (1024–65535); it applies immediately, and `connect` and `adb forward` on the computer follow the port shown on the phone.
 
 ### Connecting from a computer
 
@@ -117,11 +117,15 @@ curl -s http://192.168.1.23:8765/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}'
 ```
 
+## Self-hosted remote access
+
+For public remote access, deploy the optional self-hosted gateway. Pair and explicitly enable access under **MCP → Remote**, then copy the config to a client supporting Authorization headers. **CLI / Skill → Remote** uses the same gateway and phone LAN access token. The phone authenticates requests; the gateway manages pairing and forwards requests, without access-token management or OAuth flows. No shared Wi-Fi or VPN is required. The first version is single-owner, single-device. See the [deployment guide](../companions/relay/README.md). HTTPS ends at the gateway, which can read forwarded contents; use one you trust.
+
 ## Tools
 
 | Tool | Arguments | What it does |
 | --- | --- | --- |
-| `mika_run_task` | `goal` (required), `conversation` (optional) | Hands Mika a job and returns a `task_id` right away. The task is recorded in a conversation you can see in the app. To follow up on an earlier job, pass the `conversation` that task returned. |
+| `mika_run_task` | `goal` (required), `conversation` and `"request_id"` (optional) | Hands Mika a job and returns a `task_id` right away. The task is recorded in a conversation you can see in the app. To follow up on an earlier job, pass the `conversation` that task returned. |
 | `mika_task_status` | `task_id` | The task's state now: status, latest progress, what it is waiting for, and the answer when done. |
 | `mika_wait_task` | `task_id`, `timeout_s` (optional, default 30, at most 50) | Waits until the status changes (for example Mika starts waiting for an answer, or finishes) or time runs out, then returns the state. Progress notes alone don't count, so it doesn't return on every step. |
 | `mika_answer` | `task_id`, `text` | Answers the question Mika asked in this task. |
@@ -133,12 +137,15 @@ Statuses:
 
 - `starting`: just handed to the phone, not started yet.
 - `running`: in progress, with the latest progress note.
-- `paused`: waiting for a condition, such as the phone being unlocked (it carries on by itself afterwards), or waiting in the queue.
+- `queued`: not started yet, waiting behind other tasks (the limit on tasks running at once is reached, or this conversation already has a task running); it starts by itself when its turn comes. Wait or cancel.
+- `paused`: waiting for a condition, such as the phone being unlocked (it carries on by itself afterwards).
 - `waiting_for_answer`: Mika asked a question; answer with `mika_answer` (answering on the phone works too). If nobody answers for a long time, Mika carries on as if there were no answer.
 - `waiting_on_phone`: this step can only be handled by a person on the phone, such as a step handed over for you to do yourself. The computer can't answer it; wait or cancel. The phone shows its usual notification.
 - `done`: finished, with the answer; `verified` says whether the answer was checked.
 - `failed`: not done, with the reason.
 - `cancelled`: stopped.
+
+When the schema of `mika_run_task` includes `"request_id"`, save a lowercase UUID before submitting and use it with `mika_task_status` if you lose the reply. Replaying the same ID, goal and conversation starts only one task. Use a fresh ID for a different request. After a phone process restart, finished tasks retain their results and unfinished tasks report `failed` with `failure_kind=interrupted`. Finished records are kept for 30 days, up to the latest 1000.
 
 Suggested flow: `mika_run_task` → `mika_wait_task` repeatedly → on `waiting_for_answer`, reply with `mika_answer` → until `done` / `failed` / `cancelled`.
 
@@ -146,7 +153,7 @@ After steering, use `mika_task_status` to find the `message_id` in `steers`: `re
 
 ## Remote wake and unlock
 
-On the phone, open Settings › Connect a computer › Advanced settings and turn on “Allow remote wake and unlock” (off by default). Swipe/no-credential locks need no saved credential. Configure the current PIN or password twice on that page; the computer cannot set or read it.
+On the phone, open Settings › Connect a computer › Advanced settings and turn on “Allow remote wake and unlock” (off by default). Clients connecting through a self-hosted gateway also need “Allow wake and unlock through the gateway” on the Remote page (off by default); otherwise these three tools are not offered to them. Swipe/no-credential locks need no saved credential. Configure the current PIN or password twice on that page; the computer cannot set or read it.
 
 | Tool | Arguments | Purpose |
 | --- | --- | --- |

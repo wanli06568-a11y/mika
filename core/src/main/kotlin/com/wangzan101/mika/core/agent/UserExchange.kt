@@ -2,13 +2,14 @@ package com.wangzan101.mika.core.agent
 
 import com.wangzan101.mika.core.action.ConfirmChoice
 import com.wangzan101.mika.core.action.Refusals
-import com.wangzan101.mika.core.gate.ConfirmationGate
-import com.wangzan101.mika.core.gate.DeclareResult
+import com.wangzan101.mika.core.safety.gate.ConfirmationGate
+import com.wangzan101.mika.core.safety.gate.DeclareResult
+import com.wangzan101.mika.core.safety.gate.TargetAppRestoreFailed
 import com.wangzan101.mika.core.general.RequestConfirmation
-import com.wangzan101.mika.core.memory.UserUtterances
+import com.wangzan101.mika.core.learn.memory.UserUtterances
 import com.wangzan101.mika.core.prompt.Feedback
-import com.wangzan101.mika.core.record.Redactor
-import com.wangzan101.mika.core.record.RunEvent
+import com.wangzan101.mika.core.run.record.Redactor
+import com.wangzan101.mika.core.run.record.RunEvent
 import com.wangzan101.mika.core.tool.HandBack
 import com.wangzan101.mika.core.tool.HandBackOutcome
 import com.wangzan101.mika.core.tool.Outcome
@@ -83,6 +84,15 @@ internal class UserExchange(
     fun answerInput(text: String, askId: String? = null): Boolean =
         if (matches(askId)) inputReply?.complete(text) ?: false else false
 
+    /** 渠道的新指令取代旧提问：结束这次等待，不让旧任务无限占着会话。 */
+    fun cancelInput(askId: String): Boolean {
+        val ask = activeAsk
+        if (ask?.askId != askId || ask.kind != Delivery.Ask.Kind.Input) return false
+        val pending = inputReply ?: return false
+        pending.cancel()
+        return true
+    }
+
     fun answerConfirmation(choice: ConfirmChoice, askId: String? = null): Boolean =
         if (matches(askId)) confirmationReply?.complete(choice) ?: false else false
 
@@ -108,7 +118,7 @@ internal class UserExchange(
         } finally {
             inputReply = null
             resolve(ask)
-        }.also { if (it == null) emit(RunEvent.State(now(), "no_answer", detail(prompt))) else utterances()?.add(UserWords.said(com.wangzan101.mika.core.userscreen.UserScreenMessage.parse(it).words, tools)) }?.let { answerText(it) }
+        }.also { if (it == null) emit(RunEvent.State(now(), "no_answer", detail(prompt))) else utterances()?.add(UserWords.said(com.wangzan101.mika.core.screen.user.UserScreenMessage.parse(it).words, tools)) }?.let { answerText(it) }
     }
 
     suspend fun input(o: Outcome.Input, running: TaskState): ToolExecution {
@@ -122,7 +132,7 @@ internal class UserExchange(
         })
     }
 
-    /** 等用户交回;取消任务(aborted)时返回 null。没交回就不说成交回了:跳过、超时不算失败,但如实告诉模型。 */
+    /** 等用户交回;取消任务(aborted)时返回 null。等待不超时,避免仍需用户处理时丢掉任务现场。 */
     suspend fun takeover(o: Outcome.Takeover, running: TaskState): ToolExecution? {
         if (provenance.attendance == Attendance.Unattended || provenance.origin == RunOrigin.Child) return null
         val pending = CompletableDeferred<HandBack>().also { takeoverReply = it }
@@ -133,8 +143,7 @@ internal class UserExchange(
         val since = now()
         val back = try {
             if (announce(ask) == DeliveryState.Failed) return null
-            if (provenance.attendance == Attendance.Reachable) withTimeoutOrNull(inputTimeoutMs) { pending.await() }
-            else pending.await()
+            pending.await()
         } finally { takeoverReply = null; resolve(ask) } ?: return null
         back.note?.let { utterances()?.add(it) }
         tools.noteTakeover(o.reason, back)
@@ -145,10 +154,11 @@ internal class UserExchange(
         return ToolExecution(buildJsonObject {
             put("outcome", back.outcome.name)
             if (back.outcome == HandBackOutcome.complete) {
-                put("ok", true)
+                put("ok", back.appReturnFailure == null)
                 put("durationMs", back.durationMs ?: (now() - since))
                 back.inputCount?.let { put("inputCount", it) }
                 back.stoppedAt?.let { put("stoppedAt", it) }
+                back.url?.let { put("url", it) }
                 put("note", HANDBACK_NOTE)
                 if (back.userFinished) { put("userFinished", true); put("instruction", USER_FINISHED_PROMPT) }
                 back.note?.takeIf { it.isNotBlank() }?.let { put("userNote", it) }
@@ -157,6 +167,12 @@ internal class UserExchange(
                 put("reason", if (back.outcome == HandBackOutcome.skipped) "takeover_skipped" else "takeover_timeout")
                 put("counts_as_failure", false)
                 put("note", NO_HANDBACK_NOTE)
+            }
+            back.appReturnFailure?.let {
+                put("error", TargetAppRestoreFailed.CODE)
+                put("message", it)
+                put("recoverable", true)
+                put("counts_as_failure", false)
             }
         })
     }

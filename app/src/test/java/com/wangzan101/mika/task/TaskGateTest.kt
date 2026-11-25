@@ -1,7 +1,9 @@
 package com.wangzan101.mika.task
 
 import org.junit.Rule
+import com.wangzan101.mika.R
 import com.wangzan101.mika.i18n.ChineseTexts
+import com.wangzan101.mika.i18n.tr
 import com.wangzan101.mika.core.agent.TaskState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,6 +11,7 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -33,20 +36,196 @@ class TaskGateTest {
 
     @Test
     fun nonInteractiveWaitsForUnlockThenResumesByItself() = runTest {
-        locked.value = LockState.Reading(interactive = false, keyguardLocked = false).locked
+        locked.value = LockState.Reading(interactive = false, keyguardLocked = false, deviceLocked = false).locked
         var passed = false
         launch { gate.pass { reported += it }; passed = true }
         runCurrent()
         assertFalse(passed)
         assertEquals(TaskState.Held(TaskGate.LOCKED), reported.last())
 
-        locked.value = LockState.Reading(interactive = true, keyguardLocked = true).locked // 亮屏但还在锁屏界面
+        locked.value = LockState.Reading(interactive = true, keyguardLocked = true, deviceLocked = true).locked // 亮屏但还在锁屏界面
         runCurrent()
         assertFalse(passed)
-        locked.value = LockState.Reading(interactive = true, keyguardLocked = false).locked
+        locked.value = LockState.Reading(interactive = true, keyguardLocked = false, deviceLocked = false).locked
         runCurrent()
         assertTrue(passed)
         assertEquals(null, reported.last())
+    }
+
+    @Test
+    fun gateRefreshesSystemLockStateBeforeAllowingWrite() = runTest {
+        var systemLocked = true
+        var unlocks = 0
+        val refreshed = TaskGate(locked, shellUp,
+            refreshLocked = { locked.value = systemLocked }, // 熄屏已发生，广播对应的状态流还没更新
+            unattendedUnlock = {
+                unlocks++
+                systemLocked = false
+                locked.value = false
+                "unlocked"
+            }) { true }
+
+        refreshed.pass { reported += it }
+
+        assertEquals(1, unlocks)
+        assertEquals(listOf<TaskState?>(TaskState.Held(TaskGate.LOCKED), null), reported)
+    }
+
+    @Test
+    fun unattendedTaskUnlocksThenContinues() = runTest {
+        locked.value = true
+        var unlocks = 0
+        val unattended = TaskGate(locked, shellUp, unattendedUnlock = {
+            unlocks++
+            locked.value = false
+            "unlocked"
+        }) { true }
+
+        unattended.pass { reported += it }
+
+        assertEquals(1, unlocks)
+        assertEquals(listOf<TaskState?>(TaskState.Held(TaskGate.LOCKED), null), reported)
+    }
+
+    @Test
+    fun unattendedTaskFailsWhenUnlockIsUnavailable() = runTest {
+        locked.value = true
+        val unattended = TaskGate(locked, shellUp, unattendedUnlock = { "unsupported_keyguard" }) { true }
+
+        val result = withTimeoutOrNull(1_000) { runCatching { unattended.pass { reported += it } } }
+
+        val error = result?.exceptionOrNull()
+        assertTrue(error is UnattendedLockException)
+        assertEquals("unsupported_keyguard", (error as UnattendedLockException).status)
+        assertTrue(error.message.orEmpty().endsWith("[unsupported_keyguard]"))
+        assertEquals(TaskState.Held(TaskGate.LOCKED), reported.last())
+    }
+
+    @Test
+    fun channelUnlockFailureUsesItsOwnGuidanceAndDoesNotRetry() = runTest {
+        locked.value = true
+        var unlocks = 0
+        val channel = TaskGate(locked, shellUp,
+            unattendedUnlock = { unlocks++; "disabled" },
+            unlockFailureMessage = { tr(R.string.wechat_unlock_failed) }) { true }
+
+        val result = withTimeoutOrNull(1_000) { runCatching { channel.pass { reported += it } } }
+
+        val error = result?.exceptionOrNull()
+        assertTrue(error is UnattendedLockException)
+        assertEquals("${tr(R.string.wechat_unlock_failed)} [disabled]", error?.message)
+        assertEquals(1, unlocks)
+        assertTrue(locked.value)
+        assertEquals(listOf(TaskState.Held(TaskGate.LOCKED)), reported)
+    }
+
+    /** 已开始、本地授权的任务解锁失败:不再杀任务、不再重复注入凭据,停在锁屏等用户手动解锁。 */
+    @Test
+    fun midRunFailedUnlockWaitsForManualUnlockWithoutRetryingCredential() = runTest {
+        var attempts = 0
+        var failure: String? = null
+        val recovering = TaskGate(locked, shellUp,
+            unattendedUnlock = { attempts++; "attempt_blocked" },
+            recoverUnlockFailure = { true },
+            onRecoveryFailure = { failure = it }) { true }
+        assertFalse(recovering.pass { reported += it })
+        locked.value = true
+        var resumed = false
+        var needsFreshScreen: Boolean? = null
+        launch { needsFreshScreen = recovering.pass { reported += it }; resumed = true }
+        runCurrent()
+        assertEquals(1, attempts)
+        assertEquals("attempt_blocked", failure)
+        assertFalse(resumed)
+        assertEquals(TaskState.Held(TaskGate.LOCKED), reported.last())
+        locked.value = false
+        runCurrent()
+        assertTrue(resumed)
+        assertEquals(true, needsFreshScreen)
+        assertEquals(1, attempts)
+    }
+
+    /** 已开始、本地授权的任务自动解锁成功:关卡告诉调用方锁屏周期发生过,准备好的动作要重读屏再做。 */
+    @Test
+    fun midRunSuccessfulAutoUnlockAlsoRequiresFreshScreen() = runTest {
+        val recovering = TaskGate(locked, shellUp,
+            unattendedUnlock = { locked.value = false; "unlocked" },
+            recoverUnlockFailure = { true }) { true }
+        assertFalse(recovering.pass { reported += it })
+        locked.value = true
+        assertTrue(recovering.pass { reported += it })
+        assertFalse(locked.value)
+    }
+
+    /** 解锁助手中途出错:按内部错误处理,转成等待用户解锁,不向外抛错丢进度。 */
+    @Test
+    fun midRunUnlockExceptionWaitsForUserInsteadOfLosingProgress() = runTest {
+        var reportedStatus: String? = null
+        val recovering = TaskGate(locked, shellUp,
+            unattendedUnlock = { error("helper disconnected") }, recoverUnlockFailure = { true },
+            onRecoveryFailure = { reportedStatus = it }) { true }
+        assertFalse(recovering.pass { reported += it })
+        locked.value = true
+        var resumed = false
+        launch { recovering.pass { reported += it }; resumed = true }
+        runCurrent()
+        assertEquals("internal_error", reportedStatus)
+        assertFalse(resumed)
+        locked.value = false
+        runCurrent()
+        assertTrue(resumed)
+    }
+
+    /** 还没开始过的任务解锁失败照旧失败收尾:没有进度可保。 */
+    @Test
+    fun initialFailureStillEndsUnattendedRun() = runTest {
+        locked.value = true
+        val recovering = TaskGate(locked, shellUp,
+            unattendedUnlock = { "unsupported_keyguard" }, recoverUnlockFailure = { true }) { true }
+        val outcome = runCatching { recovering.pass { reported += it } }
+        assertTrue(outcome.exceptionOrNull() is UnattendedLockException)
+    }
+
+    /** 没有解锁授权的任务(用户在场)解锁助手出错:照旧失败收尾,不装作能恢复。 */
+    @Test
+    fun unauthorizedRunStillFailsWhenUnlockErrors() = runTest {
+        locked.value = true
+        val recovering = TaskGate(locked, shellUp,
+            unattendedUnlock = { error("helper disconnected") }, recoverUnlockFailure = { false }) { true }
+        val outcome = runCatching { recovering.pass { reported += it } }
+        assertTrue(outcome.exceptionOrNull() is UnattendedLockException)
+        assertEquals("internal_error", (outcome.exceptionOrNull() as UnattendedLockException).status)
+    }
+
+    /** 用户在场的任务中途锁屏、手动解锁回来:关卡同样报锁屏周期,准备好的动作先重读屏。 */
+    @Test
+    fun attendedRunResumedFromManualUnlockRequiresFreshScreen() = runTest {
+        assertFalse(gate.pass { reported += it })
+        locked.value = true
+        var passed = false
+        var needsFreshScreen: Boolean? = null
+        launch { needsFreshScreen = gate.pass { reported += it }; passed = true }
+        runCurrent()
+        assertFalse(passed)
+        assertEquals(TaskState.Held(TaskGate.LOCKED), reported.last())
+        locked.value = false
+        runCurrent()
+        assertTrue(passed)
+        assertEquals(true, needsFreshScreen)
+    }
+
+    @Test
+    fun unattendedTaskTrustsRefreshedSystemStateOverAttemptOutcome() = runTest {
+        locked.value = true
+        // 流程因权限等原因返回时，用户可能刚好已经手动解锁；实际系统状态才是依据。
+        val unattended = TaskGate(locked, shellUp, unattendedUnlock = {
+            locked.value = false
+            "disabled"
+        }) { true }
+
+        unattended.pass { reported += it }
+
+        assertEquals(listOf<TaskState?>(TaskState.Held(TaskGate.LOCKED), null), reported)
     }
 
     @Test

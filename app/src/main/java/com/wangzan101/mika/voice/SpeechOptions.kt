@@ -1,6 +1,7 @@
 package com.wangzan101.mika.voice
 
 import com.wangzan101.mika.R
+import com.wangzan101.mika.core.model.ModelError
 import com.wangzan101.mika.i18n.tr
 import com.wangzan101.mika.settings.Provider
 
@@ -15,10 +16,11 @@ object SpeechOptions {
      */
     data class Group(val provider: Provider, val models: List<String>)
 
-    /** 能做转写的服务商各一组;列表里只留像语音模型的。 */
-    fun groups(providers: List<Provider>): List<Group> = providers.filter(Transcriber::supports).map { p ->
-        Group(p, p.models.orEmpty().filter(Transcriber::looksLikeSpeech).map { it.id })
-    }
+    /** 能做转写的服务商各一组;模型按服务商给的列表原样列出,不按名字猜用途。 */
+    fun groups(providers: List<Provider>): List<Group> =
+        providers.filter(Transcriber::supports).map { provider ->
+            Group(provider, provider.models.orEmpty().map { it.id })
+        }
 
     /** 卡片右边两行:[title] 是选了什么,[sub] 是补充(可能没有),[subOk] 为真时补充用「可用」的绿色。 */
     data class Summary(val title: String, val sub: String?, val subOk: Boolean)
@@ -29,6 +31,13 @@ object SpeechOptions {
         val silent = Summary(tr(R.string.speech_system), tr(R.string.speech_system_silent), false)
         return when (choice) {
             SpeechChoice.Off -> Summary(tr(R.string.models_off), null, false)
+            is SpeechChoice.Doubao -> Summary(tr(R.string.speech_doubao_model), tr(R.string.speech_doubao_provider), false)
+            is SpeechChoice.FunAsr -> Summary(tr(R.string.speech_funasr_model), FunAsrProtocol.hostOf(choice.url), false)
+            is SpeechChoice.Bailian -> Summary(
+                choice.model,
+                tr(R.string.speech_bailian_provider) + " · " + tr(if (choice.region == BailianRegion.Singapore) R.string.speech_bailian_singapore else R.string.speech_bailian_beijing),
+                false,
+            )
             SpeechChoice.Auto -> when {
                 system.usable -> systemSummary(system)
                 system.available -> silent
@@ -45,6 +54,14 @@ object SpeechOptions {
                 Summary(choice.model, p.name, false)
             }
         }
+    }
+
+    /** 边说边转的服务在设置页里试连没通时的说法;不带服务端原话。 */
+    fun probeFailure(e: Throwable): String = when {
+        e is ModelError.Auth || e is LiveAsrError && e.auth -> tr(R.string.speech_live_auth)
+        e is LiveAsrError -> tr(R.string.speech_live_refused, e.code)
+        e is ModelError.RateLimited -> tr(R.string.speech_live_refused, "429")
+        else -> tr(R.string.speech_live_unreachable)
     }
 
     private fun systemSummary(system: SystemCapability) = Summary(

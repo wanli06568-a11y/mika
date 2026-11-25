@@ -2,11 +2,11 @@ package com.wangzan101.mika.core.tool
 
 import com.wangzan101.mika.core.assembly.toolDispatcher
 import com.wangzan101.mika.core.model.Part
-import com.wangzan101.mika.core.uistate.ActionResult
-import com.wangzan101.mika.core.uistate.EffectTuning
-import com.wangzan101.mika.core.uistate.ScreenPort
-import com.wangzan101.mika.core.uistate.ScreenSnapshot
-import com.wangzan101.mika.core.uistate.UiElement
+import com.wangzan101.mika.core.screen.uistate.ActionResult
+import com.wangzan101.mika.core.screen.uistate.EffectTuning
+import com.wangzan101.mika.core.screen.uistate.ScreenPort
+import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
+import com.wangzan101.mika.core.screen.uistate.UiElement
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
@@ -48,6 +48,14 @@ class ToolDispatcherEffectTest {
         assertEquals(true, r.changed)
     }
 
+    @Test fun actionRecordsTheSourceAppWhenTheScreenChangesApps() = runTest {
+        val s = LateScreen({ currentTime }, page("列表"), page("设置").copy(packageName = "com.android.settings"), afterMs = 0)
+        val r = toolDispatcher(s, inlineScreen = false).execute(call("phone_tap", """{"x":500,"y":500}"""))
+        assertEquals("place_changed", r.content.kind())
+        assertEquals("com.x", r.record["actionApp"]?.jsonPrimitive?.content)
+        assertEquals(null, r.content["actionApp"])
+    }
+
     // 动作之后新出现「到上限了」的提示:结果里写 limitReached 和停下的提示;动作前就在屏上的说明文字不算
     @Test fun limitNoticeAfterTheActionIsReported() = runTest {
         val s = LateScreen({ currentTime }, page("职位详情", "立即沟通"), page("职位详情", "立即沟通", "今日沟通次数已用完，明天再来吧"), afterMs = 0)
@@ -70,6 +78,22 @@ class ToolDispatcherEffectTest {
         val r = toolDispatcher(s).execute(call("phone_tap", """{"x":500,"y":500}"""))
         assertEquals("no_effect", r.content.kind())
         assertEquals(false, r.changed)
+    }
+
+    @Test fun currentAdequateTreeOverridesAnEarlierUnusableRead() = runTest {
+        var empty = true
+        val s = object : ScreenPort by FakeScreen() {
+            private fun current() = if (empty) ScreenSnapshot("empty", "com.x", emptyList(), 1080, 2400)
+            else page("一", "二", "三", "四", "五", "六")
+            override suspend fun snapshot() = current()
+            override suspend fun peek() = current()
+        }
+        val d = toolDispatcher(s)
+        assertEquals("unusable", d.execute(call("phone_observe")).content["treeQuality"]!!.jsonPrimitive.content)
+        empty = false
+        val c = d.execute(call("phone_tap", """{"x":500,"y":500}""")).content
+        assertEquals("no_effect", c.kind())
+        assertEquals(null, c["effect"]!!.jsonObject["treeBlind"])
     }
 
     @Test fun portThatAlreadyWaitedIsNotWaitedForAgain() = runTest {

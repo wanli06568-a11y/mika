@@ -1,13 +1,12 @@
 package com.wangzan101.mika.core.agent
 
-import com.wangzan101.mika.core.context.StepSummary
+import com.wangzan101.mika.core.agent.StepSummary
 import com.wangzan101.mika.core.model.Author
 import com.wangzan101.mika.core.model.Message
 import com.wangzan101.mika.core.model.Part
 import com.wangzan101.mika.core.model.Role
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -45,11 +44,16 @@ class ContextCompressor(
     private val structured: Boolean = false,
     private val diffScreens: Boolean = false,
     private val triggerOverride: Int? = null,
+    /** 按轮数触发:活着的工具往返超过 [keepRecent] + [foldEvery] 时把最早的折进摘要(null=不按轮数,只按大小,即现状)。 */
+    private val foldEvery: Int? = null,
 ) {
     /** 「真实 / 粗估」比值:每次用量回来就平滑更新([TokenEstimate.calibrated]);只决定什么时候压缩、压到哪一级,不改发过的内容。 */
     private var observed: Double? = null
-    /** 估算乘的比值:校准过用校准值,还没有真实用量时用偏保守的 [UNCALIBRATED_SCALE]。消息和固定开销都乘它。 */
-    internal val scale: Double get() = observed ?: UNCALIBRATED_SCALE
+    /**
+     * 估算乘的比值。真实用量只用来提高这个保守下限,不把后面的增量往下估:
+     * 普通提示词的用量偏低,不代表随后追加的标点密集 JSON 也有同样的字符/token 比。
+     */
+    internal val scale: Double get() = observed?.coerceAtLeast(UNCALIBRATED_SCALE) ?: UNCALIBRATED_SCALE
 
     /** 上一次压缩:它覆盖的完整历史开头 [covered],压成的 [base](粗估 [estimate]);[aggressive]:按模型报超长那一档压的。 */
     private class View(val covered: List<Message>, val base: List<Message>, val folded: Int, val aggressive: Boolean) {
@@ -96,8 +100,11 @@ class ContextCompressor(
             maxOf(limits.trigger, UsageMeter.estimate(it.estimate + fixedOverhead, scale) + limits.margin).coerceAtMost(limits.usable)
         } ?: limits.trigger
         val compact = (last != null && view == null) || (aggressive && view?.aggressive != true) || size > trigger
-        if (!compact) return Compressed(HistoryPruner.limitImages(sent, maxImages), view?.folded ?: 0)
-        val next = compact(history, limits, fixedOverhead, aggressive)
+        // 轮数触发:只为控历史长度。大小还没超、模型没报超长时,只把最早超出的往返折进摘要(见 [foldEvery]);
+        // 大小/超长照旧走下面的阶梯。压缩后历史回到 keepRecent 轮,之后只追加,直到又攒够 foldEvery 轮才再折(锯齿,不每步都压)。
+        val roundOver = foldEvery != null && toolRounds(sent) > keepRecent + foldEvery
+        if (!compact && !roundOver) return Compressed(HistoryPruner.limitImages(sent, maxImages), view?.folded ?: 0)
+        val next = if (compact) compact(history, limits, fixedOverhead, aggressive) else foldToRecent(history)
         views[contextTokens] = next
         return Compressed(HistoryPruner.limitImages(next.base, maxImages), next.folded, rewritten = true)
     }
@@ -151,6 +158,16 @@ class ContextCompressor(
         return View(history.toList(), chosen.messages.toList(), chosen.foldedSteps, aggressive)
     }
 
+    /** 只为控轮数:大小没超、模型没报超长,把最早超出的往返折进摘要,留最近 [keepRecent] 个原样(不做按目标的整段缩短,也不换更狠的档)。 */
+    private fun foldToRecent(history: List<Message>): View {
+        val pruned = HistoryPruner.prune(history, tools, HistoryPruner.Cut(keepRecent))
+        val folded = fold(pruned, keepRecent, aggressive = false)
+        return View(history.toList(), folded.messages.toList(), folded.foldedSteps, aggressive = false)
+    }
+
+    /** 一段消息里模型发起工具调用的往返数(折叠摘要没有工具调用,不计)。 */
+    private fun toolRounds(ms: List<Message>) = ms.count { it.role == Role.Assistant && it.parts.any { p -> p is Part.ToolCall } }
+
     private fun fold(pruned: List<Message>, keep: Int, aggressive: Boolean): Compressed {
         // 一个往返 = 一条助手消息及其后到下一条助手消息之前的消息;之前的是开头(任务原话、标准等)
         val starts = pruned.indices.filter { pruned[it].role == Role.Assistant }
@@ -158,11 +175,13 @@ class ContextCompressor(
         val toolStarts = starts.filter { i -> pruned[i].parts.any { it is Part.ToolCall } }
         if (toolStarts.size <= keep) return Compressed(pruned, 0)
         val cut = toolStarts[toolStarts.size - keep]
-        // 动作自带屏幕:折叠边界前最近一次全量读屏和它之后的差异链不折,差异要靠它们才看得懂(狠压缩时照折,分发器随后发全量);
+        // 动作自带屏幕:折叠边界前最近一次全量读屏不折,留下的差异多半接在它后面(之间的差异读取已在缩短时换成占位;狠压缩时照折,分发器随后发全量);
         val rounds = starts.mapIndexed { k, start -> pruned.subList(start, starts.getOrElse(k + 1) { pruned.size }) }
         val screenRounds = rounds.map(::screenKind)
         val before = starts.count { it < cut }
-        val anchor = if (aggressive || !diffScreens) -1 else (0 until before).lastOrNull { screenRounds[it] == ScreenKind.FULL } ?: -1
+        // 留下的往返里的屏幕自己看得懂(见 selfContained)时,边界前那份全量用不上
+        val anchor = if (aggressive || !diffScreens || selfContained(pruned.subList(cut, pruned.size))) -1
+            else (0 until before).lastOrNull { screenRounds[it] == ScreenKind.FULL } ?: -1
 
         val out = ArrayList<Message>(pruned.subList(0, starts.first()))
         // 每段连续折叠的往返各得一条摘要,放在这一段原来的位置;中间保留的往返把段隔开。
@@ -179,8 +198,9 @@ class ContextCompressor(
         starts.takeWhile { it < cut }.forEachIndexed { k, start ->
             val end = starts.getOrElse(k + 1) { pruned.size }
             val round = pruned.subList(start, end)
-            // 每轮只执行第一个调用,其余都以 parallel_tool_call_skipped 退回,所以按第一个调用判断要不要保留
-            val call = round.first().parts.filterIsInstance<Part.ToolCall>().firstOrNull()
+            // 一轮最多执行一个动作,但误写成调用的 task_progress 可能排在它前面:
+            // 按真正执行的动作判断要不要保留,否则会把这轮连同用户回答一起折掉。
+            val call = round.first().parts.firstActionCall()
             if (tools.verb(call?.name) in PINNED_VERBS || (anchor >= 0 && k >= anchor && screenRounds[k] != ScreenKind.NONE)) {
                 closeBlock()
                 out += round
@@ -210,15 +230,33 @@ class ContextCompressor(
         val verbs = round.flatMap { it.parts }.filterIsInstance<Part.ToolCall>().associate { it.id to tools.verb(it.name) }
         var kind = ScreenKind.NONE
         for (r in round.flatMap { it.parts }.filterIsInstance<Part.ToolResult>()) {
-            val obj = (if ("\"elements\":[" in r.content || "\"screen\":{" in r.content) parse(r.content) else null) ?: continue
+            val obj = (if ("\"elements\":[" in r.content || "\"${ScreenElementTable.KEY}\":[" in r.content || "\"screen\":{" in r.content) parse(r.content) else null) ?: continue
             val screen = obj["screen"] as? JsonObject
             when {
-                verbs[r.callId] in OBSERVATIONS && obj["elements"] is JsonArray -> return ScreenKind.FULL
+                verbs[r.callId] in OBSERVATIONS && ScreenElementTable.hasRows(obj) -> return ScreenKind.FULL
                 screen != null && screen["full"] == JsonPrimitive(true) -> return ScreenKind.FULL
                 screen != null -> kind = ScreenKind.DIFF
             }
         }
         return kind
+    }
+
+    /**
+     * [kept] 里的屏幕不靠更早的读屏也看得懂:至少有一份没被缩短的屏幕,每份差异的基准(`base`)也在其中。
+     * 按 base 对,手机和网页各自的差异链都算得对;缩短成占位的屏幕不算(模型看不到它的内容)。
+     */
+    private fun selfContained(kept: List<Message>): Boolean {
+        val ids = HashSet<String>()
+        val bases = HashSet<String>()
+        for (r in kept.flatMap { it.parts }.filterIsInstance<Part.ToolResult>()) {
+            val obj = (if ("\"snapshotId\"" in r.content) parse(r.content) else null) ?: continue
+            val screens = listOfNotNull(obj.takeIf(ScreenElementTable::hasRows), obj["screen"] as? JsonObject)
+            for (s in screens) {
+                (s["snapshotId"] as? JsonPrimitive)?.contentOrNull?.let(ids::add)
+                (s["base"] as? JsonPrimitive)?.contentOrNull?.let(bases::add)
+            }
+        }
+        return ids.isNotEmpty() && ids.containsAll(bases)
     }
 
     private fun summary(lines: List<String>) = notice((listOf(HEADER, SUMMARY_REMINDER) + lines).joinToString("\n"))

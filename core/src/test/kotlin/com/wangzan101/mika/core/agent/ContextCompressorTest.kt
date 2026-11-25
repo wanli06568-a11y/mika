@@ -7,8 +7,11 @@ import com.wangzan101.mika.core.testing.answerReply
 import com.wangzan101.mika.core.tool.FakeScreen
 import kotlinx.coroutines.test.runTest
 import com.wangzan101.mika.core.model.Message
+import com.wangzan101.mika.core.model.ModelReply
 import com.wangzan101.mika.core.model.Part
 import com.wangzan101.mika.core.model.Role
+import com.wangzan101.mika.core.model.StopReason
+import com.wangzan101.mika.core.model.Usage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -42,7 +45,7 @@ class ContextCompressorTest {
             }
             val caller = ModelCaller(model, toolDispatcher(FakeScreen()), null, SpeedFlags.OFF, RetryPolicy.NONE, {}, { 0 })
             caller.reset("")
-            caller.ask(history, emptyList())
+            caller.ask(history, emptyList(), step = 1)
             return transport.requests.single()
         }
         assertEquals(history, sent(null))
@@ -76,6 +79,37 @@ class ContextCompressorTest {
         assertEquals(0, c.foldedSteps)
     }
 
+    /** 轮数触发:大小远没到触发点(1M 窗口),但 40 轮 > keepRecent(12)+foldEvery(16)=28,照样折到最近 12 轮。 */
+    @Test fun foldsByRoundCountEvenWhenSizeIsSmall() {
+        val h = head + taps(40)
+        val c = ContextCompressor(TOOLS, foldEvery = 16).compress(h, contextTokens = 1_000_000)
+        assertTrue(c.rewritten)
+        assertEquals(28, c.foldedSteps)
+        assertEquals(12, toolRounds(c.messages))
+        assertTrue(summary(c.messages)!!.contains("Step 28 phone_tap(按钮28) → applied"))
+    }
+
+    /** 轮数触发也是锯齿式的:两次折叠之间只追加,不每步都压;折叠数远少于步数。 */
+    @Test fun roundCountFoldsInBatchesNotEveryStep() {
+        val all = head + taps(120)
+        fun h(n: Int) = all.take(head.size + 2 * n)
+        val c = ContextCompressor(TOOLS, foldEvery = 16)
+        val outs = (1..120).map { c.compress(h(it), contextTokens = 1_000_000) }
+        val rewrites = outs.zipWithNext().withIndex().filter { (_, p) -> p.first.messages != p.second.messages.take(p.first.messages.size) }.map { it.index + 2 }
+        val folds = outs.zipWithNext().withIndex().filter { (_, p) -> p.first.foldedSteps != p.second.foldedSteps }.map { it.index + 2 }
+        assertEquals(folds, rewrites)
+        assertTrue("$rewrites", rewrites.isNotEmpty() && rewrites.size <= 10)
+        rewrites.zipWithNext().forEach { (a, b) -> assertTrue("$rewrites", b - a > 1) }
+    }
+
+    /** 默认不按轮数触发(只按大小),40 轮在 1M 窗口里原样发。 */
+    @Test fun withoutFoldEveryRoundCountDoesNotTrigger() {
+        val h = head + taps(40)
+        val c = ContextCompressor(TOOLS).compress(h, contextTokens = 1_000_000)
+        assertEquals(h, c.messages)
+        assertEquals(0, c.foldedSteps)
+    }
+
     /** 触发点刚好低于整份请求的窗口:压一次就能回到目标以下,用最轻的一级(留最近 12 次往返)。 */
     private fun justOver(h: List<Message>) = windowFor(uncalibrated(h)) - 1
 
@@ -91,6 +125,32 @@ class ContextCompressorTest {
         assertEquals(h.takeLast(24), c.messages.drop(3))
         val s = summary(c.messages)!!
         assertTrue(s, "Step 1 phone_tap(按钮1) → applied" in s && "Step 28 phone_tap(按钮28) → applied" in s && "Step 29" !in s)
+    }
+
+    @Test fun keepsTheAskUserRoundEvenWhenATaskProgressCallComesFirst() {
+        // #714 lets a round carry a task_progress call ahead of the one action that
+        // actually runs. The compressor must judge the round by that action, not
+        // by the progress report, or the user's answer is folded away.
+        val ask = listOf(
+            Message(Role.Assistant, listOf(
+                Part.ToolCall("p1", "task_progress", """{"updates":[]}"""),
+                Part.ToolCall("a1", "ask_user", """{"question":"Continue?"}"""),
+            ), Author.Mika),
+            Message(Role.Tool, listOf(
+                Part.ToolResult("p1", """{"ok":true}""", isError = false),
+                Part.ToolResult("a1", """{"answer":"yes"}""", isError = false),
+            ), Author.Mika),
+        )
+        val h = head + taps(30) + ask + taps(20)
+        val c = ContextCompressor(TOOLS).compress(h, contextTokens = justOver(h))
+        assertTrue(
+            "the ask_user round was folded",
+            c.messages.any { m -> m.parts.any { it is Part.ToolCall && it.name == "ask_user" } },
+        )
+        assertTrue(
+            "the user's answer was folded",
+            c.messages.any { m -> m.parts.any { it is Part.ToolResult && it.callId == "a1" } },
+        )
     }
 
     @Test fun appendOnlyBetweenCompactions() {
@@ -121,6 +181,42 @@ class ContextCompressorTest {
         val calls = c.messages.flatMap { m -> m.parts.filterIsInstance<Part.ToolCall>().map { it.id } }
         val results = c.messages.flatMap { m -> m.parts.filterIsInstance<Part.ToolResult>().map { it.callId } }
         assertEquals(calls, results)
+    }
+
+    @Test fun downwardCalibrationCannotLetOneHugeScreenBypassCompaction() = runTest {
+        val first = ModelReply(
+            listOf(Part.ToolCall("open_settings", "phone_launch_app", """{"package":"com.android.settings"}""")),
+            StopReason.ToolUse, Usage(inputTokens = 972, outputTokens = 20),
+        )
+        val transport = FakeModel(first, answerReply("done"), contextTokens = 32_768)
+        val caller = ModelCaller(transport, toolDispatcher(FakeScreen()), null, SpeedFlags.OFF, RetryPolicy.NONE, {}, { 0 })
+        caller.reset("")
+        // 字符数不是 token 数:这份开局原文约 8K 字符;假服务端报 972 输入 token,旧逻辑会把增量估算压到下限 0.5。
+        val opening = listOf(Message(Role.User, listOf(Part.Text("x".repeat(8_000))), Author.User))
+        caller.ask(opening, emptyList(), step = 1)
+        val reply = Message(Role.Assistant, first.parts, Author.Mika)
+        caller.noteReply(reply, transport, first.usage)
+
+        val elements = (1..400).joinToString(",") { i ->
+            """{"ref":"@e$i","role":"TextView","name":"Setting item $i","center":{"x":500,"y":100},"bounds":[0,0,1080,120],"resourceId":"android:id/title"}"""
+        }
+        val nodes = (1..400).joinToString(",") { i ->
+            """{"role":"TextView","ref":"@e$i","text":"Setting item $i","resourceId":"android:id/title","bounds":[0,0,1080,120]}"""
+        }
+        val screen = """{"ok":true,"snapshotId":"settings","elements":[$elements],"tree":[{"id":1,"type":"application","nodes":[$nodes]}]}"""
+        assertTrue("test fixture chars=${screen.length}", screen.length > 90_000)
+        assertTrue(
+            "test fixture must reproduce the old trigger bypass",
+            972 + 20 + UsageMeter.estimate(TokenEstimate.of(screen), 0.5) < ContextLimits.of(32_768).trigger,
+        )
+        val history = opening + reply + Message(Role.Tool, listOf(Part.ToolResult("open_settings", screen, false)), Author.Mika)
+        caller.ask(history, emptyList(), step = 2)
+
+        val sent = transport.requests[1]
+        val result = sent.flatMap { it.parts }.filterIsInstance<Part.ToolResult>().single()
+        assertTrue("a single new screen must be capped before sending", HistoryPruner.OMITTED_READ in result.content)
+        assertTrue("raw JSON must not be resent at ${screen.length} chars", "android:id/title" !in result.content)
+        assertTrue(uncalibrated(sent) <= ContextLimits.of(32_768).usable)
     }
 
     @Test fun overheadHeavySmallWindowNeverExceedsTheWindow() {
@@ -289,5 +385,40 @@ class ContextCompressorTest {
         // 狠压缩时不保留
         val hard = ContextCompressor(TOOLS,diffScreens = true).compress(h, contextTokens = 1000, aggressive = true).messages
         assertTrue(hard.flatMap { it.parts }.filterIsInstance<Part.ToolResult>().none { "\"s1\"" in it.content })
+    }
+
+    // #263:只折到留 12 轮那一档时,留下的往返里的屏幕自己看得懂(第一份是全量 s9),边界前那份全量 s1 照常折叠;
+    // s9 是接在 s3 后面的差异时 s1 照旧留着(沿用原来的做法;s3 已换成占位,s1 并不足以看懂 s9)
+    @Test fun dropsEarlierFullReadWhenKeptScreensAreSelfContained() {
+        val (folded, kept) = compressWithLatest("""{"snapshotId":"s9","full":true,"elements":[{"ref":"@e1"}]}""")
+        assertTrue(kept.any { "\"s9\"" in it } && kept.none { "\"s1\"" in it })
+        val (foldedWithBase, keptWithBase) = compressWithLatest("""{"snapshotId":"s9","base":"s3","full":false,"added":[]}""")
+        assertTrue(keptWithBase.any { "\"s9\"" in it } && keptWithBase.any { "\"s1\"" in it })
+        // 两次都停在留 12 轮那一档:前 30 次点按、两次差异和(第一次)s1 折掉
+        assertEquals(listOf(38, 37), listOf(folded, foldedWithBase))
+    }
+
+    @Test fun keepsTableObservationAsBaseForLaterDiff() {
+        val (_, kept) = compressWithLatest("""{"snapshotId":"s9","base":"s1","full":false,"added":[]}""",
+            rows = """"elementTables":[{"columns":["ref"],"rows":[["@e1"]]}]""")
+        assertTrue(kept.any { "elementTables" in it && "\"s1\"" in it })
+    }
+
+    // 手机和网页各有各的差异链:留下的往返里先有网页的全量,手机的差异仍接在边界前手机那份全量后面,它不能折
+    @Test fun keepsPhoneBaseWhenKeptRoundsStartWithAWebFullScreen() {
+        val web = round("web_interact", "{}", """{"ok":true,"screen":{"snapshotId":"w1","full":true,"elements":[{"ref":"@w1"}]},"pad":"$pad"}""")
+        val (folded, kept) = compressWithLatest("""{"snapshotId":"p2","base":"s3","full":false,"added":[]}""", before = web)
+        assertTrue(kept.any { "\"w1\"" in it } && kept.any { "\"s1\"" in it })
+        assertEquals(37, folded)
+    }
+
+    /** 边界前:30 次点按、全量 s1、两次差异、5 次点按;留下的 12 次:[before]、带 [screen] 的一次返回、其余点按。返回折了几步和留下的工具结果。 */
+    private fun compressWithLatest(screen: String, before: List<Message> = emptyList(), rows: String = """"elements":[{"ref":"@e1"}]"""): Pair<Int, List<String>> {
+        val full = round("phone_observe", "{}", """{"ok":true,"snapshotId":"s1",$rows,"pad":"$pad"}""")
+        val diffs = (2..3).flatMap { round("phone_back", "{}", """{"ok":true,"screen":{"snapshotId":"s$it","base":"s${it - 1}","full":false,"added":[]},"pad":"$pad"}""") }
+        val latest = round("phone_back", "{}", """{"ok":true,"screen":$screen,"pad":"$pad"}""")
+        val h = head + taps(30) + full + diffs + taps(5) + before + latest + taps(11 - before.size / 2)
+        val c = ContextCompressor(TOOLS, diffScreens = true).compress(h, contextTokens = 10_000)
+        return c.foldedSteps to c.messages.flatMap { it.parts }.filterIsInstance<Part.ToolResult>().map { it.content }
     }
 }

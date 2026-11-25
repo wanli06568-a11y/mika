@@ -18,6 +18,7 @@ All of Mika's documentation lives here. If you're new, reading the "Getting star
 | --- | --- |
 | [Features in detail](features.en.md) | The details behind each item under "What it can do" in the README: background screen, browser, the screen you're looking at, schedules, interrupting, memory, sandbox and more |
 | [FAQ](faq.en.md) | Questions about installing, phone control, models, computers, language and privacy |
+| [For AI assistants: writing a persona](persona-writing.en.md) | Persona-writing rules for an AI assistant: what a persona can change, picking options, writing instructions, how to deliver |
 | [Disclaimer, data and privacy](disclaimer.en.md) | Beta notes, risks of use, where your data is stored and where it goes |
 
 ## Using it from a computer
@@ -28,6 +29,7 @@ Start with [Use Mika from a computer](computer.en.md): pick CLI + Skill or MCP, 
 | --- | --- |
 | [CLI / Skill: install, update and remove](computer-install.en.md) | Installing the `mika` command or the Skill for your agent |
 | [CLI and Skill: connection and task commands](cli.en.md) | Commands to connect to the phone, submit tasks, check progress, answer questions and add instructions |
+| [Feishu bot](feishu.en.md) | QR creation, linking an existing app, private-message tasks and results |
 | [Computer access (MCP)](mcp.en.md) | Letting an MCP client hand tasks to Mika: USB, Wi-Fi / VPN, tools, security |
 | [Install with an AI agent on your computer](install-with-agent.en.md) | Installation steps written for an AI agent on your computer: with the phone on USB, hand it this doc and it sets things up for you |
 

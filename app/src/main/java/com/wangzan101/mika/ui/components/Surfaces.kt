@@ -48,11 +48,55 @@ import com.wangzan101.mika.ui.theme.MikaShapes
 import com.wangzan101.mika.ui.theme.MikaSize
 import com.wangzan101.mika.ui.theme.MikaTheme
 import com.wangzan101.mika.ui.theme.MikaType
+import com.wangzan101.mika.ui.theme.LocalSkinBackdrop
+import com.wangzan101.mika.ui.theme.SkinBackdrop
+import com.wangzan101.mika.ui.theme.rememberSkinBackdrop
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 
-/** 页面底:干净的近白(深色下近黑),不加渐变。 */
+/**
+ * 页面底:干净的近白(深色下近黑),不加渐变。
+ * 设了背景图片时铺满图片、再盖一层同色遮罩(见 [SkinBackdrop]),卡片和文字照旧。
+ */
 @Composable
 fun PageBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
-    Box(modifier.fillMaxSize().background(MikaTheme.colors.bg), content = content)
+    val backdrop = rememberSkinBackdrop()
+    // 有没有图都是同一个结构:图是异步读的,换结构会让里面的页面整个重建、丢掉状态
+    Box(
+        modifier.fillMaxSize().background(MikaTheme.colors.bg).then(
+            if (backdrop == null) Modifier else Modifier
+                .onGloballyPositioned { backdrop.pageOrigin = it.positionInRoot(); backdrop.pageSize = it.size }
+                .drawBehind { backdrop.draw(this, backdrop.pageOrigin) },
+        ),
+    ) {
+        CompositionLocalProvider(LocalSkinBackdrop provides backdrop) { content() }
+    }
+}
+
+/**
+ * 页面底色:顶栏、输入栏底下的渐隐这些要挡住滚动内容的地方用它。
+ * 有背景图片且 [color] 就是页面底色时,照着同一位置画一块页面背景,和页面底连成一片;
+ * [fade] 是从透明到页面底色的渐变,有背景图片时当作透明度的遮罩用。
+ */
+fun Modifier.pageBackground(color: Color, fade: Brush? = null): Modifier = composed {
+    val backdrop = LocalSkinBackdrop.current
+    if (backdrop == null || color != MikaTheme.colors.bg) return@composed if (fade != null) background(fade) else background(color)
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    val placed = onGloballyPositioned { origin = it.positionInRoot() }
+    if (fade == null) {
+        placed.drawBehind { backdrop.draw(this, origin) }
+    } else {
+        // 先画背景,再按渐变的透明度裁掉:上面透明、下面实
+        placed.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawBehind {
+                backdrop.draw(this, origin)
+                drawRect(fade, blendMode = BlendMode.DstIn)
+            }
+    }
 }
 
 /** 卡片的底:白底 + 黑 5% 描边 + 极淡阴影;深色下只有描边。 */
@@ -69,7 +113,7 @@ fun Modifier.floatShadow(colors: MikaColors, shape: Shape): Modifier =
 
 /** 一张卡片,内容裁在圆角里(行的按压效果不出角)。 */
 @Composable
-fun MikaCard(modifier: Modifier = Modifier, shape: Shape = MikaShapes.Card, content: @Composable ColumnScope.() -> Unit) {
+fun MikaCard(modifier: Modifier = Modifier, shape: Shape = if (LocalPlainList.current) PlainCardShape else MikaShapes.Card, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier.fillMaxWidth().cardSurface(MikaTheme.colors, shape).clip(shape), content = content)
 }
 
@@ -79,7 +123,60 @@ fun MikaCard(modifier: Modifier = Modifier, shape: Shape = MikaShapes.Card, cont
  */
 @Composable
 fun GroupCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    MikaCard(modifier.padding(bottom = 12.dp), content = content)
+    if (!LocalPlainList.current) {
+        MikaCard(modifier.padding(bottom = 12.dp), content = content)
+        return
+    }
+    // 简约列表:行的说明([ListRow] / [RadioRow] 的 note)不进行里,收到卡片下面当脚注
+    val notes = remember { CardNotes() }
+    Column(modifier.padding(bottom = 12.dp)) {
+        CompositionLocalProvider(LocalCardNotes provides notes) { MikaCard(content = content) }
+        val text = notes.footnote()
+        if (text != null) {
+            Text(text, Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                style = MikaType.Hint, color = MikaTheme.colors.ink3)
+        }
+    }
+}
+
+/** 一张卡片里各行交上来的说明。 */
+class CardNotes {
+    internal class Note(val title: String, val text: String, val selected: Boolean?)
+    internal val items = androidx.compose.runtime.mutableStateMapOf<Any, Note>()
+    /** 各行的图标(没有图标记 null)。 */
+    internal val icons = androidx.compose.runtime.mutableStateMapOf<Any, Any?>()
+
+    /** 同一组里同一个图标出现三次以上,或有的行有图标有的没有,整组都不放图标:图标只在能帮你区分时出现。 */
+    internal val hideIcons: Boolean
+        get() {
+            val all = icons.values.toList()
+            if (all.size < 2) return false
+            val shown = all.filterNotNull()
+            return shown.isNotEmpty() && (shown.size < all.size || shown.groupingBy { it }.eachCount().values.any { it >= 3 })
+        }
+
+    /** 单选组只说选中那项;只有一条就直接说;多条按「标题:说明」逐行列出。 */
+    internal fun footnote(): String? {
+        val all = items.values.toList()
+        if (all.isEmpty()) return null
+        all.firstOrNull { it.selected == true }?.let { return it.text }
+        if (all.any { it.selected != null }) return null
+        if (all.size == 1) return all[0].text
+        return all.joinToString("\n") { "${it.title}:${it.text}" }
+    }
+}
+
+val LocalCardNotes = androidx.compose.runtime.staticCompositionLocalOf<CardNotes?> { null }
+
+/** 把这一行的说明交给所在卡片;不在简约列表的卡片里时返回 false,由行自己显示。 */
+@Composable
+internal fun rememberCardNote(title: String, note: String?, selected: Boolean? = null): Boolean {
+    val sink = LocalCardNotes.current ?: return false
+    if (note.isNullOrEmpty()) return true
+    val key = remember { Any() }
+    androidx.compose.runtime.DisposableEffect(sink, key) { onDispose { sink.items.remove(key) } }
+    androidx.compose.runtime.SideEffect { sink.items[key] = CardNotes.Note(title, note, selected) }
+    return true
 }
 
 /** 状态卡:左边圆形图标,右边标题和说明。用于页面顶上的总状态。 */
@@ -100,7 +197,11 @@ fun StateCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val (bg, fg) = tone.colors(c)
-            Box(Modifier.size(36.dp).background(bg, CircleShape), contentAlignment = Alignment.Center) {
+            if (LocalPlainList.current) {
+                // 简约列表:不画圆底;正常状态用正文色,只有要你处理的才上色
+                val tint = if (tone == TileTone.Neutral || tone == TileTone.Ok) c.ink else fg
+                Icon(icon, null, Modifier.size(22.dp), tint = tint)
+            } else Box(Modifier.size(36.dp).background(bg, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(icon, null, Modifier.size(20.dp), tint = fg)
             }
             Column(Modifier.weight(1f)) {
@@ -150,7 +251,7 @@ private val GlassBlur = BlurEffect(30f, 30f, TileMode.Clamp)
 fun GlassBar(
     modifier: Modifier = Modifier,
     backdrop: GlassBackdrop? = null,
-    shape: Shape = MikaShapes.Pill,
+    shape: Shape = MikaShapes.Composer,
     content: @Composable RowScope.() -> Unit,
 ) {
     val c = MikaTheme.colors
@@ -178,4 +279,66 @@ fun GlassBar(
             content = content,
         )
     }
+}
+
+/**
+ * 一小块悬浮磨砂玻璃:白 72% + 背景模糊 + 细描边 + 悬浮阴影,尺寸随内容(顶栏的菜单/标题/新建按钮用)。
+ * [backdrop] 为 null(不支持模糊、或后面没有内容)时用不透明底。
+ */
+@Composable
+fun GlassSurface(
+    modifier: Modifier = Modifier,
+    backdrop: GlassBackdrop? = null,
+    shape: Shape = MikaShapes.Pill,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val c = MikaTheme.colors
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    Box(
+        modifier.floatShadow(c, shape).clip(shape)
+            .then(if (backdrop != null) Modifier.onGloballyPositioned { origin = it.positionInRoot() } else Modifier),
+    ) {
+        if (backdrop != null) {
+            Box(
+                Modifier.matchParentSize().graphicsLayer { renderEffect = GlassBlur; clip = true }
+                    .drawBehind {
+                        val d = backdrop.origin - origin
+                        translate(d.x, d.y) { drawLayer(backdrop.layer) }
+                    },
+            )
+        }
+        Box(
+            Modifier.background(if (backdrop != null) c.glass else c.surface)
+                .border(0.5.dp, c.glassEdge, shape),
+            content = content,
+        )
+    }
+}
+
+/** 简约列表风格开着:分组是大圆角纯白卡片,图标不垫底块,状态胶囊写成灰字。 */
+val LocalPlainList = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/** 简约列表里分组卡片的圆角。 */
+val PlainCardShape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
+
+/** 设置、AI 电话这类列表页:换成简约列表的配色和样式。 */
+@Composable
+fun PlainListTheme(content: @Composable () -> Unit) {
+    val base = MikaTheme.colors
+    val colors = androidx.compose.runtime.remember(base) { base.forPlainList() }
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.wangzan101.mika.ui.theme.LocalMikaColors provides colors,
+        LocalPlainList provides true,
+        content = content,
+    )
+}
+
+/** 交上这一行的图标,返回这一行实际该画的图标(所在组决定不放图标时为 null)。 */
+@Composable
+internal fun rememberCardIcon(icon: androidx.compose.ui.graphics.vector.ImageVector?): androidx.compose.ui.graphics.vector.ImageVector? {
+    val sink = LocalCardNotes.current ?: return icon
+    val key = remember { Any() }
+    androidx.compose.runtime.DisposableEffect(sink, key) { onDispose { sink.icons.remove(key) } }
+    androidx.compose.runtime.SideEffect { sink.icons[key] = icon }
+    return if (sink.hideIcons) null else icon
 }

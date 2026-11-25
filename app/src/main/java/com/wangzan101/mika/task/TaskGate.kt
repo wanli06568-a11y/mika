@@ -4,6 +4,8 @@ import com.wangzan101.mika.R
 import com.wangzan101.mika.i18n.tr
 import com.wangzan101.mika.core.agent.GateReason
 import com.wangzan101.mika.core.agent.TaskState
+import com.wangzan101.mika.core.safety.gate.TargetAppRestoreFailed
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -14,7 +16,7 @@ import kotlinx.coroutines.flow.update
  * 1. 手机操作助手不可用 → 暂停,等它恢复且用户点「继续」;
  * 2. 任务被挪到主屏(用户在主屏打开了这个 App)→ 暂停,用户点「继续」后才把它挪回虚拟屏;
  *    Mika 不自己判断用户是否用完,避免在用户眼前把 App 抽走;
- * 3. 屏幕熄灭或锁屏 → 等待解锁,亮屏并解锁后自动继续。
+ * 3. 屏幕熄灭或锁屏 → 定时任务及另行授权的微信任务尝试唤醒/解锁，其他任务等待解锁；亮屏并解锁后自动继续。
  * 前两条只在这一步用的是手机(phone 为 true)时才查:网页、沙箱上的步骤不需要助手,也不会被挪到主屏。
  * 另外,用户在浏览器页上亲手摸了借给任务的页面([onUserOnPage])→ 不论哪种屏都先停下,用户点「继续」再接着做。
  * 不碰界面的步骤(模型推理、读屏)不经过这里,照常进行。
@@ -22,11 +24,22 @@ import kotlinx.coroutines.flow.update
 class TaskGate(
     private val locked: StateFlow<Boolean>,
     private val shellAvailable: StateFlow<Boolean>,
+    /** 写操作前同步重读系统锁屏状态，避免熄屏广播尚未处理时放行。 */
+    private val refreshLocked: (() -> Unit)? = null,
+    /** 无人值守任务遇到锁屏时调用;返回解锁状态,返回前必须按系统状态刷新 [locked]。 */
+    private val unattendedUnlock: (suspend () -> String)? = null,
+    private val unlockFailureMessage: () -> String = { tr(R.string.trigger_unlock_failed) },
+    /** 本地授权(本机存着的解锁授权)的任务:解锁失败后允许转为等用户手动解锁,而不是失败收尾。 */
+    private val recoverUnlockFailure: () -> Boolean = { false },
+    /** 转为等用户手动解锁时告知一句(带不含凭据的状态码),好发提醒。 */
+    private val onRecoveryFailure: (String) -> Unit = {},
     private val moveBack: suspend () -> Boolean,
 ) {
     private val movedAway = MutableStateFlow(false)
     private val userOnPage = MutableStateFlow(false)
     private val resumes = MutableStateFlow(0)
+    /** 任务是否已经至少做过一步(关卡放通过一次):开局那次解锁不算「中途锁屏」。 */
+    private var hasPassed = false
     /** 发现被挪走那一刻的点击计数:之后点的「继续」都算数,哪怕 Agent 还没走到 gate。 */
     @Volatile private var resumesAtMove = 0
 
@@ -53,8 +66,14 @@ class TaskGate(
         userOnPage.value = false
     }
 
-    suspend fun pass(phone: () -> Boolean = { true }, setWaiting: (TaskState?) -> Unit) {
+    /**
+     * 返回 true 表示这次等待期间发生过锁屏周期(任务已开始之后):调用方据此作废按旧屏幕准备好的动作,
+     * 先重读现在的屏幕。开局的第一次解锁不算。
+     */
+    suspend fun pass(phone: () -> Boolean = { true }, setWaiting: (TaskState?) -> Unit): Boolean {
+        var recoveredMidRun = false
         while (true) {
+            refreshLocked?.invoke()
             val onPhone = phone()
             when {
                 userOnPage.value -> {
@@ -66,16 +85,37 @@ class TaskGate(
                 }
                 onPhone && movedAway.value -> {
                     pauseUntilResume(MOVED_AWAY, setWaiting, seen = resumesAtMove)
-                    while (shellAvailable.value && !moveBack()) pauseUntilResume(MOVE_BACK_FAILED, setWaiting)
+                    try {
+                        while (shellAvailable.value && !moveBack()) pauseUntilResume(MOVE_BACK_FAILED, setWaiting)
+                    } catch (e: TargetAppRestoreFailed) {
+                        movedAway.value = false
+                        setWaiting(null)
+                        throw e
+                    }
                     if (shellAvailable.value) movedAway.value = false
                 }
                 locked.value -> {
+                    recoveredMidRun = recoveredMidRun || hasPassed
                     setWaiting(TaskState.Held(LOCKED))
-                    locked.first { !it }
+                    if (unattendedUnlock == null) {
+                        locked.first { !it }
+                    } else {
+                        val status = try { unattendedUnlock.invoke() }
+                        catch (e: CancellationException) { throw e }
+                        catch (_: Exception) { refreshLocked?.invoke(); "internal_error" }
+                        // 无人值守时不能无限等用户来解锁；只认刷新后的系统状态，不认流程自称成功。
+                        if (locked.value) {
+                            // 已开始的本地授权任务不杀、也不重复注入凭据:转为等用户手动解锁
+                            if (!hasPassed || !recoverUnlockFailure()) throw UnattendedLockException(unlockFailureMessage(), status)
+                            onRecoveryFailure(status)
+                            locked.first { !it }
+                        }
+                    }
                 }
                 else -> {
+                    hasPassed = true
                     setWaiting(null)
-                    return
+                    return recoveredMidRun
                 }
             }
         }
@@ -117,3 +157,6 @@ class TaskGate(
         val USER_ON_PAGE: String get() = tr(R.string.gate_user_on_page)
     }
 }
+
+/** 无人值守任务无法通过系统锁屏；保留不含凭据的状态码,由任务服务转成有结果通知的失败终态。 */
+internal class UnattendedLockException(message: String, val status: String) : Exception("$message [$status]")

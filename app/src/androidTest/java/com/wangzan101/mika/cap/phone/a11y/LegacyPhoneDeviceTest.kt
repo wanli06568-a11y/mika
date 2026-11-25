@@ -8,9 +8,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.wangzan101.mika.cap.phone.PhoneServices
 import com.wangzan101.mika.cap.phone.display.AgentDisplay
 import com.wangzan101.mika.cap.phone.shell.ShellService
-import com.wangzan101.mika.core.shell.HelperHandoff
-import com.wangzan101.mika.core.uistate.ActionResult
-import com.wangzan101.mika.core.uistate.Verification
+import com.wangzan101.mika.core.device.shell.HelperHandoff
+import com.wangzan101.mika.core.screen.uistate.ActionResult
+import com.wangzan101.mika.core.screen.uistate.Verification
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -43,7 +43,7 @@ class LegacyPhoneDeviceTest {
             ?: error("USB helper did not hand off: ${phone.shellControl.status.value}")
         assertEquals(2000, shell.identity()[0])
 
-        val display = AgentDisplay(shell, 720, 1600, 320)
+        val display = AgentDisplay(shell, 720, 1600, 320, InstrumentationRegistry.getInstrumentation().targetContext.getSystemService(android.hardware.display.DisplayManager::class.java))
         try {
             val shown = context.getSystemService(DisplayManager::class.java).getDisplay(display.displayId)
             assertEquals("legacy display must be public", 0, shown.flags and Display.FLAG_PRIVATE)

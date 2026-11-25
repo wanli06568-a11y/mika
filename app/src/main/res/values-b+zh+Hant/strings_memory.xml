@@ -25,8 +25,13 @@
     <string name="memory_use_sub">關掉後不讀也不記</string>
     <string name="memory_auto">自動記住我說過的事</string>
     <string name="memory_auto_sub">任務結束後從你的原話裡整理</string>
+    <string name="memory_infer">讓 Mika 自己歸納著記</string>
+    <string name="memory_infer_sub">你讓它記時,它自己歸納的也存,並標明不是你說的</string>
     <string name="memory_learn">從做過的事裡學(技能和 App 知識)</string>
     <string name="memory_learn_sub">學到的技能和 App 知識要你收下才會用</string>
+    <string name="memory_tasks">記住辦過的任務</string>
+    <string name="memory_tasks_sub">每次任務結束記一條摘要，下次同類任務能查到</string>
+    <string name="memory_tasks_title">辦過的任務</string>
     <string name="memory_clear_sub">刪掉所有記憶和學到的技能</string>
     <string name="edit_it">改一改</string>
     <string name="unpin">取消置頂</string>
@@ -56,6 +61,7 @@
     <string name="date_pattern_md">M 月 d 日</string>
     <string name="memory_said_via">你在 %1$s透過%2$s說:『%3$s』</string>
     <string name="memory_said">你在 %1$s說:『%2$s』</string>
+    <string name="memory_inferred">Mika 在 %1$s按你的要求歸納:『%2$s』</string>
     <string name="verify_returned">核查退回</string>
     <string name="skills_drafts">新技能草稿，收下後先試用</string>
     <string name="skills_accept_try">收下試用</string>
@@ -78,4 +84,20 @@
     <string name="skills_archived">已歸檔</string>
     <string name="skills_archive">歸檔</string>
     <string name="skills_changed_lines">改了這幾行:</string>
+    <string name="skills_get">獲取技能</string>
+    <string name="skills_share">分享技能</string>
+    <string name="skills_import">匯入技能</string>
+    <string name="skills_import_sub">貼上別人分享的技能全文</string>
+    <string name="skills_import_hint">會先放進「待確認」，你看過、收下後才會用。</string>
+    <string name="skills_import_confirm">匯入</string>
+    <string name="skill_imported">已匯入，到「待確認」裡看看再收下。</string>
+    <string name="skills_imported">匯入的</string>
+    <string name="skill_builtin_name">和內建技能重名了，改個名字再試。</string>
+    <string name="skill_draft_pending">已經有一份同名草稿在等你確認，先處理那份。</string>
+    <string name="market_title">技能市場</string>
+    <string name="market_sub">瀏覽 GitHub 上分享的技能</string>
+    <string name="market_source">技能來源</string>
+    <string name="market_add">加入待確認</string>
+    <string name="market_network_error">下載失敗，請檢查儲存庫名稱和網路後重試。</string>
+    <string name="market_invalid">內容格式有誤或已更新，請重新開啟市場以重新整理目錄。</string>
 </resources>
