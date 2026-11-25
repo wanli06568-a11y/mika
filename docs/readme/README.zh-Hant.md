@@ -1,4 +1,4 @@
-<!-- translated-from: README.md @ d2ae0c05a5cb -->
+<!-- translated-from: README.md @ 96cbdcf672d1 -->
 <div align="center">
 
 <img src="../media/logo.png" alt="Mika" width="88" />
@@ -26,7 +26,7 @@
 
 <br/>
 
-[English](../../README.md) · [简体中文](README.zh-CN.md) · 繁體中文 · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Türkçe](README.tr.md)
+[English](../../README.md) · [简体中文](README.zh-CN.md) · 繁體中文 · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md)
 
 <sub>這份繁體中文版譯自簡體中文版。用詞不夠道地、或內容跟原文對不上的地方，歡迎直接發 PR 修改。</sub>
 
@@ -148,7 +148,7 @@
 
 **能用自己電腦上跑的模型嗎？** 可以，服務商選「自定義」，填區域網路位址即可。
 
-**App 有繁體中文介面嗎？** 有。介面有繁體中文、簡體中文、英文、阿拉伯語、日文、韓文、西班牙文、葡萄牙文、俄文和印尼文，跟隨系統語言，也可以在 設定 › 語言 裡切換。
+**App 有繁體中文介面嗎？** 有。介面有繁體中文、簡體中文、英文、阿拉伯語、波斯語、日文、韓文、西班牙文、葡萄牙文、俄文、印尼文和越南文，跟隨系統語言，也可以在 設定 › 語言 裡切換。
 
 **更新從哪裡來？** 只從本倉庫的 [Releases](https://github.com/wangzan101/Mika/releases) 發布；App 裡「關於 › 檢查更新」也能直接升級。
 

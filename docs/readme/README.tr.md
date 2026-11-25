@@ -1,4 +1,4 @@
-<!-- translated-from: README.md @ d2ae0c05a5cb -->
+<!-- translated-from: README.md @ 96cbdcf672d1 -->
 <div align="center">
 
 <img src="../media/logo.png" alt="Mika" width="88" />
@@ -27,7 +27,7 @@
 
 <br/>
 
-[English](../../README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · Türkçe
+[English](../../README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · Türkçe · [Tiếng Việt](README.vi.md)
 
 <br/>
 
@@ -149,7 +149,7 @@ Telefonunun yeterli olup olmadığından emin değil misin? Settings › Recover
 
 **Kendi bilgisayarımda çalışan bir modeli kullanabilir miyim?** Evet: sağlayıcı olarak "Custom" seç ve yerel ağındaki adresini gir.
 
-**Uygulama Türkçe mi?** Henüz değil. Uygulama arayüzü İngilizce, Arapça, Basitleştirilmiş Çince, Geleneksel Çince, Japonca, Korece, İspanyolca, Portekizce, Rusça ve Endonezce dillerinde; sistem dilini izler ve Settings › Language (Ayarlar › Dil) bölümünden değiştirilebilir. Yerleşik uygulama ve web sitesi bilgisi Çince yazılmış, ama bu seni sınırlamaz: model onu rahatça okur ve sen Mika ile Türkçe konuşabilirsin.
+**Uygulama Türkçe mi?** Henüz değil. Uygulama arayüzü İngilizce, Arapça, Farsça, Basitleştirilmiş Çince, Geleneksel Çince, Japonca, Korece, İspanyolca, Portekizce, Rusça, Endonezce ve Vietnamca dillerinde; sistem dilini izler ve Settings › Language (Ayarlar › Dil) bölümünden değiştirilebilir. Yerleşik uygulama ve web sitesi bilgisi Çince yazılmış, ama bu seni sınırlamaz: model onu rahatça okur ve sen Mika ile Türkçe konuşabilirsin.
 
 **Güncellemeler nereden geliyor?** Yalnızca bu reponun [Releases](https://github.com/wangzan101/Mika/releases) sayfasından; uygulama içinde About › Check for updates (Hakkında › Güncellemeleri kontrol et) bölümünden de yükseltebilirsin.
 

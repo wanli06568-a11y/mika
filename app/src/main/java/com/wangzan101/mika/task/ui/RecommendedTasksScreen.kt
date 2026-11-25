@@ -63,7 +63,7 @@ import com.wangzan101.mika.ui.Route
 fun RecommendedTasksScreen(store: RecommendedTaskStore, onBack: () -> Unit, onPick: ((RecommendedTask) -> Unit)? = null, onOpenChecklists: (() -> Unit)? = null, onOpenWorkflows: (() -> Unit)? = null) {
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     remember(store) {
-        store.ensureLoaded(seed = { ChatCopy.recommendationSeeds() }, retired = { ChatCopy.retiredRecommendationSeeds(appContext) })
+        store.apply { ensureLoaded(seed = { ChatCopy.recommendationSeeds() }, retired = { ChatCopy.retiredRecommendationSeeds(appContext) }) }
     }
     val tasks by store.tasks.collectAsState()
     val unreadable by store.unreadable.collectAsState()
