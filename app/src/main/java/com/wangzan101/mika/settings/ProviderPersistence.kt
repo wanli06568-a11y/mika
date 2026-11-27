@@ -43,9 +43,9 @@ import com.wangzan101.mika.settings.ProviderStore.Companion.USE_NONE
 import com.wangzan101.mika.settings.ProviderStore.Companion.get
 
 // 服务商存储:读写配置文件、迁移与修复旧数据
-/** 删掉没有用途、也没有组在用的模型配置。Key 存在服务商上,不受影响。 */
+/** 删掉没有用途、组或对话在用的模型配置。Key 存在服务商上,不受影响。 */
 internal fun ProviderStore.prune() {
-    val used = _roles.value.referenced + _groups.value.flatMap { g -> g.members.map { it.configId } }
+    val used = _roles.value.referenced + _groups.value.flatMap { g -> g.members.map { it.configId } } + externalConfigReferences()
     _configs.value = _configs.value.filter { it.id in used }
 }
 
@@ -194,6 +194,8 @@ internal fun ProviderStore.providerOf(o: JsonObject) = Provider(
     ttsModels = (o["ttsModels"] as? JsonArray).orEmpty().mapNotNull {
         (it as? JsonPrimitive)?.takeIf { value -> value.isString }?.content?.trim()?.takeIf(String::isNotEmpty)
     }.toSet(),
+    // 旧版本存下的没有这一项:没起备注
+    nickname = Provider.cleanNickname((o["nickname"] as? JsonPrimitive)?.takeIf { it.isString }?.content),
     // 旧版本存下的没有这一项:那时每一家都走过「测试并保存」,按测过算
     savedUntested = o["untested"]?.jsonPrimitive?.booleanOrNull ?: false,
     models = o["models"]?.jsonArray?.map { e ->
@@ -312,6 +314,7 @@ internal fun ProviderStore.configJson(
                     put("id", p.id); put("name", p.name); put("kind", p.kind.name); put("baseUrl", p.baseUrl)
                     p.sessionHeader?.let { put("sessionHeader", it) }
                     p.signIn?.let { put("signIn", it) }
+                    p.nickname?.let { put("nickname", it) }
                     p.dailyTokenBudget?.let { put("dailyTokenBudget", it) }
                     if (p.serviceTiers.isNotEmpty()) putJsonObject("serviceTiers") {
                         for ((model, tier) in p.serviceTiers) put(model, tier.requestValue)

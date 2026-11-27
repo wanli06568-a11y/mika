@@ -183,6 +183,7 @@
     <string name="attach_recent">최근 사진</string>
     <string name="attach_recent_partial">Mika에게 허용한 사진</string>
     <string name="attach_all">모든 사진</string>
+    <string name="attach_more">더보기</string>
     <string name="attach_change">접근 변경</string>
     <string name="attach_no_photos">아직 사진이 없어요</string>
     <string name="attach_need_access">여기서 사진을 고르려면 Mika가 사진에 접근하도록 허용하세요</string>
@@ -253,6 +254,8 @@
     <string name="pip_closed_hint">이 작업에서는 닫았어요. 오른쪽 아래의 “화면 표시”를 누르거나 사이드 메뉴에서 “백그라운드 화면”을 여세요.</string>
     <string name="chat_conversation_tokens">이 대화: %1$s</string>
     <string name="chat_conversation_tokens_partial">이 대화: %1$s 이상</string>
+    <string name="chat_current_model">현재 모델</string>
+    <string name="chat_usage_view_details">토큰 사용량 보기</string>
     <string name="chat_task_cost_estimate">약 %1$s</string>
     <string name="chat_task_cost_partial">%1$s(일부)</string>
     <string name="chat_task_cost_unavailable">비용을 추정할 수 없음</string>
@@ -331,4 +334,6 @@
     <string name="chat_example_share_title">친구에게 Mika 공유</string>
     <string name="chat_example_share_blurb">필요한 친구에게 추천하기</string>
     <string name="chat_example_share">Mika 프로젝트 링크 https://github.com/wangzan101/mika를 친구에게 공유하고, 휴대폰을 대신 조작해 준다고 알려 줘</string>
+    <string name="chat_video">동영상</string>
+    <string name="chat_video_play">재생</string>
 </resources>

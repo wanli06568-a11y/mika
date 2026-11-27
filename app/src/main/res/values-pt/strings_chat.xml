@@ -205,6 +205,7 @@
     <string name="attach_recent">Fotos recentes</string>
     <string name="attach_recent_partial">Fotos que você permitiu o Mika acessar</string>
     <string name="attach_all">Todas as fotos</string>
+    <string name="attach_more">Mais</string>
     <string name="attach_change">Alterar acesso</string>
     <string name="attach_no_photos">Ainda não há fotos</string>
     <string name="attach_need_access">Para escolher fotos aqui, permita que o Mika acesse suas fotos</string>
@@ -277,6 +278,8 @@
     <string name="pip_closed_hint">Fechada para esta tarefa. Toque em “Mostrar tela” no canto inferior direito ou abra “Telas em segundo plano” no menu lateral.</string>
     <string name="chat_conversation_tokens">Esta conversa: %1$s</string>
     <string name="chat_conversation_tokens_partial">Esta conversa: pelo menos %1$s</string>
+    <string name="chat_current_model">Modelo atual</string>
+    <string name="chat_usage_view_details">Ver uso de tokens</string>
     <string name="chat_task_cost_estimate">Aprox. %1$s</string>
     <string name="chat_task_cost_partial">%1$s (parcial)</string>
     <string name="chat_task_cost_unavailable">Custo indisponível</string>
@@ -359,4 +362,6 @@
     <string name="chat_example_share_title">Compartilhe o Mika com um amigo</string>
     <string name="chat_example_share_blurb">Indique para quem vai usar</string>
     <string name="chat_example_share">Compartilhe o link do projeto Mika https://github.com/wangzan101/mika com um amigo e diga que ele opera o celular por você.</string>
+    <string name="chat_video">Vídeo</string>
+    <string name="chat_video_play">Reproduzir</string>
 </resources>

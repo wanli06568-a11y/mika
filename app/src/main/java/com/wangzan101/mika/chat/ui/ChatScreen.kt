@@ -125,6 +125,8 @@ fun ChatScreen(
     onOpenDrawer: () -> Unit,
     /** 被拦下的提示里的「去设置」。 */
     openSettings: () -> Unit,
+    /** 用量面板里的「查看 Token 用量」:跳到设置里的 Token 用量页。 */
+    openUsage: () -> Unit = {},
     /** 「＋」面板里的「浏览器」:打开内置浏览器。 */
     onOpenBrowser: () -> Unit = {},
     openRun: (String) -> Unit = {},
@@ -228,6 +230,7 @@ fun ChatScreen(
     var showWorkflows by rememberSaveable { mutableStateOf(false) }
     // 面板开着时选照片会把首页的草稿提升成对话(id 从 null 变成新值),所以不跟对话 id 绑;换对话时用户本来就会先关掉
     var showPlus by rememberSaveable { mutableStateOf(false) }
+    var showMainModel by rememberSaveable(ui.conversationId) { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var saveTaskPrompt by remember(ui.conversationId) { mutableStateOf<String?>(null) }
@@ -545,7 +548,7 @@ fun ChatScreen(
             hasHistory = ui.exchanges.isNotEmpty(),
             onSend = { vm.send(input, check) },
             onStop = vm::stopAll,
-            working = ui.deskTasks.isNotEmpty() || ui.exchanges.any { it.deskReply != null && it.status == ExchangeStatus.Working },
+            working = ui.deskTasks.any { it.inProgress } || ui.exchanges.any { it.deskReply != null && it.status == ExchangeStatus.Working },
             queued = ui.queued,
             onQueueActions = { queueActions = it },
             onCancelQueued = { id ->
@@ -569,6 +572,8 @@ fun ChatScreen(
             onDismissRejected = vm::dismissRejected,
             quote = ui.quote,
             onRemoveQuote = vm::clearQuote,
+            mainModel = ui.mainModel,
+            onMainModel = { showMainModel = true },
             voice = voice,
             // 说的话接在已有的字后面;任务在跑时先作为补充消息排队
             onVoiceText = { vm.input(HoldToTalk.join(vm.ui.value.input, it)) },
@@ -617,6 +622,14 @@ fun ChatScreen(
             reduceMotion = reduceMotion,
         )
 
+        if (showMainModel) {
+            MainModelSheet(
+                ui = ui.mainModel,
+                onPick = vm::chooseMainModel,
+                onMore = openSettings,
+                onDismiss = { showMainModel = false },
+            )
+        }
         if (showPlus) {
             ChatPlusSheet(
                 selected = ui.attachments,
@@ -659,7 +672,9 @@ fun ChatScreen(
             )
         }
 
-        if (showUsage) ConversationUsageSheet(ui.conversationId) { showUsage = false }
+        // 面板里的「当前模型」跟着本对话在主模型入口里存的选择走,和这个对话下一次任务用的一致
+        if (showUsage) ConversationUsageSheet(ui.conversationId, onDismiss = { showUsage = false }, onOpenUsage = openUsage,
+            mainOverride = ui.mainModel.override)
     if (showRecords) {
         CallRecordsSheet(
             callLog, current = callLog.lastOrNull { it.endMs == null }?.id.orEmpty(),
