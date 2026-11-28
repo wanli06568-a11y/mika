@@ -4,9 +4,8 @@ import com.wangzan101.mika.core.learn.teach.TeachCodec
 import com.wangzan101.mika.core.learn.teach.TeachSession
 import com.wangzan101.mika.core.learn.teach.TeachSkill
 import com.wangzan101.mika.core.learn.teach.TeachTrace
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /** 一份示范轨迹，只留合并后的步骤。放弃、拒绝、删除或收下后整个目录删掉。 */
 class TeachFiles(dir: File) {
@@ -39,9 +38,7 @@ class TeachFiles(dir: File) {
     @Synchronized fun save(session: TeachSession) {
         if (!TeachSkill.ID.matches(session.id)) return
         root.mkdirs()
-        val tmp = File(root, "session.json.tmp")
-        tmp.writeText(TeachCodec.encode(session))
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        AtomicFiles.write(file, TeachCodec.encode(session), durable = false)
     }
 
     @Synchronized fun delete() {

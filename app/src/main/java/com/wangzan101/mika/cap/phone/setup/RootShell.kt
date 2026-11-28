@@ -1,5 +1,7 @@
 package com.wangzan101.mika.cap.phone.setup
 
+import com.wangzan101.mika.cap.drainBounded
+import com.wangzan101.mika.cap.onDaemonThread
 import com.wangzan101.mika.core.device.shell.SuAnswer
 import com.wangzan101.mika.core.device.shell.SuProbe
 import java.io.File
@@ -38,29 +40,17 @@ object RootShell {
      * 超时由调用方结束进程。
      */
     fun readUid(p: Process, timeoutMs: Long): Int? {
-        val f = onThread {
+        val f = onDaemonThread(THREAD) {
             val r = p.inputStream.bufferedReader()
             generateSequence { runCatching { r.readLine() }.getOrNull() }.firstNotNullOfOrNull(SuProbe::uid)
         }
         return f.get(timeoutMs, TimeUnit.MILLISECONDS)
     }
 
-    /** 在单独的线程上做阻塞的读(不占公共线程池)。 */
-    fun <T> onThread(block: () -> T): CompletableFuture<T> = CompletableFuture<T>().also { f ->
-        Thread({ runCatching(block).fold({ f.complete(it) }, { f.completeExceptionally(it) }) }, "mika-su").apply { isDaemon = true }.start()
+    /** 在另一条线程上把 [stream] 读完(最多 [max] 字节,多的丢掉)。 */
+    fun collect(stream: InputStream, max: Int = 16 * 1024): CompletableFuture<String> = onDaemonThread(THREAD) {
+        String(drainBounded(stream, max).first, Charsets.UTF_8)
     }
 
-    /** 在另一条线程上把 [stream] 读完(最多 [max] 字节,多的丢掉)。 */
-    fun collect(stream: InputStream, max: Int = 16 * 1024): CompletableFuture<String> = onThread {
-        val buf = java.io.ByteArrayOutputStream()
-        val chunk = ByteArray(4096)
-        runCatching {
-            while (true) {
-                val n = stream.read(chunk)
-                if (n < 0) break
-                if (buf.size() < max) buf.write(chunk, 0, minOf(n, max - buf.size()))
-            }
-        }
-        buf.toString(Charsets.UTF_8.name())
-    }
+    private const val THREAD = "mika-su"
 }

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">Autocomprobación de compatibilidad</string>
-    <string name="selfcheck_row_sub">Mira qué funciona en este teléfono e infórmalo</string>
     <string name="selfcheck_intro">Dura aproximadamente 1 minuto. No toca tus otras apps, no cambia ajustes y no usa la red. Quédate en esta página mientras se ejecuta.</string>
     <string name="selfcheck_start">Iniciar</string>
     <string name="selfcheck_again">Ejecutar de nuevo</string>

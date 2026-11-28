@@ -32,10 +32,8 @@ internal object DoubaoProtocol {
     }.toString().toByteArray(Charsets.UTF_8))
 
     fun audio(pcm: ShortArray, last: Boolean): ByteArray {
-        val data = ByteBuffer.allocate(pcm.size * 2).order(ByteOrder.LITTLE_ENDIAN)
-        pcm.forEach(data::putShort)
         // Flag 2 indicates the last audio packet without an optional sequence field.
-        return packet(if (last) 0x22 else 0x20, 0, data.array())
+        return packet(if (last) 0x22 else 0x20, 0, Pcm16.toBytes(pcm))
     }
 
     private fun packet(typeAndFlags: Int, serialization: Int, payload: ByteArray): ByteArray {

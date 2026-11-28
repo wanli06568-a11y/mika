@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">Состояние звонка</string>
-    <string name="calls_dtmf_open">Клавиатура</string>
     <string name="calls_dtmf_title">Клавиатура звонка</string>
     <string name="calls_dtmf_close">Закрыть</string>
     <string name="calls_dtmf_batch">Ввести последовательность</string>

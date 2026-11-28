@@ -9,8 +9,6 @@
     <string name="file_library_loading">Загрузка файлов…</string>
     <string name="file_library_empty">Файлы не найдены</string>
     <string name="file_library_missing">Недоступен</string>
-    <string name="file_library_available">Доступен</string>
-    <string name="file_library_open">Открыть</string>
     <string name="file_library_share">Поделиться</string>
     <string name="file_library_add">Добавить в черновик</string>
     <string name="file_library_choose">Выберите беседу</string>

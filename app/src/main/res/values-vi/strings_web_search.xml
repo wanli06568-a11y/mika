@@ -12,7 +12,6 @@
     <string name="web_search_missing_key">%1$s cần khóa API để hoạt động.</string>
     <string name="web_search_get_key">Lấy khóa API</string>
     <string name="web_search_privacy">Khóa được lưu mã hóa trên điện thoại này. Kết quả tìm kiếm được coi là không đáng tin cậy.</string>
-    <string name="web_search_row_sub">Dịch vụ tìm kiếm tùy chọn; tìm kiếm bằng trình duyệt luôn khả dụng</string>
     <string name="web_search_enabled">Bật tìm kiếm web</string>
     <string name="web_search_api_key">Khóa API (tùy chọn)</string>
     <string name="web_search_invalid_endpoint">Nhập URL HTTP hoặc HTTPS không có tham số truy vấn.</string>

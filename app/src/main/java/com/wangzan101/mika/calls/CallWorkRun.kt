@@ -1,5 +1,6 @@
 package com.wangzan101.mika.calls
 
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
@@ -26,7 +27,6 @@ import com.wangzan101.mika.calls.CallRuntime.CallProblem
 import com.wangzan101.mika.calls.CallRuntime.MediaStage
 import com.wangzan101.mika.calls.CallRuntime.Work
 import com.wangzan101.mika.calls.CallRuntime.Companion.MAX_MEDIA_DIAGNOSTICS
-import com.wangzan101.mika.calls.CallRuntime.Companion.PHONE_DTMF_PROMPT
 import com.wangzan101.mika.calls.CallRuntime.Companion.FAREWELL_ENDING
 import com.wangzan101.mika.calls.CallRuntime.Companion.TOKEN
 
@@ -94,8 +94,10 @@ internal suspend fun CallRuntime.runWork(w: Work) {
         val migrated = realtimeController.migrated
         val standard = standardCalls
         // 标准通话:所属任务的状态每轮作为尾随附注给电话前台,系统提示保持字节不变
-        val ownerBackground = w.ownerTask?.let(PhoneDesk::background)
-        val provider = if (standard) CascadeCallProvider(cascade, CallUse.Phone, background = ownerBackground) else if (migrated) {
+        val languageTag = callLanguageTag()
+        val ownerBackground = w.ownerTask?.let { PhoneDesk.background(it, languageTag = languageTag) }
+        val provider = if (standard) CascadeCallProvider(cascade, CallUse.Phone, background = ownerBackground,
+            meter = w.ownerConversationId?.let(app.conversations::meter)) else if (migrated) {
             try {
                 realtimeController.callProvider()
             } catch (e: VoiceModelError) {
@@ -130,10 +132,11 @@ internal suspend fun CallRuntime.runWork(w: Work) {
         validateTarget(w)
         // 现有电话提示在前,电话前台说明在后;实时通话把开场时所属任务的状态写进提示,之后变了再推
         val systemPrompt = PhoneDesk.systemPrompt(
-            CallPolicy.prompt(w.config.systemPrompt, w.direction, ownerRules, task = w.task) + PHONE_DTMF_PROMPT,
+            CallPolicy.prompt(w.config.systemPrompt, w.direction, ownerRules, task = w.task, languageTag = languageTag) + CallRuntime.phoneDtmfPrompt(languageTag),
             task = w.task.takeIf { w.direction == CallDirection.OUTGOING },
-            openingOwnerTask = if (standard) null else PhoneDesk.renderOwnerTask(w.ownerTask?.value),
+            openingOwnerTask = if (standard) null else PhoneDesk.renderOwnerTask(w.ownerTask?.value, languageTag = languageTag),
             canCue = PhoneDesk.canCue(standard, profile.protocol),
+            languageTag = languageTag,
         )
         try {
             provider.validate(profile, systemPrompt, enablePhoneDtmf = true)
@@ -148,7 +151,7 @@ internal suspend fun CallRuntime.runWork(w: Work) {
                 validateSessionTarget(w, helper)
                 w.mediaStage = MediaStage.VOLC_CONNECT
                 val connected = withTimeoutOrNull(5_000L) {
-                    provider.connect(profile, credentials, systemPrompt, enablePhoneDtmf = true)
+                    provider.connect(profile, credentials, systemPrompt, enablePhoneDtmf = true, languageTag = languageTag)
                         .also { w.session = it } // Adopt before the timeout/cancellation boundary.
                 } ?: throw CallProblem("实时语音连接超时，未由 AI 接管")
                 if (!connected.setMuted(true)) throw CallProblem("实时语音服务未进入就绪状态")
@@ -321,13 +324,17 @@ internal suspend fun CallRuntime.runWork(w: Work) {
 /** Only a pending AI attempt or active call can hold a timed partial wake lock. */
 internal fun CallRuntime.acquireCallWakeLock(w: Work, timeoutMs: Long = CallStandbyPolicy.activeWakeBudgetMs(w.config.maxCallSeconds)) {
     releaseCallWakeLock(w)
-    runCatching {
-        val power = app.getSystemService(PowerManager::class.java) ?: return
-        val lock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Mika:ActiveCall")
-        lock.setReferenceCounted(false)
-        w.wakeLock = lock
-        lock.acquire(timeoutMs)
-    }.onFailure { debugMediaException(w, it) }
+    runCatching { w.wakeLock = app.timedPartialWakeLock("Mika:ActiveCall", timeoutMs) }
+        .onFailure { debugMediaException(w, it) }
+}
+
+/** 不计数、到点自己放开的 CPU 锁(不点亮屏幕);拿不到电源服务时为 null,acquire 出错照常抛出。 */
+internal fun Context.timedPartialWakeLock(tag: String, timeoutMs: Long): PowerManager.WakeLock? {
+    val power = getSystemService(PowerManager::class.java) ?: return null
+    return power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, tag).apply {
+        setReferenceCounted(false)
+        acquire(timeoutMs)
+    }
 }
 
 internal fun CallRuntime.releaseCallWakeLock(w: Work) {

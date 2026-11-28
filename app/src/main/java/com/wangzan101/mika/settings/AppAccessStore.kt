@@ -4,9 +4,8 @@ import com.wangzan101.mika.core.device.access.AppAccessPolicy
 import com.wangzan101.mika.core.device.access.AppAccessState
 import com.wangzan101.mika.core.device.access.AppCategory
 import com.wangzan101.mika.core.device.access.AppClassification
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.*
@@ -66,9 +65,7 @@ class AppAccessStore(private val file: File) : AppAccessPolicy {
                 }
             }
         }
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeText(json.toString())
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        AtomicFiles.write(file, json.toString(), durable = false)
         mutable.value = next
     }
 

@@ -138,8 +138,6 @@ internal fun ProviderStore.asRole(cfg: ProviderConfig, role: ModelRole): Provide
     return if (sees == cfg.capabilities.vision) cfg else cfg.copy(capabilities = cfg.capabilities.copy(vision = sees))
 }
 
-internal fun ProviderStore.asMain(cfg: ProviderConfig): ProviderConfig = asRole(cfg, ModelRole.Main)
-
 /**
  * 按配置 id 建一个当指定角色用的模型(备援链用):计量、每日预算检查都和该角色同一条路。
  * 配置不存在为 null。

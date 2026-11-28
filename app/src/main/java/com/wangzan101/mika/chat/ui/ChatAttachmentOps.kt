@@ -208,21 +208,6 @@ internal class ChatAttachmentOps(private val vm: ChatViewModel, private val sess
         return !t.full
     }
 
-    fun clearSharedAttachments(draft: SharedDraft) {
-        val currentText = _ui.value.input
-        if (currentText.isBlank()) {
-            sharedDrafts?.clear(draft.conversationId)
-        } else {
-            val updated = draft.copy(text = currentText, attachments = emptyList())
-            if (sharedDrafts?.save(updated) != true) sharedDrafts?.removeAttachment(draft.conversationId)
-        }
-        _ui.update { current ->
-            if (current.sharedDraft == draft) {
-                current.copy(sharedDraft = draft.copy(text = current.input, attachments = emptyList()).takeIf { it.text.isNotBlank() })
-            } else current
-        }
-    }
-
     private fun removeSharedAttachment(draft: SharedDraft, target: SharedDraftAttachment) {
         val currentText = _ui.value.input
         val remaining = draft.attachments.filterNot { it.fileName == target.fileName }

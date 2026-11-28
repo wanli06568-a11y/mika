@@ -178,7 +178,7 @@ internal fun CallTaskScreen(
         }
         Hairline()
         CallFieldRow(MikaIcons.Doc, draft.goal, { draft.goal = it }, stringResource(R.string.calls_task_goal_example),
-            editable, "call-task-goal", minLines = 3, maxLines = 6,
+            editable, "call-task-goal", minLines = if (draft.goal.isEmpty()) 2 else 1, maxLines = 6,
             error = if (goalLength > maxGoal) stringResource(R.string.calls_task_limit, goalLength, maxGoal) else null)
     }
 

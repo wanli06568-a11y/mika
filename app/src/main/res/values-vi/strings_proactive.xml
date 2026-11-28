@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="proactive_title">Chủ động</string>
-    <string name="proactive_entry_sub">Đọc thông báo từ các ứng dụng bạn chọn</string>
     <string name="proactive_switch">Bật</string>
     <string name="proactive_listener">Trình lắng nghe: %1$s</string>
     <string name="proactive_state_connected">đã kết nối</string>

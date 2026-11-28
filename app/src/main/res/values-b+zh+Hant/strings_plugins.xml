@@ -6,7 +6,6 @@
     <string name="plugins_empty">還沒有外掛</string>
     <string name="plugins_empty_sub">安裝外掛 zip 可以給 Mika 增加它能讀的技能。外掛不能改 App 設定，也不能讀你的其他資料。</string>
     <string name="plugins_enabled">已啟用</string>
-    <string name="plugins_disabled">已停用</string>
     <string name="plugins_skills">技能</string>
     <string name="plugins_no_skills">沒有技能</string>
     <string name="plugins_permissions">權限</string>

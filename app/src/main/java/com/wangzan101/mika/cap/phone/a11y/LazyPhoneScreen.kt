@@ -33,6 +33,8 @@ class LazyPhoneScreen(
     private val listApps: suspend () -> List<Pair<String, String>>,
     private val appCopies: suspend () -> List<AppCopy> = { emptyList() },
     override val canShareAudio: Boolean = false,
+    override val canShareImage: Boolean = false,
+    override val canShareVideo: Boolean = false,
     private val calendarBulkWriter: (suspend (List<SystemAction.AddCalendarEvent>) -> SystemActionResult)? = null,
     private val acquire: suspend () -> ScreenPort,
 ) : ScreenPort {
@@ -74,6 +76,10 @@ class LazyPhoneScreen(
     override suspend fun shareText(packageName: String, text: String): ActionResult = built()?.shareText(packageName, text) ?: unavailable()
     override suspend fun shareAudio(packageName: String, path: String, text: String?): ActionResult =
         built()?.shareAudio(packageName, path, text) ?: unavailable()
+    override suspend fun shareImage(packageName: String, path: String, text: String?): ActionResult =
+        built()?.shareImage(packageName, path, text) ?: unavailable()
+    override suspend fun shareVideo(packageName: String, path: String, text: String?): ActionResult =
+        built()?.shareVideo(packageName, path, text) ?: unavailable()
     override suspend fun systemAction(action: SystemAction): SystemActionResult = built()?.systemAction(action) ?: SystemActionResult(unavailable())
     override suspend fun bulkCalendarInsert(events: List<SystemAction.AddCalendarEvent>): SystemActionResult =
         calendarBulkWriter?.invoke(events)

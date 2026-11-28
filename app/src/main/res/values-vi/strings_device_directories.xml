@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">Truy cập bị từ chối</string>
     <string name="device_dirs_unknown">Không có trạng thái</string>
     <string name="device_dirs_entry">Gợi ý thư mục</string>
-    <string name="device_dirs_entry_sub">Giúp Mika tìm tệp đã tải xuống</string>
     <string name="device_dirs_source_preset">Đặt sẵn</string>
     <string name="device_dirs_source_user">Do bạn sửa</string>
     <string name="device_dirs_source_mika">Do Mika sửa</string>

@@ -9,8 +9,6 @@
     <string name="file_library_loading">Memuat berkas…</string>
     <string name="file_library_empty">Tidak ada berkas ditemukan</string>
     <string name="file_library_missing">Tidak tersedia</string>
-    <string name="file_library_available">Tersedia</string>
-    <string name="file_library_open">Buka</string>
     <string name="file_library_share">Bagikan</string>
     <string name="file_library_add">Tambahkan ke draf</string>
     <string name="file_library_choose">Pilih percakapan</string>

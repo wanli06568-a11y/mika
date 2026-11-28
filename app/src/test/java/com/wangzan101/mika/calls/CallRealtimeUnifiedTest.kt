@@ -34,6 +34,7 @@ private class RecordingRealtimeProvider : CallRealtimeProvider {
         credentials: VolcRealtimeCredentials,
         systemPrompt: String,
         enablePhoneDtmf: Boolean,
+        languageTag: String?,
     ): CallRealtimeSession {
         connected += profile to credentials
         return FakeSession

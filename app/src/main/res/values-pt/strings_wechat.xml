@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">Mensagens privadas podem iniciar tarefas do Mika</string>
     <string name="wechat_turn_off">Desativar</string>
     <string name="wechat_title">WeChat</string>
-    <string name="wechat_settings_sub">Atribua tarefas ao Mika no WeChat</string>
     <string name="wechat_status_disconnected">Não conectado</string>
     <string name="wechat_status_connecting">Conectando</string>
     <string name="wechat_status_connected">Conectado</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">Leia no WeChat e confirme a autorização. Depois, abra a conversa privada do bot e envie texto ou imagens. Este código QR serve apenas para esta vinculação; não o encaminhe.</string>
     <string name="wechat_connection">Conexão</string>
     <string name="wechat_receive">Receber tarefas do WeChat</string>
-    <string name="wechat_receive_sub">Quando desativado, o Mika para de ler novas mensagens</string>
     <string name="wechat_allow_unlock">Permitir que tarefas do WeChat ativem a tela e desbloqueiem o celular</string>
     <string name="wechat_allow_unlock_sub">Somente tarefas enviadas pelo chat privado da sua própria conta vinculada do WeChat podem tentar ativar a tela e desbloquear este celular.</string>
     <string name="wechat_allow_unlock_foot">Desativado por padrão; vincular a conta novamente desativa esta opção. Primeiro ative “%3$s” em “%1$s › %2$s” e salve neste celular o PIN ou a senha de bloqueio de tela, se você usar um deles. Esta opção não altera essa permissão nem usa credenciais enviadas pelo WeChat.</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">Texto e imagens privados e tarefas reais</string>
     <string name="wechat_capability_replies">Perguntas, resultados e avisos do Mika</string>
     <string name="wechat_capability_phone">Confirmações de pagamento e controle do telefone</string>
-    <string name="wechat_capability_phone_sub">Ainda concluídos neste telefone</string>
     <string name="wechat_capability_later">Voz, arquivos, grupos e várias contas</string>
     <string name="wechat_supported">Compatível</string>
     <string name="wechat_phone_only">Telefone</string>

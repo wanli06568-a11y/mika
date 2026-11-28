@@ -34,7 +34,6 @@
     <string name="ok_got_it">Понятно</string>
     <string name="cancel">Отмена</string>
     <string name="model_reasoning_title">Глубина размышлений · %1$s</string>
-    <string name="model_reasoning_value">Глубина размышлений: %1$s</string>
     <string name="model_reasoning_note">Более высокая глубина помогает в сложных задачах, но занимает больше времени и расходует больше токенов. При значении «По умолчанию» решает провайдер.</string>
     <string name="model_reasoning_unknown">Провайдер не указал доступные уровни. Неподдерживаемый выбор может привести к сбоям в задачах; в этом случае выберите «По умолчанию».</string>
     <string name="model_reasoning_unavailable">Провайдер больше не поддерживает сохранённый уровень. Выберите «По умолчанию» или другой уровень.</string>

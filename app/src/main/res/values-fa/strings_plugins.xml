@@ -6,7 +6,6 @@
     <string name="plugins_empty">هنوز افزونه‌ای نیست</string>
     <string name="plugins_empty_sub">یک فایل zip افزونه نصب کنید تا مهارت‌هایی که Mika می‌تواند بخواند اضافه شود. افزونه نمی‌تواند تنظیمات برنامه را تغییر دهد یا داده‌های دیگر شما را بخواند.</string>
     <string name="plugins_enabled">فعال</string>
-    <string name="plugins_disabled">غیرفعال</string>
     <string name="plugins_skills">مهارت‌ها</string>
     <string name="plugins_no_skills">بدون مهارت</string>
     <string name="plugins_permissions">مجوزها</string>

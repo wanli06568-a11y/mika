@@ -1,5 +1,7 @@
 package com.wangzan101.mika.core.cap.sandbox
 
+import com.wangzan101.mika.core.tool.okObj
+import com.wangzan101.mika.core.tool.fail
 import com.wangzan101.mika.core.model.Part
 import com.wangzan101.mika.core.workspace.DeviceFileSearchQuery
 import com.wangzan101.mika.core.workspace.DeviceFileImport
@@ -494,10 +496,4 @@ internal class SandboxTools(
 
     private fun unavailable(why: String) = fail("script_unavailable", why, recoverable = false)
     private fun outside() = fail("path_outside_workspace", OUTSIDE)
-
-    private fun okObj(b: JsonObjectBuilder.() -> Unit) = buildJsonObject { put("ok", true); b() }
-
-    private fun fail(error: String, message: String, recoverable: Boolean = true) = ToolExecution(buildJsonObject {
-        put("ok", false); put("error", error); put("message", message); put("recoverable", recoverable)
-    })
 }

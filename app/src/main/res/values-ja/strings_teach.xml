@@ -5,8 +5,6 @@
     <string name="teach_goal_label">覚えてほしいこと</string>
     <string name="teach_goal_hint">例：毎朝、勤怠アプリで打刻する</string>
     <string name="teach_disclosure">「示範を開始」を押したあと、手順はこの端末だけに残します。モデルが設定されている場合、技能の下書きを作るときに目標と手順の要約（パスワード、確認コード、支払い内容は除く）をそのモデルへ送ります。モデルが無いときは端末上で整理するだけで、送信しません。受け入れるまで技能は使われず、試し実行は成功していません。</string>
-    <string name="teach_continue">続ける</string>
-    <string name="teach_ready_body">Mika は見るだけで、端末は操作しません。一時停止、終了、破棄ができます。「示範を開始」を押すまで記録しません。</string>
     <string name="teach_start">示範を開始</string>
     <string name="teach_learning">学習中</string>
     <string name="teach_paused">一時停止</string>
@@ -14,7 +12,6 @@
     <string name="teach_resume">示範を続ける</string>
     <string name="teach_end">示範を終える</string>
     <string name="teach_discard">破棄</string>
-    <string name="teach_discard_body">この示範を破棄し、保存した手順を削除しますか？</string>
     <string name="teach_busy">タスクの実行中です。終わってから教えてください。</string>
     <string name="teach_need_a11y">先にユーザー補助をオンにしてください。オフだと操作を見られません。</string>
     <string name="teach_interrupted">アプリの再起動またはユーザー補助のオフで示範は止まっています。続けるまで記録しません。</string>

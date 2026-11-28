@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d 个可用</string>
     <string name="voice_hub_footer">每件事选一个来做。语音服务是这些选项的来源账号。</string>
     <string name="voice_hub_setup">去设置</string>
-    <string name="voice_hub_ready">可用</string>
     <string name="voice_hub_off">关闭</string>
     <string name="voice_hub_none">未选择</string>
     <string name="voice_source_device">这台手机 · 免费</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">删除聊天账号时，会先说明哪些语音用途会受影响。</string>
     <string name="voice_add_advanced">高级</string>
     <string name="voice_add_custom">自定义</string>
-    <string name="voice_add_custom_sub">手动填写模型 ID、协议和接口地址</string>
     <string name="voice_preset_compat">OpenAI 兼容服务</string>
     <string name="voice_preset_compat_sub">识别 · 朗读 · 实时语音 · 地址 + Key</string>
     <string name="voice_preset_selfhosted">自建识别服务</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">用于语音通话</string>
     <string name="voice_result_in_use">正在使用</string>
     <string name="voice_result_done">完成</string>
-    <string name="calls_who_speaks">用谁来说</string>
-    <string name="calls_what_to_say">电话里说什么</string>
-    <string name="calls_profile_summary">开场白、指示和通话时长</string>
     <string name="calls_voice_title">通话语音</string>
     <string name="calls_voice_shared_note">这个音色和聊天里的语音通话共用。</string>
     <string name="calls_audio_title">手机通话音频</string>

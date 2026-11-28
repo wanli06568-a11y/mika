@@ -12,10 +12,8 @@ import com.wangzan101.mika.core.assembly.knownTools
 import com.wangzan101.mika.core.assembly.legacyNames
 import com.wangzan101.mika.core.tool.ToolIndex
 import com.wangzan101.mika.core.tool.LegacyNames
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /**
  * 路线存成 `<dir>/<首个包名>/<id>.json`;超过 [max] 条时删最久没用的。
@@ -62,10 +60,8 @@ class FileRouteStore(
         require(r.steps.size <= MAX_ROUTE_STEPS && bytes.size <= MAX_ROUTE_BYTES) { "route ${r.id} too large" }
         val f = fileOf(r)
         f.parentFile?.mkdirs()
-        val tmp = File(f.parentFile, "${f.name}.tmp")
-        FileOutputStream(tmp).use { out -> out.write(bytes); out.fd.sync() }
         // 原子替换:旧文件在新文件就位前一直完好
-        Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        AtomicFiles.write(f, bytes, durable = true)
         // 同 id 换了首个包名:旧位置的那份删掉
         existing.filter { it.second.id == r.id && it.first.absoluteFile != f.absoluteFile }.forEach { it.first.delete() }
         val kept = existing.filter { it.second.id != r.id } + (f to r)

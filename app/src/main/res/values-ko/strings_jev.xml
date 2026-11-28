@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="jev_title">판단 모델 · Jev</string>
-    <string name="jev_row_sub">선택 사항: 의도 판단 및 경로 선택</string>
     <string name="jev_enabled">판단 모델 사용</string>
     <string name="jev_privacy">활성화하면 의도 판단과 경로 선택을 위해 요청, 최근 대화 맥락 및 후보 경로을 설정한 제공업체로 보냅니다. 실패하면 기존 모델을 사용합니다. 기본·이미지·경량 모델 설정은 별도로 유지됩니다.</string>
     <string name="jev_provider">제공업체</string>

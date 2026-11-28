@@ -6,6 +6,7 @@ import android.os.Process
 import android.util.Log
 import com.wangzan101.mika.cap.phone.shell.HelperHub
 import com.wangzan101.mika.core.device.shell.HelperHandoff
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -56,12 +57,7 @@ class UsbStartScript(context: Context, private val hub: HelperHub) {
         }
         // 先写临时文件再改名:电脑那边正在读时不会读到半截
         runCatching {
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(text)
-            if (!tmp.renameTo(f)) {
-                f.delete()
-                check(tmp.renameTo(f)) { "rename failed" }
-            }
+            check(AtomicFiles.write(f, text, durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.DeleteAndRetry)) { "rename failed" }
         }.onFailure { Log.w(TAG, "cannot write ${f.name}", it) }
     }
 

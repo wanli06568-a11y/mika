@@ -31,7 +31,6 @@
     <string name="mcp_last_request">上次請求 %1$s</string>
     <string name="mcp_advanced">進階設定</string>
     <string name="mcp_advanced_hide">收起進階設定</string>
-    <string name="mcp_advanced_sub">存取開關、權杖與遠端喚醒</string>
     <string name="mcp_port_detail">連接埠 %1$d。手機重新啟動後 USB 存取會關閉。</string>
     <string name="mcp_port_title">監聽埠</string>
     <string name="mcp_port_dialog_sub">預設埠被手機上其他服務佔用時換一個。改完立即生效，電腦按新埠重新連線。</string>

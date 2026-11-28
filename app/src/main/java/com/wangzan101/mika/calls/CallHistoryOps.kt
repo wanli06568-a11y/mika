@@ -45,7 +45,12 @@ internal suspend fun CallRuntime.summarizeCall(id: String, transcript: List<Call
     val summary = try {
         if (!settings.state.value.summaryEnabled) null
         else app.providers.modelFor(ModelRole.Main)?.let {
-            CallSummaryGenerator.generate(it, transcript, direction) { settings.state.value.summaryEnabled }
+            CallSummaryGenerator.generate(
+                it,
+                transcript,
+                direction,
+                languageTag = callLanguageTag(),
+            ) { settings.state.value.summaryEnabled }
         }
     } catch (e: CancellationException) {
         throw e

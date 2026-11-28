@@ -1,6 +1,7 @@
 package com.wangzan101.mika.settings
 
 import android.content.Context
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,8 +12,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /**
  * 设置 › 环境变量:名字=值 的键值对,插件脚本和提示词钩子跑起来时经它拿到(如 `MIKA_TRANSLATE_BASE/KEY/MODEL`)。
@@ -64,9 +63,7 @@ class EnvVarStore(private val dir: File) {
     private fun write(m: Map<String, String>) {
         dir.mkdirs()
         val obj = buildJsonObject { m.forEach { (k, v) -> put(k, v) } }
-        val tmp = File(dir, "$FILE.tmp")
-        tmp.writeText(obj.toString())
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        AtomicFiles.write(file, obj.toString(), durable = false)
         cached = m
         _changes.value = m
     }

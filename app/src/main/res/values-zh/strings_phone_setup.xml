@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">要换</string>
     <string name="calls_disable_sub">来电和拨号全部交回系统电话</string>
     <string name="calls_how_to_talk">接起来怎么说</string>
-    <string name="calls_greeting_empty">留空 · 等对方先开口</string>
-    <string name="calls_talk_settings_sub">通话说明和 AI 最长说多久</string>
     <string name="calls_stage_listen">听</string>
     <string name="calls_stage_think">想</string>
     <string name="calls_stage_speak">说</string>

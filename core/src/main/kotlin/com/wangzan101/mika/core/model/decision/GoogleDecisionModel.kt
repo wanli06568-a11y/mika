@@ -3,6 +3,7 @@ package com.wangzan101.mika.core.model.decision
 import com.wangzan101.mika.core.model.ModelError
 import com.wangzan101.mika.core.model.ModelHttp
 import com.wangzan101.mika.core.model.Usage
+import com.wangzan101.mika.core.model.headerOrReject
 import com.wangzan101.mika.core.net.NetProxy
 import com.wangzan101.mika.core.model.usage.RunUsageTally
 import kotlinx.coroutines.CancellationException
@@ -129,7 +130,7 @@ class GoogleDecisionModel(
             validateQuestions(questions, minCriteria)
             val payload = buildPayload(input, questions)
             val request = Request.Builder().url(url)
-                .header("x-goog-api-key", key)
+                .headerOrReject("x-goog-api-key", key)
                 .header("Accept", "application/json")
                 .post(payload.toString().toRequestBody(JSON))
                 .build()

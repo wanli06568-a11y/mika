@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">مدل‌های گفتار</string>
-    <string name="models_voice_catalog_sub">مدیریت مدل‌های گفتار به متن، متن به گفتار و تماس زنده در یک‌جا</string>
     <string name="voice_catalog_title">مدل‌های گفتار</string>
     <string name="voice_catalog_sub">مدیریت مدل‌های گفتار به متن، متن به گفتار و تماس زنده در یک‌جا. قابلیت‌ها و پروتکل‌ها این‌جا اعلام می‌شوند؛ صفحات ورودی صوتی، خواندن و تماس فقط ترجیحات را انتخاب و استفاده می‌کنند.</string>
     <string name="voice_catalog_add">افزودن مدل</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">تأیید نشده</string>
     <string name="voice_catalog_testing">در حال آزمایش…</string>
     <string name="voice_catalog_listening">گوش می‌دهم، چیزی بگویید…</string>
+    <string name="voice_catalog_no_speech">صدایی شناسایی نشد</string>
     <string name="voice_catalog_incomplete">ابتدا جزئیات حساب مورد نیاز را وارد کنید.</string>
     <string name="voice_catalog_protocol_stt_android_system">سیستم Android</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">رونوشت صدا</string>

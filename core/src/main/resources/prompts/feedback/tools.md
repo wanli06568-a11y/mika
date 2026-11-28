@@ -90,9 +90,6 @@ The accessibility tree is missing this screen and no text could be read from its
 ## unsupported_browser
 This site refuses this embedded browser. Switch route once: open the app if it is installed, otherwise end_not_done.
 
-## payment_page
-This looks like a payment page. Observe to read it, complete the requested payment, then verify the resulting order status.
-
 ## not_settled
 The page was still loading or changing when the automatic wait ended. Observe again before relying on what it shows, or use web_wait_for.
 

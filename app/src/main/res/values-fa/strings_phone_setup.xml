@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">باید عوض شود</string>
     <string name="calls_disable_sub">تماس‌های ورودی و شماره‌گیری به تلفن سیستم برمی‌گردد</string>
     <string name="calls_how_to_talk">وقتی جواب داد</string>
-    <string name="calls_greeting_empty">خالی · صبر تا تماس‌گیرنده اول حرف بزند</string>
-    <string name="calls_talk_settings_sub">دستورها و بیشترین مدت صحبت هوش مصنوعی</string>
     <string name="calls_stage_listen">می‌شنود</string>
     <string name="calls_stage_think">فکر</string>
     <string name="calls_stage_speak">می‌گوید</string>

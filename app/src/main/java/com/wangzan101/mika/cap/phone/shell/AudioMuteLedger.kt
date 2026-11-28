@@ -1,5 +1,6 @@
 package com.wangzan101.mika.cap.phone.shell
 
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.File
 
 /**
@@ -40,9 +41,7 @@ class AudioMuteLedger(private val file: File?) {
             if (modes.isEmpty()) {
                 f.delete()
             } else {
-                val tmp = File(f.parentFile, f.name + ".tmp")
-                tmp.writeText(format(modes))
-                if (!tmp.renameTo(f)) error("rename failed")
+                if (!AtomicFiles.write(f, format(modes), durable = false, move = AtomicFiles.Move.Rename)) error("rename failed")
             }
         }
     }

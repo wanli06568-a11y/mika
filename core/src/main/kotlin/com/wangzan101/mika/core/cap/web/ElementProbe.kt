@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.cap.web
 
+import com.wangzan101.mika.core.net.str
 import com.wangzan101.mika.core.cap.web.cdp.CdpEvaluationException
 import com.wangzan101.mika.core.cap.web.cdp.CdpSession
 import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
@@ -340,7 +341,6 @@ class ElementProbe(private val session: CdpSession, private val timeoutMs: Long 
             return ElementFusion.Box(xs.min(), ys.min(), xs.max(), ys.max())
         }
 
-        private fun JsonObject.str(k: String) = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.content
         private fun JsonObject.int(k: String) = (this[k] as? JsonPrimitive)?.intOrNull
 
         private fun ms(since: Long) = (System.nanoTime() - since) / 1_000_000

@@ -2,15 +2,19 @@ package com.wangzan101.mika.cap.phone.shell
 
 import android.annotation.SuppressLint
 import android.app.ActivityOptions
+import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.UserHandle
 import android.os.UserManager
 import android.util.Log
+import android.view.Display
 import com.wangzan101.mika.core.screen.uistate.AppCopies
 import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.TAG
 import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.PER_USER_RANGE
@@ -21,12 +25,48 @@ import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.START_ERROR
 import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.START_OK_COLD_IGNORED
 import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.START_INVALID_LINK
 import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.START_IN_USE_BY_OTHER
+import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.START_UNRESOLVED
 import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.PROFILE_API_VISIBILITY_HIDDEN
 import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.TASK_INFO
 import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.USER_CURRENT
 import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.sameCopy
 
-// 助手服务:启动应用、分身与多用户、自家页面
+// 助手服务:启动应用、链接与分享、系统动作、分身与多用户、自家页面
+/**
+ * 以 shell 包名调 IActivityTaskManager.startActivityAsUser([ShellService.startActivityAsUser]),带 [options](落在哪块屏)。
+ * 系统接下了(结果 >= 0)为 true;拒绝时记下结果码([what] 标明是哪一次启动)、返回 false。接口不可用时抛出,由调用方退回别的路。
+ */
+internal fun ShellService.startAsShell(intent: Intent, resolvedType: String?, options: Bundle, userId: Int, what: String): Boolean {
+    // (caller, callingPackage, callingFeatureId, intent, resolvedType, resultTo, resultWho,
+    //  requestCode, flags, profilerInfo, options, userId)
+    val result = startActivityAsUser.invoke(
+        taskManager, null, ShellContext.SHELL_PACKAGE, null, intent, resolvedType, null, null,
+        0, 0, null, options, userId,
+    ) as Int
+    if (result < 0) Log.w(TAG, "startActivityAsUser($what) -> $result")
+    return result >= 0
+}
+
+/**
+ * 启动前的占用检查:[onMain] 为真(用户在主屏用着)→ [START_IN_USE_ON_MAIN];[packages] 在 Mika 另一块屏上
+ * ([userId] 不为空时只看那份用户里的)→ [START_IN_USE_BY_OTHER];都没有为 null。
+ * 看不清任务状态时为 [START_ERROR]:宁可不启动,也不冒险打扰用户。
+ */
+internal inline fun ShellService.inUseCode(packages: Collection<String>, displayId: Int, userId: Int? = null, onMain: () -> Boolean): Int? = try {
+    when {
+        onMain() -> START_IN_USE_ON_MAIN
+        onOtherOwnDisplay(packages, displayId, userId) -> START_IN_USE_BY_OTHER
+        else -> null
+    }
+} catch (t: Throwable) {
+    Log.e(TAG, "cannot inspect main-screen tasks", t)
+    START_ERROR
+}
+
+/** 能接链接或系统动作的这些包里,有一个在主屏有任务(规则见 [ShellLinks.inUse])。 */
+internal fun ShellService.linkInUseOnMain(packages: List<String>): Boolean =
+    ShellLinks.inUse(packages, tasksOn(Display.DEFAULT_DISPLAY).flatMap(::packagesOf).toSet())
+
 /**
  * 在 [userId] 那份用户里启动 [packageName](见 [startApp]);占用只看这一份(包名 + 用户)。
  * [userId] 是 Mika 自己的用户时按原来的方式启动(USER_CURRENT、包管理器给的入口);别的用户先在那份用户里查启动入口,
@@ -34,14 +74,7 @@ import com.wangzan101.mika.cap.phone.shell.ShellService.Companion.sameCopy
  */
 internal fun ShellService.start(displayId: Int, packageName: String, userId: Int): Int = synchronized(launchLock) {
     if (!ownDisplay(displayId)) return START_ERROR
-    try {
-        if (inUseOnMainScreen(packageName, userId)) return START_IN_USE_ON_MAIN
-        if (onOtherOwnDisplay(listOf(packageName), displayId, userId)) return START_IN_USE_BY_OTHER
-    } catch (t: Throwable) {
-        // 看不清主屏状态时宁可不启动,也不冒险打扰用户
-        Log.e(TAG, "cannot inspect main-screen tasks", t)
-        return START_ERROR
-    }
+    inUseCode(listOf(packageName), displayId, userId) { inUseOnMainScreen(packageName, userId) }?.let { return it }
     // 上次任务留下的那个任务还在主屏后面:整个挪回来,接着那一页做,不另开一个从头来
     if (resumeKept(displayId, packageName, userId)) return START_OK
     val intent = launchIntent(packageName, userId) ?: return START_NOT_FOUND
@@ -51,15 +84,7 @@ internal fun ShellService.start(displayId: Int, packageName: String, userId: Int
     val component = intent.component
     if (userId != myUser && component != null && startAsLauncher(component, userId, options)) return START_OK
     val ok = try {
-        val start = taskManager.javaClass.methods.first { it.name == "startActivityAsUser" && it.parameterTypes.size == 12 }
-        // (caller, callingPackage, callingFeatureId, intent, resolvedType, resultTo, resultWho,
-        //  requestCode, flags, profilerInfo, options, userId)
-        val result = start.invoke(
-            taskManager, null, ShellContext.SHELL_PACKAGE, null, intent, null, null, null,
-            0, 0, null, options, if (userId == myUser) USER_CURRENT else userId,
-        ) as Int
-        if (result < 0) Log.w(TAG, "startActivityAsUser($packageName, user $userId) -> $result")
-        result >= 0
+        startAsShell(intent, null, options, if (userId == myUser) USER_CURRENT else userId, "$packageName, user $userId")
     } catch (t: Throwable) {
         Log.w(TAG, "startActivityAsUser unavailable, falling back to am start", t)
         val component = intent.component?.flattenToShortString() ?: return START_NOT_FOUND
@@ -207,13 +232,7 @@ internal fun ShellService.startOwnPage(displayId: Int, intent: Intent): Int {
     val page = Intent().setComponent(component).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
     val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
     val ok = try {
-        val start = taskManager.javaClass.methods.first { it.name == "startActivityAsUser" && it.parameterTypes.size == 12 }
-        val result = start.invoke(
-            taskManager, null, ShellContext.SHELL_PACKAGE, null, page, null, null, null,
-            0, 0, null, options, USER_CURRENT,
-        ) as Int
-        if (result < 0) Log.w(TAG, "startActivityAsUser(own page) -> $result")
-        result >= 0
+        startAsShell(page, null, options, USER_CURRENT, "own page")
     } catch (t: Throwable) {
         Log.w(TAG, "startActivityAsUser unavailable, falling back to am start", t)
         exec("am", "start", "--display", "$displayId", "--activity-clear-task", "-n", component.flattenToShortString()) == 0
@@ -236,4 +255,101 @@ internal fun ShellService.activitiesFor(intent: Intent, type: String?): List<Pai
 
 internal fun ShellService.packagesOf(task: Any): List<String> = listOf("baseActivity", "topActivity").mapNotNull {
     (TASK_INFO.getField(it).get(task) as? ComponentName)?.packageName
+}
+
+/** [ShellService.startView] 的实现。 */
+internal fun ShellService.launchView(displayId: Int, action: String?, uri: String?, packageName: String?): Int = synchronized(launchLock) {
+    if (!ownDisplay(displayId)) return START_ERROR
+    ShellLinks.refuse(action, uri, packageName)?.let { return it }
+    val intent = Intent(action ?: Intent.ACTION_VIEW).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    uri?.let { intent.data = Uri.parse(it) }
+    packageName?.let { intent.setPackage(it) }
+    // 网页式链接只交给声明了可从链接打开的页面,不碰 App 的内部页面
+    if (action == null) intent.addCategory(Intent.CATEGORY_BROWSABLE)
+    val candidates = activitiesFor(intent, null) ?: return START_ERROR
+    if (candidates.isEmpty()) return START_UNRESOLVED
+    val handlers = candidates.map { it.first }.distinct()
+    inUseCode(handlers, displayId) { linkInUseOnMain(handlers) }?.let { return it }
+    candidates.singleOrNull()?.let { (pkg, cls) -> intent.component = ComponentName(pkg, cls) }
+    val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
+    val ok = try {
+        startAsShell(intent, null, options, USER_CURRENT, "link")
+    } catch (t: Throwable) {
+        Log.w(TAG, "startActivityAsUser unavailable, falling back to am start", t)
+        val target = intent.component?.let { listOf("-n", it.flattenToShortString()) }
+            ?: (listOf("-a", intent.action!!) + listOfNotNull(uri?.let { "-d" }, uri) + listOfNotNull(packageName?.let { "-p" }, packageName) +
+                (if (action == null) listOf("-c", Intent.CATEGORY_BROWSABLE) else emptyList()))
+        exec("am", "start", "--display", "$displayId", *target.toTypedArray()) == 0
+    }
+    if (ok) START_OK else START_ERROR
+}
+
+/** [ShellService.startShare] 的实现。 */
+internal fun ShellService.launchShare(displayId: Int, packageName: String, text: String): Int = synchronized(launchLock) {
+    if (!ownDisplay(displayId)) return START_ERROR
+    val intent = ShareIntent.of(packageName, text)
+    val candidates = activitiesFor(intent, ShareIntent.TYPE) ?: return START_ERROR
+    if (candidates.isEmpty()) return START_UNRESOLVED
+    inUseCode(listOf(packageName), displayId) { inUseOnMainScreen(packageName) }?.let { return it }
+    candidates.singleOrNull()?.let { (pkg, cls) -> intent.component = ComponentName(pkg, cls) }
+    val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
+    val ok = try {
+        startAsShell(intent, ShareIntent.TYPE, options, USER_CURRENT, "share")
+    } catch (t: Throwable) {
+        Log.w(TAG, "startActivityAsUser unavailable, falling back to am start", t)
+        exec(*ShareIntent.amArgs(displayId, packageName, text, intent.component?.flattenToShortString()).toTypedArray()) == 0
+    }
+    if (ok) START_OK else START_ERROR
+}
+
+/** [ShellService.startShareFile] 的实现。 */
+internal fun ShellService.launchShareFile(displayId: Int, packageName: String, uri: String, mime: String, text: String): Int = synchronized(launchLock) {
+    if (!ownDisplay(displayId)) return START_ERROR
+    val target = Uri.parse(uri)
+    val intent = ShareIntent.ofFile(packageName, target, mime, text)
+    val candidates = activitiesFor(intent, mime) ?: return START_ERROR
+    if (candidates.isEmpty()) return START_UNRESOLVED
+    inUseCode(listOf(packageName), displayId) { inUseOnMainScreen(packageName) }?.let { return it }
+    candidates.singleOrNull()?.let { (pkg, cls) -> intent.component = ComponentName(pkg, cls) }
+    val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
+    val ok = try {
+        startAsShell(intent, mime, options, USER_CURRENT, "share file")
+    } catch (t: Throwable) {
+        Log.w(TAG, "startActivityAsUser unavailable, falling back to am start", t)
+        exec(*ShareIntent.amArgsFile(displayId, packageName, target, mime, text, intent.component?.flattenToShortString()).toTypedArray()) == 0
+    }
+    if (ok) START_OK else START_ERROR
+}
+
+/** [ShellService.startSystemAction] 的实现。 */
+internal fun ShellService.launchSystemAction(displayId: Int, intent: Intent, asMika: PendingIntent?): Int = synchronized(launchLock) {
+    if (!ownDisplay(displayId)) return START_ERROR
+    // Mika 自己的兼容性自检页:以 shell 身份直接开到这块屏
+    if (intent.component?.className == SystemIntents.OWN_PAGE_CLASS) return startOwnPage(displayId, intent)
+    if (!SystemIntents.allowed(intent.action, intent.dataString)) return START_INVALID_LINK
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    val candidates = activitiesFor(intent, intent.type) ?: return START_ERROR
+    if (candidates.isEmpty()) return START_UNRESOLVED
+    val handlers = candidates.map { it.first }.distinct()
+    inUseCode(handlers, displayId) { linkInUseOnMain(handlers) }?.let { return it }
+    val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
+    val asShell = try {
+        startAsShell(intent, intent.type, options.toBundle(), USER_CURRENT, "${intent.action}")
+    } catch (t: Throwable) {
+        Log.w(TAG, "startActivityAsUser(${intent.action}) refused as shell", t)
+        false
+    }
+    if (asShell) return START_OK
+    if (asMika == null) return START_ERROR
+    // 安卓 14 起 PendingIntent 的发出方要明说允许它从后台启动页面
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        options.setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+    }
+    return try {
+        asMika.send(context, 0, null, null, null, null, options.toBundle())
+        START_OK
+    } catch (t: Throwable) {
+        Log.w(TAG, "sending ${intent.action} as Mika failed", t)
+        START_ERROR
+    }
 }

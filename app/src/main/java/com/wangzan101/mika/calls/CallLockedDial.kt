@@ -1,7 +1,6 @@
 package com.wangzan101.mika.calls
 
 import android.app.KeyguardManager
-import android.os.PowerManager
 import android.os.SystemClock
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -46,11 +45,7 @@ suspend fun CallRuntime.queueLockedDial(number: String, simId: String? = null, t
     // A short one-shot lock keeps the confirmation window ticking as the screen turns off.
     // There is no indefinite standby wake lock and no attempt to wake or unlock the display.
     pending.wakeLock = runCatching {
-        val power = checkNotNull(app.getSystemService(PowerManager::class.java))
-        power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Mika:LockedDial").apply {
-            setReferenceCounted(false)
-            acquire((ticket.expiresAtMs - SystemClock.elapsedRealtime() + 1_000L).coerceIn(1L, 46_000L))
-        }
+        app.timedPartialWakeLock("Mika:LockedDial", (ticket.expiresAtMs - SystemClock.elapsedRealtime() + 1_000L).coerceIn(1L, 46_000L))
     }.getOrNull()
     if (pending.wakeLock == null) {
         finishLockedDial(pending, "无法保持锁屏拨号确认窗口，未安排拨号")

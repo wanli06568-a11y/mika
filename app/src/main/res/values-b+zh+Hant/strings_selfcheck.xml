@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">相容性自我檢查</string>
-    <string name="selfcheck_row_sub">看看這支手機上哪些能用,方便回報</string>
     <string name="selfcheck_intro">大約 1 分鐘。不會操作你的其他 App,不改設定,不連網。檢查時請停留在這一頁。</string>
     <string name="selfcheck_start">開始檢查</string>
     <string name="selfcheck_again">再查一次</string>

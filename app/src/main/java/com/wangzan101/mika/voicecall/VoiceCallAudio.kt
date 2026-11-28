@@ -4,11 +4,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
-import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import com.wangzan101.mika.calls.VolcRealtimeClient
 import com.wangzan101.mika.voice.PcmRecorder
+import com.wangzan101.mika.voice.pcm16MinBuffer
+import com.wangzan101.mika.voice.pcm16Track
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -134,22 +135,18 @@ class AndroidVoiceCallAudio(context: Context) : VoiceCallAudio {
     }
 
     override fun startPlayback(): Boolean {
-        val minBuffer = AudioTrack.getMinBufferSize(
-            VolcRealtimeClient.OUTPUT_SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
-        )
+        val minBuffer = pcm16MinBuffer(VolcRealtimeClient.OUTPUT_SAMPLE_RATE)
         if (minBuffer <= 0) return false
         val attributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build()
-        val format = AudioFormat.Builder()
-            .setSampleRate(VolcRealtimeClient.OUTPUT_SAMPLE_RATE)
-            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-            .build()
+        // Builder 把构造器的 IllegalArgumentException 换成 UnsupportedOperationException;两种都按「起不来」处理
         val next = try {
-            AudioTrack(attributes, format, maxOf(minBuffer, WRITE_BUFFER_BYTES), AudioTrack.MODE_STREAM, AudioManager.AUDIO_SESSION_ID_GENERATE)
+            pcm16Track(attributes, VolcRealtimeClient.OUTPUT_SAMPLE_RATE, maxOf(minBuffer, WRITE_BUFFER_BYTES))
         } catch (_: IllegalArgumentException) {
+            return false
+        } catch (_: UnsupportedOperationException) {
             return false
         }
         if (next.state != AudioTrack.STATE_INITIALIZED) {

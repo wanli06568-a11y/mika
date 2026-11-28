@@ -1,5 +1,6 @@
 package com.wangzan101.mika.about
 
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -246,12 +247,7 @@ class UpdateChecker(
         }
         runCatching {
             file.parentFile?.mkdirs()
-            val tmp = File(file.path + ".tmp")
-            tmp.writeText(o.toString())
-            if (!tmp.renameTo(file)) {
-                file.writeText(o.toString())
-                tmp.delete()
-            }
+            AtomicFiles.write(file, o.toString(), durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.WriteDirect)
         }
     }
 

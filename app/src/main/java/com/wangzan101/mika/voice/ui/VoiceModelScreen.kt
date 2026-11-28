@@ -2,8 +2,12 @@ package com.wangzan101.mika.voice.ui
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -12,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,7 +35,9 @@ import com.wangzan101.mika.ui.components.GroupLabel
 import com.wangzan101.mika.ui.components.InputRow
 import com.wangzan101.mika.ui.components.ListRow
 import com.wangzan101.mika.ui.components.MikaButton
+import com.wangzan101.mika.ui.components.MikaDialog
 import com.wangzan101.mika.ui.components.MikaSwitch
+import com.wangzan101.mika.ui.components.MikaTextField
 import com.wangzan101.mika.ui.components.RadioRow
 import com.wangzan101.mika.ui.components.RowChevron
 import com.wangzan101.mika.ui.components.RowValue
@@ -45,6 +50,7 @@ import com.wangzan101.mika.voice.model.VoiceModelRef
 import com.wangzan101.mika.voice.model.VoiceVoices
 import com.wangzan101.mika.voice.model.settingsProtocol
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.Locale
 import com.wangzan101.mika.settings.ui.models.Page
@@ -73,7 +79,6 @@ internal fun VoiceModelContent(store: ProviderStore, settings: VoiceSettings, on
     val choice = state.choice
     val player = remember { VoicePlayer(context) }
     val playback by player.state.collectAsState()
-    var speed by remember(choice?.providerId, choice?.model) { mutableStateOf((choice?.speed ?: 1.0f).toString()) }
     var test by remember { mutableStateOf<String?>(null) }
     DisposableEffect(player, choice?.providerId, choice?.model) { onDispose { player.stop() } }
 
@@ -101,14 +106,17 @@ internal fun VoiceModelContent(store: ProviderStore, settings: VoiceSettings, on
                     tr(R.string.voice_name), choice.voice, onChange = { saveChoice(choice.copy(voice = it)) },
                     placeholder = "alloy / Kore", first = true,
                 )
-                InputRow(
-                    tr(R.string.voice_speed), speed,
-                    onChange = {
-                        speed = it
-                        it.toFloatOrNull()?.takeIf { v -> v.isFinite() }?.let { v -> saveChoice(choice.copy(speed = normalizeVoiceSpeed(v))) }
+                NumericSettingRow(
+                    label = tr(R.string.voice_speed),
+                    value = choice.speed.toString(),
+                    placeholder = "1.0",
+                    keyboard = KeyboardType.Decimal,
+                    parseValid = { it.toFloatOrNull()?.takeIf { v -> v.isFinite() && v > 0f } != null },
+                    onSave = { raw ->
+                        raw.toFloatOrNull()?.takeIf { v -> v.isFinite() && v > 0f }?.let { v ->
+                            saveChoice(choice.copy(speed = normalizeVoiceSpeed(v)))
+                        }
                     },
-                    placeholder = "1.0", keyboard = KeyboardType.Decimal,
-                    modifier = Modifier.onFocusChanged { if (!it.hasFocus) speed = choice.speed.toString() },
                 )
             }
             GroupLabel(tr(R.string.voice_protocol))
@@ -152,16 +160,25 @@ internal fun VoiceModelContent(store: ProviderStore, settings: VoiceSettings, on
                 null, tr(R.string.voice_ask_before_save),
                 trailing = { MikaSwitch(state.askBeforeSave, settings::setAskBeforeSave, enabled = state.saveEnabled) },
             )
-            InputRow(
-                tr(R.string.voice_max_chars), state.maxCharsPerSpeak.toString(),
-                onChange = { it.toIntOrNull()?.let(settings::setMaxChars) }, placeholder = "2000",
+            NumericSettingRow(
+                label = tr(R.string.voice_max_chars),
+                value = state.maxCharsPerSpeak.toString(),
+                placeholder = "2000",
                 keyboard = KeyboardType.Number,
+                parseValid = { it.trim().toIntOrNull()?.let { n -> n > 0 } == true },
+                onSave = { raw -> raw.trim().toIntOrNull()?.takeIf { it > 0 }?.let(settings::setMaxChars) },
             )
         }
 
+        val isPlaying = playback is VoicePlayback.Loading || playback is VoicePlayback.Playing
         MikaButton(
-            tr(R.string.voice_test),
+            if (isPlaying) tr(R.string.chat_audio_stop) else tr(R.string.voice_test),
             onClick = {
+                if (isPlaying) {
+                    player.stop()
+                    test = null
+                    return@MikaButton
+                }
                 val choice = choice ?: return@MikaButton
                 val caps = settings.capabilities() ?: return@MikaButton
                 val tts = store.ttsModel(choice, caps) ?: return@MikaButton
@@ -185,7 +202,8 @@ internal fun VoiceModelContent(store: ProviderStore, settings: VoiceSettings, on
                     }
                 }
             },
-            enabled = choice != null,
+            kind = if (isPlaying) com.wangzan101.mika.ui.components.ButtonKind.Secondary else com.wangzan101.mika.ui.components.ButtonKind.Primary,
+            enabled = choice != null || isPlaying,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         )
         playback.let { p ->
@@ -225,15 +243,45 @@ private fun MigratedVoiceModelContent(
     }
     val player = remember { VoicePlayer(context) }
     val playback by player.state.collectAsState()
-    var speed by remember(selection) { mutableStateOf(state.speed.toString()) }
     var test by remember { mutableStateOf<String?>(null) }
-    DisposableEffect(player, selection) { onDispose { player.stop() } }
+    var auditioningVoice by remember { mutableStateOf<String?>(null) }
+    var auditionStarted by remember { mutableStateOf(false) }
+    var auditionJob by remember { mutableStateOf<Job?>(null) }
+    fun stopAudition() {
+        auditionJob?.cancel()
+        auditionJob = null
+        auditioningVoice = null
+        auditionStarted = false
+        player.stop()
+    }
+    LaunchedEffect(playback) {
+        if (auditioningVoice != null) {
+            if (playback is VoicePlayback.Loading || playback is VoicePlayback.Playing) {
+                auditionStarted = true
+            } else if (auditionStarted && (playback is VoicePlayback.Idle || playback is VoicePlayback.Error)) {
+                auditioningVoice = null
+                auditionStarted = false
+            }
+        }
+    }
+    DisposableEffect(player, selection) {
+        onDispose {
+            auditionJob?.cancel()
+            auditioningVoice = null
+            auditionStarted = false
+            player.stop()
+        }
+    }
 
     val previewScope = key(selection) { rememberCoroutineScope() }
 
     // 音色面板里的试听:和「测试」共用 [player],同一时间只播一条(新的替换旧的);
     // 面板关掉、换了模型、离开页面都停。合成和播放在 VoicePlayer 里挂起进行,不占主线程。
     fun audition(voice: String, locale: Locale? = null) {
+        if (auditioningVoice == voice) {
+            stopAudition()
+            return
+        }
         val ref = selection ?: return
         val protocol = selectedModel?.tts?.protocol ?: return
         val caps = settings.capabilities(protocol.settingsProtocol() ?: return)
@@ -242,15 +290,21 @@ private fun MigratedVoiceModelContent(
         } catch (_: VoiceModelError) {
             return
         }
+        auditionJob?.cancel()
+        auditioningVoice = voice
+        auditionStarted = false
         val request = TtsRequest(voiceSample(context, locale), voice, state.speed, "wav")
         test = null
-        previewScope.launch {
+        auditionJob = previewScope.launch {
             try {
                 player.play(model, request, streaming = state.streaming)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                // 失败原因已经在 player.state 里,页面底下的播放状态会显示
+                if (auditioningVoice == voice) {
+                    auditioningVoice = null
+                    auditionStarted = false
+                }
             }
         }
     }
@@ -270,10 +324,20 @@ private fun MigratedVoiceModelContent(
             VoiceOptionList(
                 choices, selection, tr(R.string.voice_try_tts), voiceVm,
                 onPick = { choice ->
+                    stopAudition()
                     selectReadAloud(voiceModels, settings, voiceVm.ensureInCatalog(choice))
                     test = null
                 },
-                onTest = { choice -> voiceVm.tryChoice(choice, tr(R.string.voice_try_sample)) },
+                onTest = { choice ->
+                    stopAudition()
+                    val useSelectedVoice = choice.ref == selection
+                    val req = TtsRequest(
+                        voiceSample(context),
+                        if (useSelectedVoice) state.voice.ifBlank { null } else null,
+                        if (useSelectedVoice) state.speed else 1f,
+                    )
+                    voiceVm.tryChoice(choice, tr(R.string.voice_try_sample), req)
+                },
             )
         }
         VoiceFallbackSection(VoiceCapability.TTS, catalog, providers, voiceVm)
@@ -283,8 +347,10 @@ private fun MigratedVoiceModelContent(
             GroupCard {
                 val pickable = if (model.tts?.protocol == com.wangzan101.mika.voice.model.TtsProtocol.AndroidSystem) {
                     SystemTtsRows(
-                        voiceModels, settings, onChanged = { test = null },
-                        onAudition = { audition(it.name, it.locale) }, onVoicesClosed = player::stop,
+                        voiceModels, settings, onChanged = { stopAudition(); test = null },
+                        onAudition = { audition(it.name, it.locale) },
+                        auditioningVoice = auditioningVoice,
+                        onVoicesClosed = { stopAudition() },
                     )
                     true
                 } else {
@@ -300,22 +366,27 @@ private fun MigratedVoiceModelContent(
                     if (voicesOpen) {
                         VoicePickerSheet(
                             VoiceVoices.withCurrent(voices, state.voice),
-                            onPick = { settings.setVoice(it); test = null },
-                            onDismiss = { voicesOpen = false; player.stop() },
+                            onPick = { stopAudition(); settings.setVoice(it); test = null },
+                            onDismiss = { voicesOpen = false; stopAudition() },
                             model = model,
                             onAudition = { audition(it) },
+                            auditioningVoice = auditioningVoice,
                         )
                     }
                     pickable
                 }
-                InputRow(
-                    tr(R.string.voice_speed), speed, first = !pickable,
-                    onChange = {
-                        speed = it
-                        it.toFloatOrNull()?.takeIf { v -> v.isFinite() }?.let { v -> settings.setSpeed(normalizeVoiceSpeed(v)) }
+                NumericSettingRow(
+                    label = tr(R.string.voice_speed),
+                    value = state.speed.toString(),
+                    placeholder = "1.0",
+                    keyboard = KeyboardType.Decimal,
+                    first = !pickable,
+                    parseValid = { it.toFloatOrNull()?.takeIf { v -> v.isFinite() && v > 0f } != null },
+                    onSave = { raw ->
+                        raw.toFloatOrNull()?.takeIf { v -> v.isFinite() && v > 0f }?.let { v ->
+                            settings.setSpeed(normalizeVoiceSpeed(v))
+                        }
                     },
-                    placeholder = "1.0", keyboard = KeyboardType.Decimal,
-                    modifier = Modifier.onFocusChanged { if (!it.hasFocus) speed = state.speed.toString() },
                 )
                 if (model.tts?.protocol == com.wangzan101.mika.voice.model.TtsProtocol.OpenAiSpeech) {
                     ListRow(
@@ -348,22 +419,32 @@ private fun MigratedVoiceModelContent(
                 null, tr(R.string.voice_ask_before_save),
                 trailing = { MikaSwitch(state.askBeforeSave, settings::setAskBeforeSave, enabled = state.saveEnabled) },
             )
-            InputRow(
-                tr(R.string.voice_max_chars), state.maxCharsPerSpeak.toString(),
-                onChange = { it.toIntOrNull()?.let(settings::setMaxChars) }, placeholder = "2000",
+            NumericSettingRow(
+                label = tr(R.string.voice_max_chars),
+                value = state.maxCharsPerSpeak.toString(),
+                placeholder = "2000",
                 keyboard = KeyboardType.Number,
+                parseValid = { it.trim().toIntOrNull()?.let { n -> n > 0 } == true },
+                onSave = { raw -> raw.trim().toIntOrNull()?.takeIf { it > 0 }?.let(settings::setMaxChars) },
             )
         }
 
+        val isPlaying = playback is VoicePlayback.Loading || playback is VoicePlayback.Playing
         MikaButton(
-            tr(R.string.voice_test),
+            if (isPlaying) tr(R.string.chat_audio_stop) else tr(R.string.voice_test),
             onClick = {
+                if (isPlaying) {
+                    player.stop()
+                    test = null
+                    return@MikaButton
+                }
                 val ref = selection ?: return@MikaButton
                 val protocol = selectedModel?.tts?.protocol ?: return@MikaButton
                 val caps = settings.capabilities(protocol.settingsProtocol() ?: return@MikaButton)
                 val model = try {
                     tts.createTts(context, ref, caps)
-                } catch (_: VoiceModelError) {
+                } catch (e: VoiceModelError) {
+                    test = e.detail
                     return@MikaButton
                 }
                 previewScope.launch {
@@ -386,7 +467,8 @@ private fun MigratedVoiceModelContent(
                     }
                 }
             },
-            enabled = selectedModel != null,
+            kind = if (isPlaying) com.wangzan101.mika.ui.components.ButtonKind.Secondary else com.wangzan101.mika.ui.components.ButtonKind.Primary,
+            enabled = selectedModel != null || isPlaying,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         )
         playback.let { p ->
@@ -400,5 +482,55 @@ private fun MigratedVoiceModelContent(
         }
         test?.let { FooterNote(it, Modifier.padding(top = 8.dp)) }
         FooterNote(tr(R.string.voice_footer), Modifier.padding(top = 10.dp))
+    }
+}
+
+@Composable
+private fun NumericSettingRow(
+    label: String,
+    value: String,
+    placeholder: String,
+    keyboard: KeyboardType,
+    first: Boolean = false,
+    parseValid: (String) -> Boolean,
+    onSave: (String) -> Unit,
+) {
+    var editing by remember { mutableStateOf(false) }
+    ListRow(null, label, first = first, onClick = { editing = true }) {
+        RowValue(value)
+        RowChevron()
+    }
+    if (editing) {
+        var draft by remember(value) { mutableStateOf(value) }
+        MikaDialog(
+            onDismissRequest = { editing = false },
+            title = { Text(label) },
+            text = {
+                MikaTextField(
+                    draft,
+                    { draft = it },
+                    Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    placeholder = { Text(placeholder) },
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboard),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onSave(draft)
+                        editing = false
+                    },
+                    enabled = parseValid(draft),
+                ) {
+                    Text(tr(R.string.voice_result_done))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editing = false }) {
+                    Text(tr(R.string.cancel))
+                }
+            },
+        )
     }
 }

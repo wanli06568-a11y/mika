@@ -22,10 +22,4 @@
     <string name="calls_voice_default_name">デフォルトのリアルタイム音声</string>
     <string name="calls_voice_protocol">統合型リアルタイム音声：認識、対話、発話を1つのサービスで処理します。</string>
     <string name="calls_voice_credentials_keep">空欄のままにすると保存済みの認証情報を保持します。新しい認証情報を入力すると置き換わり、再テストが必要です。</string>
-    <string name="calls_back_settings">設定に戻る</string>
-    <string name="calls_enabled_summary">AIによる応答と発信を使用できます。自動応答には別のスイッチがあります。</string>
-    <string name="calls_settings_device_group">端末と動作</string>
-    <string name="calls_settings_data_group">データ</string>
-    <string name="calls_history_entry_summary">要約、フォローアップ、原文</string>
-    <string name="calls_voice_setup">音声サービスを設定してテスト</string>
 </resources>

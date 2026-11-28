@@ -60,6 +60,7 @@ internal fun SystemTtsRows(
     settings: VoiceSettings,
     onChanged: () -> Unit,
     onAudition: ((SystemTtsVoiceInfo) -> Unit)? = null,
+    auditioningVoice: String? = null,
     onVoicesClosed: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -104,9 +105,15 @@ internal fun SystemTtsRows(
             settings.setVoice("")
             onChanged()
         }) + voices.orEmpty().map { voice ->
+            val playing = auditioningVoice == voice.name
             SheetAction(
                 voice.displayName,
-                trailing = onAudition?.let { play -> SheetTrailing(MikaIcons.Sound, tr(R.string.voice_audition, voice.displayName)) { play(voice) } },
+                trailing = onAudition?.let { play ->
+                    SheetTrailing(
+                        if (playing) MikaIcons.Stop else MikaIcons.Sound,
+                        if (playing) tr(R.string.chat_audio_stop) else tr(R.string.voice_audition, voice.displayName),
+                    ) { play(voice) }
+                },
             ) {
                 settings.setVoice(voice.name)
                 onChanged()

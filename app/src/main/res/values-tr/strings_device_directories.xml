@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">Erişim reddedildi</string>
     <string name="device_dirs_unknown">Durum kullanılamıyor</string>
     <string name="device_dirs_entry">Klasör ipuçları</string>
-    <string name="device_dirs_entry_sub">Mika\'nın indirilen dosyaları bulmasına yardımcı olun</string>
     <string name="device_dirs_source_preset">Ön ayar</string>
     <string name="device_dirs_source_user">Sizin düzenlediğiniz</string>
     <string name="device_dirs_source_mika">Mika\'nın düzenlediği</string>

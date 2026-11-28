@@ -33,7 +33,6 @@
     <string name="browser_download_running">Descargando…</string>
     <string name="browser_download_done">Descargado</string>
     <string name="browser_download_failed">Error de descarga</string>
-    <string name="browser_download_open">Abrir</string>
     <string name="browser_download_cancel">Cancelar descarga</string>
     <string name="browser_download_delete">Eliminar</string>
     <string name="browser_download_delete_q">¿Eliminar esta descarga?</string>
@@ -45,7 +44,6 @@
     <string name="browser_permission_location">Ubicación</string>
     <string name="browser_permission_allow">Permitir</string>
     <string name="browser_permission_block">Bloquear</string>
-    <string name="browser_no_download">El navegador aún no puede descargar archivos.</string>
     <string name="browser_crashed">La página tuvo un problema y se cerró. Puedes volver a abrirla.</string>
     <string name="browser_logged_in">Sesión iniciada: Mika también puede usarla en sus tareas.</string>
     <string name="browser_desktop">Escritorio</string>

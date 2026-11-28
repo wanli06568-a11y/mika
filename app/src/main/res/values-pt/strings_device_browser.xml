@@ -1,7 +1,6 @@
 <resources>
     <string name="device_browser_title">Arquivos do dispositivo</string>
     <string name="device_browser_roots">Pastas autorizadas</string>
-    <string name="device_browser_back">Voltar</string>
     <string name="device_browser_retry">Não foi possível carregar. Toque para tentar novamente</string>
     <string name="device_browser_empty">Nenhum arquivo ou pasta autorizada</string>
     <string name="device_browser_more">Carregar mais</string>

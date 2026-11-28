@@ -1,9 +1,8 @@
 package com.wangzan101.mika.core.run.trace
 
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.File
 import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 internal class TraceDiskFull(val block: String) : IOException("Trace storage limit")
 
@@ -66,8 +65,7 @@ internal class TraceDisk(private val directory: File, private var limit: Long) {
         }
         val tmp = File(file.parentFile, file.name + ".tmp")
         try {
-            tmp.writeBytes(data)
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            AtomicFiles.write(file, data, durable = false, temp = tmp)
             free -= delta
         } finally {
             tmp.delete()

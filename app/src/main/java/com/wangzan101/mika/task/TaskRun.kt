@@ -292,10 +292,10 @@ class TaskRun(
     /** 本任务导出的文件;结束时随这一轮存进对话。 */
     val sharedFiles: StateFlow<List<SharedFile>> get() = runState.sharedFiles
     /** 本任务生成并留在工作区里的音频;结束时随这一轮存进对话。 */
-    val audios: StateFlow<List<com.wangzan101.mika.core.chat.GeneratedAudio>> get() = runState.audios
+    val audios: StateFlow<List<com.wangzan101.mika.core.agent.GeneratedAudio>> get() = runState.audios
     /** 本任务生成并留在工作区里的图;结束时随这一轮存进对话。 */
-    val photos: StateFlow<List<com.wangzan101.mika.core.chat.GeneratedPhoto>> get() = runState.photos
-    val videos: StateFlow<List<com.wangzan101.mika.core.chat.GeneratedVideo>> get() = runState.videos
+    val photos: StateFlow<List<com.wangzan101.mika.core.agent.GeneratedPhoto>> get() = runState.photos
+    val videos: StateFlow<List<com.wangzan101.mika.core.agent.GeneratedVideo>> get() = runState.videos
     val takeoverStage: StateFlow<Takeover.Stage> get() = runState.takeoverStage
     val frames: StateFlow<Bitmap?> get() = runState.frames
     /** 个人助手的缩略图只收本任务获准展示的手机画面。 */
@@ -604,12 +604,12 @@ class TaskRun(
     fun addShared(f: SharedFile) = runState.addShared(f)
 
     /** 音频能力生成了一段音频(写进工作区时由端口回调)。 */
-    fun addAudio(a: com.wangzan101.mika.core.chat.GeneratedAudio) = runState.addAudio(a)
+    fun addAudio(a: com.wangzan101.mika.core.agent.GeneratedAudio) = runState.addAudio(a)
 
     /** 音频能力把一段音频存进了音乐库:当作这一轮导出的文件,聊天里出现卡片。 */
     fun addSavedAudio(s: com.wangzan101.mika.core.model.SavedAudio) = runState.addSavedAudio(s)
 
-    fun addVideo(v: com.wangzan101.mika.core.chat.GeneratedVideo) = runState.addVideo(v)
+    fun addVideo(v: com.wangzan101.mika.core.agent.GeneratedVideo) = runState.addVideo(v)
 
     fun addSaved(s: com.wangzan101.mika.core.cap.image.SavedImage) = runState.addSaved(s)
 
@@ -695,9 +695,9 @@ class TaskRun(
     }
 
     suspend fun execute(priorTurns: List<Turn>): TaskState {
-        // 每次启动（UI、定时、渠道都一样）重读所属对话；此后整次运行只用这一份不可变路由。
+        // 每次启动（UI、定时、渠道都一样）重读所属对话（前台派出的子对话跟着前台对话）；此后整次运行只用这一份不可变路由。
         val choice = withContext(Dispatchers.IO) {
-            runCatching { ConversationStore.shared(service).settings(conversationId).main }.getOrNull()
+            runCatching { ConversationStore.shared(service).runMainChoice(conversationId) }.getOrNull()
         }
         val snapshot = env.modelSnapshot(service, session, choice).also { modelSnapshot = it }
         noticeTainted = NoticeTurn.tainted(priorTurns)

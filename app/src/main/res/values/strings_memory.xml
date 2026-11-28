@@ -32,7 +32,6 @@
     <string name="memory_tasks">Remember past tasks</string>
     <string name="memory_tasks_sub">Keep a short summary of each finished task to recall next time</string>
     <string name="memory_tasks_title">Past tasks</string>
-    <string name="memory_clear_sub">Delete all memory and learned skills</string>
     <string name="edit_it">Edit</string>
     <string name="unpin">Unpin</string>
     <string name="pin">Pin</string>
@@ -87,7 +86,6 @@
     <string name="skills_get">Get skills</string>
     <string name="skills_share">Share skill</string>
     <string name="skills_import">Import a skill</string>
-    <string name="skills_import_sub">Paste a skill someone shared with you</string>
     <string name="skills_import_hint">It goes to “To review” first and isn’t used until you read it and accept it.</string>
     <string name="skills_import_confirm">Import</string>
     <string name="skill_imported">Imported. Review it under “To review”.</string>
@@ -95,7 +93,6 @@
     <string name="skill_builtin_name">A built-in skill already has this name. Rename it and try again.</string>
     <string name="skill_draft_pending">A draft with this name is already waiting for review. Handle that one first.</string>
     <string name="market_title">Skill market</string>
-    <string name="market_sub">Browse shared skills on GitHub</string>
     <string name="market_source">Skill source</string>
     <string name="market_add">Add to review</string>
     <string name="market_network_error">Could not download. Check the repository and network, then try again.</string>

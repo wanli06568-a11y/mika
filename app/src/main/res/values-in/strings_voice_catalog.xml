@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">Model suara</string>
-    <string name="models_voice_catalog_sub">Kelola model ucapan ke teks, teks ke ucapan, dan panggilan langsung di satu tempat</string>
     <string name="voice_catalog_title">Model suara</string>
     <string name="voice_catalog_sub">Kelola model ucapan ke teks, teks ke ucapan, dan panggilan langsung di satu tempat. Kemampuan dan protokol dinyatakan di sini; halaman input suara, pembacaan, dan panggilan hanya memilih dan memakai preferensi.</string>
     <string name="voice_catalog_add">Tambah model</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">Belum diverifikasi</string>
     <string name="voice_catalog_testing">Menguji…</string>
     <string name="voice_catalog_listening">Mendengarkan, katakan sesuatu…</string>
+    <string name="voice_catalog_no_speech">Tidak ada ucapan terdeteksi</string>
     <string name="voice_catalog_incomplete">Isi detail akun yang diperlukan terlebih dahulu.</string>
     <string name="voice_catalog_protocol_stt_android_system">Sistem Android</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">Transkripsi audio</string>

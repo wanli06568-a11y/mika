@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Integrate #826, #297, #306, #806 and #808 into five independently reviewable commits with explicit language, secure export, conversation model snapshots and bounded agent calls.
+**Goal:** Integrate #826, #297, #306 and #806 into four independently reviewable commits with explicit language, secure export, conversation model snapshots and per-call Light options. (#808 was dropped; see Task 5.)
 
 **Architecture:** Preserve the current export registry, provider store, task pipeline and model router. Add narrow value objects at existing boundaries rather than restoring superseded PR packages; freeze model choices per run and make prompt transforms request-local.
 
@@ -12,13 +12,13 @@
 
 ## Global Constraints
 
-- Work only in `integration/pr-batch-2026-11-25`; within this plan commit order is #826 → #297 → #306 → #806 → #808, while the cross-plan sequence remains Spec §3. After Task 3, complete settings/capsule, voice, and lockscreen Tasks 1–3 before Tasks 4–5.
+- Work only in `integration/pr-batch-2026-11-25`; within this plan commit order is #826 → #297 → #306 → #806, while the cross-plan sequence remains Spec §3. After Task 3, complete settings/capsule, voice, and lockscreen Tasks 1–3 before Task 4.
 - Every behavior starts with a test that fails on the old implementation; no cherry-picking whole PR stacks.
 - Preserve current Markdown/JSON export, provider/group routing, run records and prompt compatibility; no unrelated redesign.
 - `null`/`system` language compatibility never reads device locale or infers a tag from user text.
 - HTML always escapes untrusted fields, permits only HTTP(S) links and disables active WebView content.
 - A run uses one immutable model snapshot; changing conversation settings affects only the next run.
-- Forced tools are per-call options; the 100k cap is on by default and a smaller provider window wins.
+- Forced tools are per-call options.
 - Keep each commit atomic and add the listed `Co-authored-by`; run focused independent review before committing.
 - Real model and device checks not actually executed remain explicitly unverified.
 
@@ -28,7 +28,6 @@
 - Hostile Markdown, URLs and filenames: no script, navigation or asset-root escape; pinned by Task 2 security tests.
 - Override deletion or provider catalog changes during a run: current run stays immutable, next run falls back; pinned by Task 3 tests.
 - Unrelated 400/422 responses and missing usage fields: no false fallback or zero-filled metrics; pinned by Task 4 tests.
-- Irreducible images and pinned tool-call rounds: fail before dispatch without unpaired history; pinned by Task 5 tests.
 
 ---
 
@@ -111,20 +110,6 @@ assertEquals(localized, localizeCancelledHeader(localized, tag))
 - [ ] **Step 5: Verify and review.** Run `./gradlew :core:test --tests 'com.wangzan101.mika.core.agent.AgentLoopLightTest' --tests 'com.wangzan101.mika.core.agent.ModelRouterTest' --tests 'com.wangzan101.mika.core.run.record.RunMetricsTest'` and affected app provider/export/metrics tests. Review all provider fakes and streaming wrappers.
 - [ ] **Step 6: Commit.** Run `git add app core && git commit -m 'feat(agent): add per-call forced tools for Light steps' -m 'Co-authored-by: Vagif Novruzov <77735702+Razor573@users.noreply.github.com>'`.
 
-### Task 5: #808 unified compaction and input cap
+### Task 5: #808 unified compaction and input cap (dropped)
 
-**Files:**
-- Modify: `core/src/main/kotlin/com/wangzan101/mika/core/agent/ContextCompressor.kt`, `ContextLimits.kt`, `HistoryPruner.kt`, `ModelCaller.kt`, `SpeedFlags.kt`
-- Modify: `app/src/main/java/com/wangzan101/mika/settings/ProviderTypes.kt`, `ProviderModelFactory.kt`
-- Test: create `core/src/test/kotlin/com/wangzan101/mika/core/agent/CompactionAndCapTest.kt`; extend compressor/limits/pruner/prefix/agent-loop tests and conversation model tests
-
-**Interfaces:**
-- Produces: `COMPACT_EVERY_STEPS=15`, `KEEP_FULL_OBSERVATIONS=3`, `MAX_INPUT_TOKENS_CAP=100_000`; existing explicit per-config overrides remain distinguishable from built-in defaults.
-- Consumes: Task 3's actual snapshot member window and Task 4's single-response compression usage anchor.
-
-- [ ] **Step 1: Write failing cycle/cap/pruning tests.** Assert steps 1–14 unchanged, 15 folds completed steps while retaining the last three observations, 16–29 append-only and 30 repeats; mixed taps/observations retain observation identities rather than merely the last three steps. Assert inclusive 100000 boundary, 128k/1M → usable 100000/trigger 87000/target 50000/minTrigger 50000, and a 64k provider → usable 48000.
-- [ ] **Step 2: Write failing retry and safety tests.** Cover `defaultModelCallerEnforces100kEvenWithSpeedFlagsOff`, `explicitLegacy16RoundOverrideWinsOver15StepDefault`, transformed-system overhead, ordinary/overflow/member retry transforms, pinned rounds after task_progress, paired call/result IDs and irreducible user images causing `ContextTooLong` with zero requests.
-- [ ] **Step 3: Implement separate cycle, size and retention policies.** Remove synthesized legacy 16 defaults while honoring explicitly saved overrides; enable 100k independently of speed flags and let smaller windows win. Prune older observation payloads and images, then shrink/drop oldest complete rounds/clip without deleting pinned rounds or breaking pairs.
-- [ ] **Step 4: Recompute every real request transform.** Calculate overhead, cap and dispatch from the same current transformed prompt on every ordinary retry, overflow retry and group-member switch; keep overflow state separate and revalidate before sending.
-- [ ] **Step 5: Verify the full compaction surface and #306 combination.** Run the new test plus `ContextCompressorTest`, `ContextLimitsTest`, `HistoryPrunerTest`, both prefix-stability suites, `StructuredCompactionTest`, `AgentLoopTest`, `AgentLoopLightTest`, and app provider/conversation tests. Add a small-context conversation override case proving the actual snapshot member wins over global and 100k.
-- [ ] **Step 6: Review and commit.** Check old tests do not become production escape hatches, then run `git add app core && git commit -m 'feat(agent): unify 15-step compaction and 100k input cap' -m 'Co-authored-by: Vagif Novruzov <77735702+Razor573@users.noreply.github.com>'`.
+Dropped on 2026-11-27: #808 was closed. Mika does not add 15-step periodic compaction or a fixed 100k input cap, because rewriting history every N steps changes the request prefix and defeats the provider's prompt cache. Size-triggered compaction and the existing per-config `compactionEveryRounds` folding stay as they are. See Spec §4.8.

@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.search
 
+import com.wangzan101.mika.core.model.ApiKeyText
 import com.wangzan101.mika.core.net.JsonHttp
 import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
@@ -16,6 +17,14 @@ internal object SearchHttp {
     private const val MAX_SNIPPET_CHARS = 600
 
     fun json(body: JsonObject): RequestBody = JsonHttp.json(body)
+
+    /**
+     * 密钥里有请求头放不下的字符时直接给模型一个鉴权失败:不然 OkHttp 抛的异常信息会带上整段密钥。
+     * 合法时返回 null。
+     */
+    fun unusableKey(key: String): WebSearchResult.Failure? =
+        if (ApiKeyText.isHeaderLegal(key)) null
+        else WebSearchResult.Failure("authentication_failed", "The configured API key contains unusable characters.")
 
     suspend fun call(
         client: OkHttpClient,

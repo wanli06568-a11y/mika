@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">Pesan pribadi dapat memulai tugas Mika</string>
     <string name="wechat_turn_off">Matikan</string>
     <string name="wechat_title">WeChat</string>
-    <string name="wechat_settings_sub">Berikan tugas kepada Mika di WeChat</string>
     <string name="wechat_status_disconnected">Belum terhubung</string>
     <string name="wechat_status_connecting">Menghubungkan</string>
     <string name="wechat_status_connected">Terhubung</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">Pindai di WeChat dan konfirmasi otorisasi. Kemudian buka chat pribadi bot dan kirim teks atau gambar. Kode QR ini hanya untuk penautan ini; jangan diteruskan.</string>
     <string name="wechat_connection">Koneksi</string>
     <string name="wechat_receive">Terima tugas WeChat</string>
-    <string name="wechat_receive_sub">Saat dimatikan, Mika berhenti membaca pesan baru</string>
     <string name="wechat_allow_unlock">Izinkan tugas WeChat membangunkan dan membuka kunci ponsel</string>
     <string name="wechat_allow_unlock_sub">Hanya tugas dari chat pribadi akun WeChat Anda sendiri yang tertaut yang dapat mencoba membangunkan dan membuka kunci ponsel ini.</string>
     <string name="wechat_allow_unlock_foot">Nonaktif secara default dan akan dinonaktifkan lagi setelah akun ditautkan ulang. Aktifkan “%3$s” terlebih dahulu di “%1$s › %2$s”, lalu simpan PIN atau kata sandi layar kunci di ponsel ini jika digunakan. Sakelar ini tidak mengubah izin tersebut atau menggunakan kredensial yang dikirim lewat WeChat.</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">Teks dan gambar pribadi serta tugas nyata</string>
     <string name="wechat_capability_replies">Pertanyaan, hasil, dan pemberitahuan Mika</string>
     <string name="wechat_capability_phone">Konfirmasi pembayaran dan pengambilalihan ponsel</string>
-    <string name="wechat_capability_phone_sub">Tetap diselesaikan di ponsel ini</string>
     <string name="wechat_capability_later">Suara, file, grup, dan beberapa akun</string>
     <string name="wechat_supported">Didukung</string>
     <string name="wechat_phone_only">Ponsel</string>

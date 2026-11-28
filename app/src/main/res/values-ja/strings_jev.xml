@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="jev_title">判断モデル · Jev</string>
-    <string name="jev_row_sub">任意の意図判定とルート選択</string>
     <string name="jev_enabled">判断モデルを使う</string>
     <string name="jev_privacy">有効にすると、意図の判定とルートの選択のため、依頼、最近の会話の文脈、候補ルートが設定したプロバイダーに送信されます。失敗時は従来のモデルを使います。メイン・画像・軽量モデルの設定は独立しています。</string>
     <string name="jev_provider">プロバイダー</string>

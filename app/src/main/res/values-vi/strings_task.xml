@@ -55,14 +55,7 @@
     <string name="task_shell_died">Trợ thủ điều khiển điện thoại đã mất kết nối và màn hình ảo đã đóng. Thử lại khi nó kết nối lại.</string>
     <string name="task_running">Đang chạy</string>
     <string name="chip_thinking">Đang suy nghĩ</string>
-    <string name="chip_read_screen">Đang đọc</string>
-    <string name="chip_use_phone">Trên điện thoại</string>
-    <string name="chip_browse">Đang duyệt</string>
     <string name="chip_take_over">Tiếp quản</string>
-    <string name="chip_route_step">Bước %1$d/%2$d</string>
-    <string name="chip_count">%1$d/%2$d</string>
-    <string name="chip_done">Xong: %1$d</string>
-    <string name="chip_wait_app">Đang chờ ứng dụng</string>
     <string name="channel_task_accepted">Đã rõ — tác vụ của bạn đã được ghi nhận.</string>
     <string name="task_step_note">Bước %1$d: %2$s</string>
     <string name="task_wait_unlock">Đang chờ mở khóa</string>

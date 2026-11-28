@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="persona_title">Персона</string>
-    <string name="persona_sub">Выберите, как Mika говорит с вами</string>
     <string name="persona_default">По умолчанию</string>
     <string name="persona_default_sub">Обычный голос Mika</string>
     <string name="persona_empty">Персон пока нет</string>

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="proactive_title">Proaktif</string>
-    <string name="proactive_entry_sub">Seçtiğiniz uygulamaların bildirimlerini okur</string>
     <string name="proactive_switch">Aç</string>
     <string name="proactive_listener">Dinleyici: %1$s</string>
     <string name="proactive_state_connected">bağlı</string>

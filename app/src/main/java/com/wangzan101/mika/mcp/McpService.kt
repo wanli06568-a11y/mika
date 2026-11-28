@@ -4,12 +4,11 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
-import android.content.pm.ServiceInfo
-import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import com.wangzan101.mika.MikaApp
 import com.wangzan101.mika.R
+import com.wangzan101.mika.enterForeground
 import com.wangzan101.mika.i18n.tr
 import com.wangzan101.mika.settings.FeatureFlags
 import com.wangzan101.mika.task.TaskService
@@ -35,13 +34,10 @@ class McpService : Service() {
         val applied = !quitting && runCatching { McpModes.apply(intent?.action, runtime.settings, runtime.usb, runtime.relaySettings) }
             .onFailure { Log.w("MikaMcp", "could not update computer access settings", it) }.isSuccess
         // startForegroundService 之后必须尽快进前台,哪怕马上就要退出;系统不让进前台时就此退出,不让进程崩
-        val foreground = runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(NOTIFICATION_ID, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-            } else {
-                startForeground(NOTIFICATION_ID, notification())
-            }
-        }.onFailure { Log.w("MikaMcp", "computer access service could not enter the foreground", it) }.isSuccess
+        val foreground = enterForeground(
+            NOTIFICATION_ID,
+            onFailure = { Log.w("MikaMcp", "computer access service could not enter the foreground", it) },
+        ) { notification() }
         val ready = foreground && !FeatureFlags.get(this).quitRequested() && applied && runCatching { runtime.sync() }
             .onFailure { Log.w("MikaMcp", "could not start computer access", it) }.getOrDefault(false)
         if (!ready) {

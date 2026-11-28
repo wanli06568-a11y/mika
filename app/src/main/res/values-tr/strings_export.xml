@@ -28,7 +28,6 @@
     <string name="export_done">Dışa aktarıldı</string>
     <string name="export_failed">Dışa aktarma başarısız: %1$s</string>
     <string name="export_no_messages">Dışa aktarılacak bir şey yok</string>
-    <string name="export_current_turn">Çalışan tur dahil değil.</string>
     <string name="export_warnings">%1$d öğe dahil edilemedi.</string>
     <string name="export_filename_fallback">Mika konuşması</string>
 

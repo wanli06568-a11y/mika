@@ -31,7 +31,6 @@
     <string name="browser_download_running">正在下载…</string>
     <string name="browser_download_done">已下载</string>
     <string name="browser_download_failed">下载失败</string>
-    <string name="browser_download_open">打开</string>
     <string name="browser_download_cancel">取消下载</string>
     <string name="browser_download_delete">删除</string>
     <string name="browser_download_delete_q">删除这个下载？</string>
@@ -43,7 +42,6 @@
     <string name="browser_permission_location">位置</string>
     <string name="browser_permission_allow">允许</string>
     <string name="browser_permission_block">阻止</string>
-    <string name="browser_no_download">浏览器里暂时不能下载文件。</string>
     <string name="browser_crashed">网页出了问题，已经关掉，可以重新打开。</string>
     <string name="browser_logged_in">已登录，Mika 办事时也能用了。</string>
     <string name="browser_desktop">电脑版</string>

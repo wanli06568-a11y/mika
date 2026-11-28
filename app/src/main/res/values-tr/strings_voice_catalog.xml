@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">Konuşma modelleri</string>
-    <string name="models_voice_catalog_sub">Konuşmayı metne, metni konuşmaya ve canlı arama modellerini tek yerden yönetin</string>
     <string name="voice_catalog_title">Konuşma modelleri</string>
     <string name="voice_catalog_sub">Konuşmayı metne, metni konuşmaya ve canlı arama modellerini tek yerden yönetin. Yetenekler ve protokoller burada belirtilir; ses girişi, okuma ve arama sayfaları yalnızca tercihleri seçer ve kullanır.</string>
     <string name="voice_catalog_add">Model ekle</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">Doğrulanmadı</string>
     <string name="voice_catalog_testing">Test ediliyor…</string>
     <string name="voice_catalog_listening">Dinliyorum, bir şey söyleyin…</string>
+    <string name="voice_catalog_no_speech">Konuşma algılanmadı</string>
     <string name="voice_catalog_incomplete">Önce gerekli hesap bilgilerini doldurun.</string>
     <string name="voice_catalog_protocol_stt_android_system">Android sistemi</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">Ses transkripsiyonu</string>

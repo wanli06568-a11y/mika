@@ -28,6 +28,7 @@ class YouSearch(
     private val key = apiKey?.trim()?.takeIf(String::isNotEmpty)
 
     override suspend fun search(query: String, count: Int): WebSearchResult {
+        if (key != null) SearchHttp.unusableKey(key)?.let { return it }
         val n = count.coerceIn(1, WebSearch.MAX_COUNT)
         val request = if (key == null) {
             Request.Builder().url(keylessUrl.newBuilder().addQueryParameter("query", query).addQueryParameter("count", n.toString()).build()).get()

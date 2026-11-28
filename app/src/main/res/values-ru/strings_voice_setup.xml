@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">Доступно: %1$d</string>
     <string name="voice_hub_footer">Выберите, кто выполняет каждую задачу. Голосовые сервисы — это аккаунты, из которых берутся варианты.</string>
     <string name="voice_hub_setup">Настроить</string>
-    <string name="voice_hub_ready">Готово</string>
     <string name="voice_hub_off">Выключено</string>
     <string name="voice_hub_none">Не выбрано</string>
     <string name="voice_source_device">Этот телефон · бесплатно</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">Перед удалением аккаунта чата вы увидите, какие голосовые функции это затронет.</string>
     <string name="voice_add_advanced">Расширенные</string>
     <string name="voice_add_custom">Вручную</string>
-    <string name="voice_add_custom_sub">Укажите ID моделей, протоколы и адреса сами</string>
     <string name="voice_preset_compat">Сервис, совместимый с OpenAI</string>
     <string name="voice_preset_compat_sub">Голосовой ввод · чтение вслух · реальное время · адрес + ключ</string>
     <string name="voice_preset_selfhosted">Распознавание на своём сервере</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">Для голосовых звонков</string>
     <string name="voice_result_in_use">Используется</string>
     <string name="voice_result_done">Готово</string>
-    <string name="calls_who_speaks">Кто говорит</string>
-    <string name="calls_what_to_say">Что говорить по телефону</string>
-    <string name="calls_profile_summary">Приветствие, инструкции и длительность звонка</string>
     <string name="calls_voice_title">Голос звонка</string>
     <string name="calls_voice_shared_note">Этот голос общий с голосовыми звонками в чате.</string>
     <string name="calls_audio_title">Звук телефонного звонка</string>

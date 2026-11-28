@@ -34,7 +34,6 @@
     <string name="ok_got_it">OK</string>
     <string name="cancel">キャンセル</string>
     <string name="model_reasoning_title">思考の深さ · %1$s</string>
-    <string name="model_reasoning_value">思考の深さ: %1$s</string>
     <string name="model_reasoning_note">深くすると難しいタスクに強くなりますが、時間とトークンが多くかかることがあります。「デフォルト」はプロバイダーにお任せします。</string>
     <string name="model_reasoning_unknown">このプロバイダーは選べるレベルを公開していません。非対応のレベルを選ぶとタスクが失敗することがあります。その場合は「デフォルト」を選んでください。</string>
     <string name="model_reasoning_unavailable">保存したレベルはプロバイダーで使えなくなりました。「デフォルト」か別のレベルを選んでください。</string>

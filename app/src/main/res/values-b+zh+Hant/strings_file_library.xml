@@ -9,8 +9,6 @@
     <string name="file_library_loading">正在載入檔案…</string>
     <string name="file_library_empty">找不到檔案</string>
     <string name="file_library_missing">無法使用</string>
-    <string name="file_library_available">可使用</string>
-    <string name="file_library_open">開啟</string>
     <string name="file_library_share">分享</string>
     <string name="file_library_add">加入待傳送欄</string>
     <string name="file_library_choose">選擇對話</string>

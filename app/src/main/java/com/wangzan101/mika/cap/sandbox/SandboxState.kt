@@ -1,6 +1,7 @@
 package com.wangzan101.mika.cap.sandbox
 
 import com.wangzan101.mika.R
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.i18n.tr
 import android.content.Context
 import android.os.Build
@@ -19,7 +20,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.LinkOption
-import java.nio.file.StandardCopyOption
 
 enum class InstallStep { Check, Extract, Configure, Skills, Done }
 
@@ -146,10 +146,8 @@ class SandboxState internal constructor(
         /** 先写临时文件再改名,写到一半被杀不会留下坏文件。 */
         private fun writeJson(f: File, o: JsonObject) {
             f.parentFile?.mkdirs()
-            val tmp = File(f.path + ".tmp")
             // 落盘后再改名:断电或被杀时要么是旧记录、要么是新记录
-            java.io.FileOutputStream(tmp).use { out -> out.write(o.toString().toByteArray()); out.fd.sync() }
-            Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            AtomicFiles.write(f, o.toString(), durable = true)
         }
     }
 }

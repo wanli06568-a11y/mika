@@ -1,14 +1,10 @@
 package com.wangzan101.mika.proactive
 
 import com.wangzan101.mika.core.proactive.TopicPoolData
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.settings.KeyCipher
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 /**
  * 归纳出来的话题池,整份加密成 `proactive/topics.bin`(AES-GCM,正式用 `KeystoreKeyCipher("mika-proactive-topics")`)。
@@ -36,8 +32,7 @@ class TopicPoolFile(dir: File, private val cipher: KeyCipher, private val clock:
     override fun save(data: TopicPoolData) {
         poolDir.mkdirs()
         val bytes = cipher.encrypt(StoreCodec.write(TopicPoolData.serializer(), data, versionOf(data)))
-        FileOutputStream(tmp).use { it.write(bytes); it.fd.sync() }
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        AtomicFiles.write(file, bytes, durable = true, temp = tmp)
     }
 
     /** 删掉另存的旧文件(`$FILE.broken-…`)。 */
@@ -59,11 +54,7 @@ class TopicPoolFile(dir: File, private val cipher: KeyCipher, private val clock:
     }
 
     private fun moveAside() {
-        val stamp = SimpleDateFormat("yyyyMMddHHmmss", Locale.US).format(clock())
-        var target = File(poolDir, "$FILE.broken-$stamp")
-        var n = 1
-        while (target.exists()) target = File(poolDir, "$FILE.broken-$stamp-${n++}")
-        Files.move(file.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE)
+        AtomicFiles.quarantine(file, AtomicFiles.Quarantine.MoveBroken, now = clock())
     }
 
     companion object {

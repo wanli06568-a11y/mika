@@ -1,7 +1,7 @@
 package com.wangzan101.mika.core.learn.knowledge
 
 import com.wangzan101.mika.core.agent.KNOWLEDGE_BODY_LIMIT
-import com.wangzan101.mika.core.agent.TokenEstimate
+import com.wangzan101.mika.core.model.TokenEstimate
 import com.wangzan101.mika.core.agent.KNOWLEDGE_TRUNCATED_HINT
 import com.wangzan101.mika.core.agent.clipKnowledge
 import org.junit.Assert.assertEquals

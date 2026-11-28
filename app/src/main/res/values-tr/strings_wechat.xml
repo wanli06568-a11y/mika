@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">Özel mesajlar Mika görevlerini başlatabilir</string>
     <string name="wechat_turn_off">Kapat</string>
     <string name="wechat_title">WeChat</string>
-    <string name="wechat_settings_sub">WeChat\'te Mika\'ya görev verin</string>
     <string name="wechat_status_disconnected">Bağlı değil</string>
     <string name="wechat_status_connecting">Bağlanıyor</string>
     <string name="wechat_status_connected">Bağlandı</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">WeChat\'te tarayın ve yetkilendirmeyi onaylayın. Sonra botun özel sohbetini açıp metin veya görüntü gönderin. Bu QR kodu yalnızca bu bağlama içindir; iletmeyin.</string>
     <string name="wechat_connection">Bağlantı</string>
     <string name="wechat_receive">WeChat görevlerini al</string>
-    <string name="wechat_receive_sub">Kapalıyken Mika yeni mesajları okumayı bırakır</string>
     <string name="wechat_allow_unlock">WeChat görevlerinin uyandırmasına ve kilidi açmasına izin ver</string>
     <string name="wechat_allow_unlock_sub">Yalnızca kendi bağlı WeChat özel sohbetinizden gelen görevler bu telefonu uyandırmayı ve kilidini açmayı deneyebilir.</string>
     <string name="wechat_allow_unlock_foot">Varsayılan olarak kapalı; yeniden bağlamak onu kapatır. Önce \“%1$s › %2$s\”de \“%3$s\”i etkinleştirin ve kullanıyorsanız kilit ekranı PIN\'inizi veya parolanızı oraya kaydedin. Bu anahtar o izni değiştirmez veya WeChat üzerinden gönderilen kimlikleri kullanmaz.</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">Özel metin, görüntü ve gerçek görevler</string>
     <string name="wechat_capability_replies">Mika soruları, sonuçları ve bildirimleri</string>
     <string name="wechat_capability_phone">Ödeme onayları ve telefon devri</string>
-    <string name="wechat_capability_phone_sub">Yine de bu telefonda tamamlanır</string>
     <string name="wechat_capability_later">Ses, dosyalar, gruplar ve birden çok hesap</string>
     <string name="wechat_supported">Destekleniyor</string>
     <string name="wechat_phone_only">Telefon</string>

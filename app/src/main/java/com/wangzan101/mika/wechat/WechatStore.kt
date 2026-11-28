@@ -2,6 +2,7 @@ package com.wangzan101.mika.wechat
 
 import com.wangzan101.mika.core.run.ChannelPeer
 import com.wangzan101.mika.core.cap.wechat.WechatAccount
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.settings.KeyCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -9,9 +10,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 @Serializable
@@ -251,9 +249,7 @@ class WechatStore(
 
     private fun writeAtomic(file: File, bytes: ByteArray) {
         file.parentFile?.mkdirs()
-        val temp = File(file.parentFile, file.name + ".tmp")
-        FileOutputStream(temp).use { it.write(bytes); it.fd.sync() }
-        Files.move(temp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        AtomicFiles.write(file, bytes, durable = true)
     }
 
     companion object {

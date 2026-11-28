@@ -2,6 +2,7 @@ package com.wangzan101.mika.settings
 
 import com.wangzan101.mika.core.prompt.PersonaPrompt
 import com.wangzan101.mika.core.prompt.PersonaStyle
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -181,12 +182,7 @@ class PersonaStore(private val dir: File) {
     @Synchronized private fun save(list: List<Persona>, active: String? = _activeId.value) {
         dir.mkdirs()
         val text = json.encodeToString(PersonaFile(personas = list, active = active))
-        val tmp = File(dir, "${file.name}.tmp")
-        tmp.writeText(text)
-        if (!tmp.renameTo(file)) {
-            file.writeText(text)
-            tmp.delete()
-        }
+        AtomicFiles.write(file, text, durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.WriteDirect)
         _personas.value = list
         _activeId.value = active
     }
@@ -202,7 +198,7 @@ class PersonaStore(private val dir: File) {
             Loaded(personas, stored.active?.takeIf { id -> personas.any { it.id == id } })
         }.getOrElse {
             // 读不懂的旧文件留着,别被下一次保存直接盖掉
-            runCatching { file.renameTo(File(dir, "${file.name}.bad-${System.currentTimeMillis()}")) }
+            runCatching { AtomicFiles.quarantine(file, AtomicFiles.Quarantine.RenameBad, dedupe = false) }
             Loaded(emptyList(), null)
         }
     }

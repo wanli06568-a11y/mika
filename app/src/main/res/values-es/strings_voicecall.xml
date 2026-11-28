@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="voicecall_see_task_page">Te necesita: abre la página de la tarea</string>
-    <string name="voicecall_task_paused">Tarea en pausa</string>
     <string name="voicecall_task_running">En proceso</string>
     <string name="voicecall_task_done">Completada</string>
     <string name="voicecall_task_open">Ver el progreso</string>
@@ -63,7 +62,6 @@
     <string name="voicecall_log_end_idle">Llamada finalizada · %1$s · sin actividad</string>
     <string name="voicecall_log_silent">Llamada de voz · %1$s · sin hablar</string>
     <string name="voicecall_log_live">En llamada</string>
-    <string name="voicecall_more">Más</string>
     <string name="voicecall_records">Historial de llamadas</string>
     <string name="voicecall_records_hint">Toca una para verla en el chat</string>
     <string name="voicecall_records_empty">Aún no hay llamadas en esta conversación</string>

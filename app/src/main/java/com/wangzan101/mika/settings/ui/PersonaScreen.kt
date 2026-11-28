@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.wangzan101.mika.R
-import com.wangzan101.mika.core.agent.TokenEstimate
+import com.wangzan101.mika.core.model.TokenEstimate
 import com.wangzan101.mika.core.prompt.PersonaPrompt
 import com.wangzan101.mika.core.prompt.PersonaStyle
 import com.wangzan101.mika.settings.Persona

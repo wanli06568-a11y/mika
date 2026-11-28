@@ -28,14 +28,10 @@ internal interface DeviceFileTool : AgentTool {
     override fun available(ctx: ToolContext) = ctx[DeviceFilesCapability.KEY] != null
 }
 
-private fun error(code: String, message: String, recoverable: Boolean = true) = ToolExecution(buildJsonObject {
-    put("ok", false); put("error", code); put("message", message); put("recoverable", recoverable)
-})
-
 internal suspend fun guardDeviceFiles(block: suspend () -> ToolExecution): ToolExecution = try { block() }
-catch (e: SandboxError) { error(e.code, e.message ?: e.code, e.recoverable) }
-catch (e: SecurityException) { error("device_access_denied", "Device file access was denied.") }
-catch (e: IOException) { error("device_file_io", "Could not access or copy the file.") }
+catch (e: SandboxError) { fail(e.code, e.message ?: e.code, e.recoverable) }
+catch (e: SecurityException) { fail("device_access_denied", "Device file access was denied.") }
+catch (e: IOException) { fail("device_file_io", "Could not access or copy the file.") }
 
 private object ListDeviceFiles : DeviceFileTool {
     override val verb = Verb.ListDeviceFiles

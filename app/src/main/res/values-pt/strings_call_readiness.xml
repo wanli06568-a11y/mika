@@ -2,20 +2,7 @@
 <resources>
     <string name="calls_device_allow_notifications">Autorizar notificações</string>
     <string name="calls_device_allow_phone">Autorizar permissões de telefone</string>
-    <string name="calls_device_helper">Assistente integrado</string>
-    <string name="calls_device_helper_connected">Ligado</string>
-    <string name="calls_device_notifications">Notificações de chamadas</string>
-    <string name="calls_device_notifications_app_off">Notificações da aplicação desativadas</string>
-    <string name="calls_device_notifications_calls_off">Canal de chamadas por IA desativado</string>
-    <string name="calls_device_notifications_permission_missing">Permissão para notificações não concedida</string>
-    <string name="calls_device_notifications_standby_off">Canal de espera em segundo plano desativado</string>
-    <string name="calls_device_notifications_unknown">Não foi possível verificar o estado das notificações</string>
     <string name="calls_device_open_app_settings">Abrir permissões da aplicação</string>
-    <string name="calls_device_pair_helper">Ligar o assistente</string>
-    <string name="calls_device_permission_granted">Permitido</string>
-    <string name="calls_device_phone_permissions">Permissões de telefone</string>
-    <string name="calls_device_phone_permissions_note">Permita consultar o estado das chamadas e efetuar chamadas</string>
-    <string name="calls_device_ready_to_test">Pronto para testar o áudio manualmente</string>
     <string name="calls_device_system_settings_failed">Não foi possível abrir as definições do sistema. Abra a página de informações da aplicação nas definições do Android.</string>
     <string name="calls_background_auto_off">O atendimento automático está desativado</string>
     <string name="calls_background_battery">Bateria e atividade em segundo plano</string>

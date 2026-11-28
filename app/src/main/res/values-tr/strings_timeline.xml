@@ -63,7 +63,6 @@
         <item quantity="other">%1$d adım</item>
     </plurals>
     <string name="timeline_criteria">Neyin tamam sayılacağı</string>
-    <string name="timeline_outcome">Sonuç</string>
     <string name="timeline_check">Denetim</string>
     <string name="timeline_duration">Geçen süre</string>
     <string name="timeline_more">Daha fazla ayrıntı</string>
@@ -85,8 +84,6 @@
         <item quantity="other">%1$d kez görüntülendi</item>
     </plurals>
     <string name="effect_small_change">Biraz değişti</string>
-    <string name="timeline_hide_screen">Ekranı gizle</string>
-    <string name="timeline_show_screen">O andaki ekranı gör</string>
     <string name="timeline_step_screen">%1$d adımındaki ekran</string>
     <string name="timeline_export">Kullanım kayıtlarını dışa aktar</string>
     <string name="timeline_export_hint">Her model yanıtının token kullanımını ve bağlam sıkıştırma olaylarını JSONL olarak kaydedin.</string>

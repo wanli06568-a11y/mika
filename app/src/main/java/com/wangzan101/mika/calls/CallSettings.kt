@@ -108,41 +108,6 @@ class CallSettings(
     }
 
     @Synchronized
-    fun saveCredentials(appId: String, accessKey: String, apiKey: String) {
-        val legacyId = appId.trim()
-        val legacyKey = accessKey.trim()
-        val modern = apiKey.trim()
-        require(listOf(legacyId, legacyKey, modern).all { value ->
-            value.length <= 1_024 && value.all { it.code in 33..126 }
-        }) { "火山凭据格式无效" }
-        val clear = legacyId.isEmpty() && legacyKey.isEmpty() && modern.isEmpty()
-        require(clear || (modern.isNotEmpty() && legacyId.isEmpty() && legacyKey.isEmpty()) ||
-            (modern.isEmpty() && legacyId.isNotEmpty() && legacyKey.isNotEmpty())) {
-            "请仅填写 API Key，或同时填写旧版 App ID 和 Access Key"
-        }
-        val edit = prefs.edit()
-        if (clear) {
-            edit.remove(CREDENTIALS).putBoolean("auto_answer", false).putBoolean(BACKGROUND_AUTHORIZED, false)
-        } else {
-            val bytes = "${modern}\n${legacyId}\n${legacyKey}".toByteArray()
-            try {
-                val encrypted = runCatching { cipher.encrypt(bytes) }.getOrElse { error("无法加密火山凭据") }
-                edit.putString(CREDENTIALS, Base64.encodeToString(encrypted, Base64.NO_WRAP))
-            } finally {
-                bytes.fill(0)
-            }
-        }
-        val committed = edit.commit()
-        if (committed || clear) {
-            mutable.value = mutable.value.copy(credentialsConfigured = !clear,
-                autoAnswer = !clear && mutable.value.autoAnswer,
-                backgroundStandbyAuthorized = !clear && mutable.value.backgroundStandbyAuthorized)
-            credentialsRevision.value++
-        }
-        check(committed) { "无法保存火山凭据" }
-    }
-
-    @Synchronized
     internal fun readLegacyCredentials(): VolcRealtimeCredentials? {
         val stored = prefs.getString(CREDENTIALS, null) ?: return null
         val bytes = cipher.decrypt(Base64.decode(stored, Base64.NO_WRAP))

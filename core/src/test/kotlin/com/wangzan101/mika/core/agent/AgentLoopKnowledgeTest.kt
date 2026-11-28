@@ -83,7 +83,8 @@ class AgentLoopKnowledgeTest {
     @Test fun knowledgeSurvivesCompression() {
         val store = KnowledgeStore(listOf(e("alpha", "p.a")))
         val model = FakeModel(reply(call("phone_observe")), *(1..15).map { reply(call("wait", """{"seconds":${it / 10.0}}""")) }.toTypedArray(), finish, contextTokens = 100)
-        kotlinx.coroutines.runBlocking { AgentLoop(model, toolDispatcher(PkgScreen(listOf("p.a"))), "B", knowledge = store).run("随便") }
+        // 虚拟时间:15 次 wait 不真等
+        runTest { AgentLoop(model, toolDispatcher(PkgScreen(listOf("p.a"))), "B", knowledge = store).run("随便") }
         val last = model.requests.last()
         assertEquals(1, last.refs().size)
         assertTrue(last.any { m -> m.plainText().startsWith(ContextCompressor.HEADER) })

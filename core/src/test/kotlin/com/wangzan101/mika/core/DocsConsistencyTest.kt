@@ -33,6 +33,7 @@ class DocsConsistencyTest {
         root.walkTopDown().onEnter { it.name !in skipDirs }.filter { it.isFile }
             .map { it.relativeTo(root).invariantSeparatorsPath }.toList()
     }
+    private val repoFileNames: Set<String> by lazy { repoFiles.map { it.substringAfterLast('/') }.toSet() }
     private val repoDirs: List<String> by lazy {
         root.walkTopDown().onEnter { it.name !in skipDirs }.filter { it.isDirectory && it != root }
             .map { it.relativeTo(root).invariantSeparatorsPath }.toList()
@@ -44,6 +45,17 @@ class DocsConsistencyTest {
     }
     private val sourceText: String by lazy { sourceFiles.joinToString("\n") { it.readText() } }
     private val sourceNames: Set<String> by lazy { sourceFiles.map { it.nameWithoutExtension }.toSet() }
+
+    /** 源码里 class/object/interface/typealias 声明过的名字。先扫一遍成集合,不为每个类名重扫整份源码。 */
+    private val declaredNames: Set<String> by lazy {
+        Regex("""\b(?:class|object|interface|typealias)\s+(\w+)\b""").findAll(sourceText).map { it.groupValues[1] }.toSet()
+    }
+
+    /** 从本仓库以外的包导入过的名字:`import a.b.C.D` 里第一段以后的每一段(C、D)。 */
+    private val outsideImportNames: Set<String> by lazy {
+        Regex("""(?m)^import\s+(?!com\.wangzan101\.mika\.)([\w.]+)""").findAll(sourceText)
+            .flatMap { it.groupValues[1].split('.').drop(1) }.filter { it.isNotEmpty() }.toSet()
+    }
 
     private fun docs(): List<File> {
         val list = mutableListOf(File(root, "README.md"), File(root, "eval/README.md"), File(root, "tools/sandbox/README.md"))
@@ -114,7 +126,7 @@ class DocsConsistencyTest {
             return repoFiles.any { f -> f.startsWith(head) && (f.endsWith("/$tail") || f.substringBeforeLast('.').endsWith("/$tail")) }
         }
         if ('/' !in clean) {
-            return if (clean.substringAfterLast('.', "") in codeExtensions) repoFiles.any { it == clean || it.endsWith("/$clean") } else true
+            return if (clean.substringAfterLast('.', "") in codeExtensions) clean in repoFileNames else true
         }
         val first = clean.substringBefore('/')
         if (first !in topLevel) return true
@@ -126,10 +138,9 @@ class DocsConsistencyTest {
     }
 
     private fun classExists(name: String): Boolean =
-        name in sourceNames || Regex("""\b(class|object|interface|typealias)\s+$name\b""").containsMatchIn(sourceText)
+        name in sourceNames || name in declaredNames
 
-    private fun importedFromOutside(name: String): Boolean =
-        Regex("""(?m)^import\s+(?!com\.wangzan101\.mika\.)[\w.]+\.$name\b""").containsMatchIn(sourceText)
+    private fun importedFromOutside(name: String): Boolean = name in outsideImportNames
 
     private fun problems(doc: File): List<String> {
         val rel = doc.relativeTo(root).invariantSeparatorsPath

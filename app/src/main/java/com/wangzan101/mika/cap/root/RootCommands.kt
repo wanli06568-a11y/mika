@@ -2,6 +2,8 @@ package com.wangzan101.mika.cap.root
 
 import android.os.SystemClock
 import android.util.Base64
+import com.wangzan101.mika.cap.drainBounded
+import com.wangzan101.mika.cap.onDaemonThread
 import com.wangzan101.mika.core.cap.root.RootCommandClass
 import com.wangzan101.mika.core.cap.root.RootPort
 import com.wangzan101.mika.core.cap.root.RootRun
@@ -10,7 +12,6 @@ import com.wangzan101.mika.core.device.shell.SuAnswer
 import com.wangzan101.mika.core.device.shell.SuProbe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
@@ -35,8 +36,8 @@ class RootCommands(
         val started = SystemClock.elapsedRealtime()
         val p = runCatching { ProcessBuilder(SuProbe.rootArgs(su, script(command))).start() }
             .getOrElse { return@runInterruptible RootRun.Denied.also { refused(SuAnswer.Denied) } }
-        val out = onThread { drain(p.inputStream) }
-        val err = onThread { drain(p.errorStream) }
+        val out = onDaemonThread(THREAD) { drain(p.inputStream) }
+        val err = onDaemonThread(THREAD) { drain(p.errorStream) }
         val exited = try {
             p.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
         } finally {
@@ -96,31 +97,14 @@ class RootCommands(
         "" to 0L
     }
 
-    /** 在单独的线程上读(不占公共线程池)。 */
-    private fun <T> onThread(block: () -> T): CompletableFuture<T> = CompletableFuture<T>().also { f ->
-        Thread({ runCatching(block).fold({ f.complete(it) }, { f.completeExceptionally(it) }) }, "mika-root").apply { isDaemon = true }.start()
-    }
-
     /** 读完一个流,最多留 [MAX_BYTES],多的数着丢掉。 */
-    private fun drain(stream: InputStream): Pair<String, Long> {
-        val buf = ByteArrayOutputStream()
-        var dropped = 0L
-        val chunk = ByteArray(8192)
-        runCatching {
-            while (true) {
-                val n = stream.read(chunk)
-                if (n < 0) break
-                val keep = minOf(n, MAX_BYTES - buf.size())
-                if (keep > 0) buf.write(chunk, 0, keep)
-                dropped += n - keep
-            }
-        }
-        return buf.toString(Charsets.UTF_8.name()) to dropped
-    }
+    private fun drain(stream: InputStream): Pair<String, Long> =
+        drainBounded(stream, MAX_BYTES).let { (kept, dropped) -> String(kept, Charsets.UTF_8) to dropped }
 
     private companion object {
         const val MARK = "__mika_root_ok__"
         const val MAX_BYTES = 1 shl 20
         const val STOP_GRACE_MS = 2_000L
+        const val THREAD = "mika-root"
     }
 }

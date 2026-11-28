@@ -1,7 +1,6 @@
 <resources>
     <string name="device_browser_title">端末のファイル</string>
     <string name="device_browser_roots">許可済みフォルダー</string>
-    <string name="device_browser_back">戻る</string>
     <string name="device_browser_retry">読み込めません。タップして再試行</string>
     <string name="device_browser_empty">ファイルまたは許可済みフォルダーがありません</string>
     <string name="device_browser_more">さらに読み込む</string>

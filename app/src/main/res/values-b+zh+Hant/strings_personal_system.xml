@@ -5,10 +5,6 @@
     <string name="personal_system_reply_failed">回覆失敗，請稍後再試。</string>
     <string name="personal_system_task_start_failed">任務啟動失敗</string>
     <string name="personal_system_task_cancelled">任務已取消</string>
-    <string name="personal_system_task_completed">任務已完成</string>
-    <string name="personal_system_task_failed">任務失敗</string>
-    <string name="personal_system_task_running">任務進行中</string>
-    <string name="personal_system_task_queued">任務排隊中</string>
     <string name="personal_system_no_model">請先在設定中選擇主要模型，再回來繼續聊天。</string>
     <string name="personal_system_context_long">這則訊息超出目前模型的上下文限制，請分成幾段傳送。</string>
     <string name="personal_system_empty_reply">模型沒有傳回可顯示的回覆，請再試一次。</string>

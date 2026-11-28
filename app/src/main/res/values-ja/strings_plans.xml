@@ -21,7 +21,6 @@
     <string name="plans_run_now">今すぐ実行</string>
     <string name="plans_edit_time">編集</string>
     <string name="plans_edit_title">スケジュールされたタスクを編集</string>
-    <string name="plans_edit_label">初回の実行: yyyy-MM-dd HH:mm</string>
     <string name="plans_preview">次の実行予定：</string>
     <string name="plans_need_future">未来の有効な時刻を入力してください</string>
     <string name="plans_create_title">新しいスケジュールされたタスク</string>
@@ -33,7 +32,6 @@
     <string name="plans_repeat_interval">間隔</string>
     <string name="plans_repeat_weekly">毎週</string>
     <string name="plans_interval_minutes">繰り返し間隔（分）</string>
-    <string name="plans_clock">現地時刻（カンマ区切り）</string>
     <string name="plans_pick_time">時刻を選択</string>
     <string name="plans_add_time">時刻を追加</string>
     <string name="plans_remove_time">この時刻を削除</string>
@@ -66,7 +64,6 @@
     <string name="plans_delete_title">このスケジュールされたタスクを削除しますか？</string>
     <string name="plans_done">完了</string>
     <string name="plans_checked">確認済み</string>
-    <string name="plans_check_failed">確認に失敗しました</string>
     <string name="plans_result_pending">結果の確認が必要です</string>
     <string name="plans_every_day">毎日</string>
     <plurals name="plans_every_minutes">

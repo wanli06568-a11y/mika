@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="appaccess_title">Akses aplikasi</string>
-    <string name="appaccess_row_sub">Blokir aplikasi dan berbagi layar per aplikasi</string>
     <string name="appaccess_intro">Pilih aplikasi mana yang boleh dibaca dan dioperasikan Mika dengan alat ponsel standar. Perintah shell, sandbox, dan akses komputer (MCP) tidak dibatasi oleh pengaturan ini.</string>
     <string name="appaccess_privacy">Pengategorian mengirim nama aplikasi dan nama paket ke model AI; “Segarkan daftar aplikasi” akan menanyakan Anda dulu.</string>
     <string name="appaccess_unavailable">Pengaturan akses aplikasi tidak bisa dibaca, jadi akses ponsel standar dijeda. Reset akan menghapus izin dan kategori yang tersimpan.</string>

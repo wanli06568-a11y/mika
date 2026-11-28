@@ -9,8 +9,6 @@
     <string name="file_library_loading">جارٍ تحميل الملفات…</string>
     <string name="file_library_empty">لم يتم العثور على ملفات</string>
     <string name="file_library_missing">غير متاح</string>
-    <string name="file_library_available">متاح</string>
-    <string name="file_library_open">فتح</string>
     <string name="file_library_share">مشاركة</string>
     <string name="file_library_add">إضافة إلى المسودة</string>
     <string name="file_library_choose">اختر محادثة</string>

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">Tự kiểm tra tương thích</string>
-    <string name="selfcheck_row_sub">Xem những gì hoạt động trên điện thoại này và báo cáo</string>
     <string name="selfcheck_intro">Mất khoảng 1 phút. Nó không đụng tới các ứng dụng khác của bạn, không thay đổi cài đặt và không dùng mạng. Vui lòng ở lại trang này trong khi nó chạy.</string>
     <string name="selfcheck_start">Bắt đầu</string>
     <string name="selfcheck_again">Chạy lại</string>

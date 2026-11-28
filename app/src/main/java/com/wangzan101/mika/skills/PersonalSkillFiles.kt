@@ -4,6 +4,7 @@ import com.wangzan101.mika.core.learn.skills.PersonalSkill
 import com.wangzan101.mika.core.learn.skills.PersonalSkills
 import com.wangzan101.mika.core.learn.skills.SkillStatus
 import com.wangzan101.mika.core.learn.skills.SkillRevision
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -14,8 +15,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 /**
@@ -181,9 +180,7 @@ class PersonalSkillFiles(dir: File) : PersonalSkills {
     }
 
     private fun atomicWrite(f: File, text: String) {
-        val tmp = File(f.parentFile, "${f.name}.tmp")
-        tmp.writeText(text)
-        Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        AtomicFiles.write(f, text, durable = false)
     }
 
     private companion object {

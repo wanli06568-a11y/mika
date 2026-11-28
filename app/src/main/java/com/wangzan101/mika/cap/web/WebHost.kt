@@ -21,6 +21,7 @@ import android.view.WindowManager
 import android.webkit.WebView
 import android.widget.FrameLayout
 import com.wangzan101.mika.cap.web.cdp.DesktopProfile
+import com.wangzan101.mika.media.copyStridedFrame
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.nio.ByteBuffer
@@ -181,17 +182,8 @@ class WebHost(private val context: Context, widthPx: Int, heightPx: Int, density
                     val cur = frame
                     val target = if (cur != null && cur.width == stridePx && cur.height == image.height) cur
                     else Bitmap.createBitmap(stridePx, image.height, Bitmap.Config.ARGB_8888).also { cur?.recycle() }
-                    val src = plane.buffer.apply { rewind() }
-                    val needed = target.byteCount
-                    if (src.remaining() >= needed) target.copyPixelsFromBuffer(src)
-                    else {
-                        // 最后一行可能不带填充,缓冲比整块位图短:先垫进一块等长的缓冲
-                        val s = scratch?.takeIf { it.capacity() == needed } ?: ByteBuffer.allocateDirect(needed).also { scratch = it }
-                        s.clear()
-                        s.put(src)
-                        s.rewind()
-                        target.copyPixelsFromBuffer(s)
-                    }
+                    // 最后一行可能不带填充,缓冲比整块位图短:copyStridedFrame 先垫进一块等长的缓冲
+                    scratch = copyStridedFrame(target, plane.buffer, scratch)
                     frame = target
                 }
                 lastCopyAt = SystemClock.uptimeMillis()

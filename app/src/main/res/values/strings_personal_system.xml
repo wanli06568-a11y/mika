@@ -5,10 +5,6 @@
     <string name="personal_system_reply_failed">Reply failed. Please try again later.</string>
     <string name="personal_system_task_start_failed">Failed to start task</string>
     <string name="personal_system_task_cancelled">Task cancelled</string>
-    <string name="personal_system_task_completed">Task completed</string>
-    <string name="personal_system_task_failed">Task failed</string>
-    <string name="personal_system_task_running">Task in progress</string>
-    <string name="personal_system_task_queued">Task queued</string>
     <string name="personal_system_no_model">Please select a primary model in Settings, then come back to continue the conversation.</string>
     <string name="personal_system_context_long">This message exceeds the current model’s context limit. Please split it into several messages.</string>
     <string name="personal_system_empty_reply">The model did not return a reply that can be displayed. Please try again.</string>

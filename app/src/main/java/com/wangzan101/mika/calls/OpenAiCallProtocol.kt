@@ -23,7 +23,7 @@ internal object OpenAiCallProtocol {
                 }
                 putJsonObject("output") { put("format", format); put("voice", config.speaker) }
             }
-            if (config.enablePhoneDtmf) put("tools", VolcRealtimeProtocol.phoneCallTools())
+            if (config.enablePhoneDtmf) put("tools", VolcRealtimeProtocol.phoneCallTools(config.languageTag))
         }
     }.toString()
 

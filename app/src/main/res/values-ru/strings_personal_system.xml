@@ -5,10 +5,6 @@
     <string name="personal_system_reply_failed">Не удалось ответить. Повторите попытку позже.</string>
     <string name="personal_system_task_start_failed">Не удалось запустить задачу</string>
     <string name="personal_system_task_cancelled">Задача отменена</string>
-    <string name="personal_system_task_completed">Задача выполнена</string>
-    <string name="personal_system_task_failed">Ошибка выполнения задачи</string>
-    <string name="personal_system_task_running">Задача выполняется</string>
-    <string name="personal_system_task_queued">Задача в очереди</string>
     <string name="personal_system_no_model">Сначала выберите основную модель в настройках, затем вернитесь к беседе.</string>
     <string name="personal_system_context_long">Это сообщение превышает размер контекста текущей модели. Отправьте его по частям.</string>
     <string name="personal_system_empty_reply">Модель не вернула ответ, который можно показать. Попробуйте ещё раз.</string>

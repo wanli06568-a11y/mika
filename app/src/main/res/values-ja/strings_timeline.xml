@@ -62,7 +62,6 @@
         <item quantity="other">%1$d ステップ</item>
     </plurals>
     <string name="timeline_criteria">完了の基準</string>
-    <string name="timeline_outcome">結果</string>
     <string name="timeline_check">確認</string>
     <string name="timeline_duration">所要時間</string>
     <string name="timeline_more">詳細を見る</string>
@@ -81,8 +80,6 @@
         <item quantity="other">%1$d 回確認</item>
     </plurals>
     <string name="effect_small_change">少し変化しました</string>
-    <string name="timeline_hide_screen">画面を隠す</string>
-    <string name="timeline_show_screen">そのときの画面を見る</string>
     <string name="timeline_step_screen">ステップ %1$d の画面</string>
     <string name="timeline_export">使用量の記録をエクスポート</string>
     <string name="timeline_export_hint">モデルの各応答のトークン使用量と、コンテキスト圧縮のイベントを JSONL で保存します。</string>

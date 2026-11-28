@@ -1,6 +1,7 @@
 package com.wangzan101.mika.task
 
 import com.wangzan101.mika.R
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.i18n.tr
 import android.util.Log
 import com.wangzan101.mika.core.run.ChannelPeer
@@ -17,7 +18,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.File
-import java.io.FileOutputStream
 
 /** 送达账本持久化；Attempting 在进程重启后是结果不明，不能自动重发。 */
 class FileOutboxStore(private val file: File) : OutboxStore {
@@ -47,7 +47,7 @@ class FileOutboxStore(private val file: File) : OutboxStore {
             }
         }.onFailure {
             Log.e("MikaOutbox", "outbox could not be read; preserving damaged file", it)
-            file.copyTo(File(file.parentFile, file.name + ".corrupt"), overwrite = true)
+            AtomicFiles.quarantine(file, AtomicFiles.Quarantine.CopyCorrupt)
             records.clear()
         }
     }
@@ -83,9 +83,7 @@ class FileOutboxStore(private val file: File) : OutboxStore {
                 is Delivery.Notice -> { put("kind", "notice"); put("text", d.text) }
             }
         } }).toString()
-        val temp = File(file.parentFile, file.name + ".tmp")
-        FileOutputStream(temp).use { out -> out.write(json.toByteArray(Charsets.UTF_8)); out.fd.sync() }
-        check(temp.renameTo(file)) { "outbox rename failed" }
+        check(AtomicFiles.write(file, json, durable = true, move = AtomicFiles.Move.Rename)) { "outbox rename failed" }
         this.records.clear()
         this.records.putAll(next)
     }

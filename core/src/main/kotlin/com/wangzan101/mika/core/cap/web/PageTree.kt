@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.cap.web
 
+import com.wangzan101.mika.core.net.str
 import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
 import com.wangzan101.mika.core.screen.uistate.UiElement
 import com.wangzan101.mika.core.screen.uistate.normalize
@@ -76,7 +77,6 @@ object PageTree {
     private fun JsonObject?.num(key: String): Double? =
         (this?.get(key) as? JsonPrimitive)?.doubleOrNull?.let { if (it.isFinite()) it.coerceIn(-PX_LIMIT, PX_LIMIT) else 0.0 }
 
-    private fun JsonObject.str(key: String): String? = (get(key) as? JsonPrimitive)?.takeIf { it.isString }?.content
 
     /** 0/1 与 true/false 都认。 */
     private fun JsonObject?.flag(key: String): Boolean {

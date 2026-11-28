@@ -2,20 +2,7 @@
 <resources>
     <string name="calls_device_allow_notifications">Bildirimlere izin ver</string>
     <string name="calls_device_allow_phone">Telefon izinlerine izin ver</string>
-    <string name="calls_device_helper">Yerleşik yardımcı</string>
-    <string name="calls_device_helper_connected">Bağlandı</string>
-    <string name="calls_device_notifications">Arama bildirimleri</string>
-    <string name="calls_device_notifications_app_off">Uygulama bildirimleri kapalı</string>
-    <string name="calls_device_notifications_calls_off">Yapay zeka aramaları kanalı kapalı</string>
-    <string name="calls_device_notifications_permission_missing">Bildirim izni verilmedi</string>
-    <string name="calls_device_notifications_standby_off">Bekleme kanalı kapalı</string>
-    <string name="calls_device_notifications_unknown">Bildirim durumu kontrol edilemedi</string>
     <string name="calls_device_open_app_settings">Uygulama izin ayarlarını aç</string>
-    <string name="calls_device_pair_helper">Yardımcıyı bağla</string>
-    <string name="calls_device_permission_granted">İzin verildi</string>
-    <string name="calls_device_phone_permissions">Telefon izinleri</string>
-    <string name="calls_device_phone_permissions_note">Arama durumunu okumaya ve arama yapmaya izin verin</string>
-    <string name="calls_device_ready_to_test">Manuel ses testi için hazır</string>
     <string name="calls_device_system_settings_failed">Sistem ayarları açılamadı. Android Ayarları\'nda uygulama bilgisi sayfasını açın.</string>
     <string name="calls_background_auto_off">Otomatik yanıt kapalı</string>
     <string name="calls_background_battery">Pil ve arka plan etkinliği</string>

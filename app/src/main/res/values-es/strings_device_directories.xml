@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">Acceso denegado</string>
     <string name="device_dirs_unknown">Estado no disponible</string>
     <string name="device_dirs_entry">Pistas de carpetas</string>
-    <string name="device_dirs_entry_sub">Ayuda a Mika a encontrar archivos descargados</string>
     <string name="device_dirs_source_preset">Predefinida</string>
     <string name="device_dirs_source_user">Editada por ti</string>
     <string name="device_dirs_source_mika">Editada por Mika</string>

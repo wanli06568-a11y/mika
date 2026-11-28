@@ -4,9 +4,8 @@ import android.content.Context
 import com.wangzan101.mika.cap.web.WebProxy
 import com.wangzan101.mika.core.net.NetProxy
 import com.wangzan101.mika.core.net.ProxyAddress
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /**
  * 设置 › 网络代理,形如 `http://[用户:密码@]主机:端口`;空串表示不用,直连。
@@ -61,9 +60,7 @@ class NetProxyStore(
 
     private fun write(v: String) {
         dir.mkdirs()
-        val tmp = File(dir, "$FILE.tmp")
-        tmp.writeBytes(cipher.encrypt(v.toByteArray(Charsets.UTF_8)))
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        AtomicFiles.write(file, cipher.encrypt(v.toByteArray(Charsets.UTF_8)), durable = false)
     }
 
     companion object {

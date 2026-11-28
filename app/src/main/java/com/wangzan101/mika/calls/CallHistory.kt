@@ -2,8 +2,8 @@ package com.wangzan101.mika.calls
 
 import android.content.Context
 import android.util.Base64
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.File
-import java.io.FileOutputStream
 import com.wangzan101.mika.settings.KeystoreKeyCipher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -231,8 +231,7 @@ internal class CallHistory(private val storage: Storage) {
             return try {
                 val encrypted = cipher.encrypt(bytes)
                 if (encrypted.size > MAX_ENCODED_BYTES) return false
-                FileOutputStream(tmp).use { output -> output.write(encrypted); output.fd.sync() }
-                if (!tmp.renameTo(file)) return false
+                if (!AtomicFiles.write(file, encrypted, durable = true, move = AtomicFiles.Move.Rename, temp = tmp)) return false
                 prefs.edit().remove(KEY).commit()
             } finally {
                 bytes.fill(0)

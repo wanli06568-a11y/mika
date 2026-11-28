@@ -29,6 +29,7 @@ class JinaSearch(
     private val key = apiKey.trim()
 
     override suspend fun search(query: String, count: Int): WebSearchResult {
+        SearchHttp.unusableKey(key)?.let { return it }
         val n = count.coerceIn(1, WebSearch.MAX_COUNT)
         val request = Request.Builder().url(url).header("Authorization", "Bearer $key").header("X-Respond-With", "no-content")
             .post(SearchHttp.json(buildJsonObject { put("q", query); put("num", n) })).build()

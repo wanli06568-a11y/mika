@@ -2,6 +2,7 @@ package com.wangzan101.mika.settings
 
 import com.wangzan101.mika.core.mcp.McpUsb
 import com.wangzan101.mika.core.remote.RemoteOwnership
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,8 +12,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.security.SecureRandom
 import java.util.Base64
 
@@ -62,9 +61,7 @@ class McpUsbSettings(
         token?.let { return it }
         val t = Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(32).also(random::nextBytes))
         dir.mkdirs()
-        val tmp = File(dir, file.name + ".tmp")
-        tmp.writeText(buildJsonObject { put("boot", bootId()); put("token", t) }.toString())
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        AtomicFiles.write(file, buildJsonObject { put("boot", bootId()); put("token", t) }.toString(), durable = false)
         token = t
         _enabled.value = true
         return t
@@ -83,12 +80,9 @@ class McpUsbSettings(
         val t = token ?: return
         val f = infoFile() ?: return
         f.parentFile?.mkdirs()
-        val tmp = File(f.parentFile, f.name + ".tmp")
-        tmp.writeText(McpUsb.info(port, t, bootId()))
-        if (!tmp.renameTo(f)) {
-            f.delete()
-            check(tmp.renameTo(f)) { "rename failed" }
-        }
+        val ok = AtomicFiles.write(f, McpUsb.info(port, t, bootId()), durable = false,
+            move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.DeleteAndRetry)
+        check(ok) { "rename failed" }
     }
 
     /** 没在监听(没开起来、关了):删掉连接信息文件,电脑那边的脚本就知道没开成。 */

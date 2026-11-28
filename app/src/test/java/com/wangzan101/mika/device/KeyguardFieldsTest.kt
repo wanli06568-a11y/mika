@@ -15,6 +15,22 @@ class KeyguardFieldsTest {
             "com.android.keyguard.PasswordTextView", true, false, false))
     }
 
+    @Test fun editableStockPinEntryIsOnlyAPin() {
+        // 有的系统把原版 PasswordTextView 报成 editable、不报数字输入类型,仍是 PIN 框,不能同时算成密码框(#881)
+        val id = "com.android.systemui:id/pinEntry"
+        val cls = "com.android.keyguard.PasswordTextView"
+        assertTrue(KeyguardFields.matches(CredentialKind.Pin, id, cls, true, true, false, digitPad = true))
+        assertFalse(KeyguardFields.matches(CredentialKind.Password, id, cls, true, true, false, digitPad = true))
+        assertTrue(KeyguardFields.matches(CredentialKind.Pin, id, cls, true, true, false))
+        assertFalse(KeyguardFields.matches(CredentialKind.Password, id, cls, true, true, false))
+    }
+
+    @Test fun editableOemPinEntryEditTextWithDigitPadIsOnlyAPin() {
+        val id = "com.android.systemui:id/pinEntry"
+        assertTrue(KeyguardFields.matches(CredentialKind.Pin, id, "android.widget.EditText", true, true, false, untyped = false, digitPad = true))
+        assertFalse(KeyguardFields.matches(CredentialKind.Password, id, "android.widget.EditText", true, true, false, untyped = false, digitPad = true))
+    }
+
     @Test fun stockAndroid17PinEntryTextViewUsesTheDigitPad() {
         val id = "com.android.systemui:id/pinEntry"
         assertTrue(KeyguardFields.matches(CredentialKind.Pin, id,

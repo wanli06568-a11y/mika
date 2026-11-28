@@ -7,12 +7,12 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import com.wangzan101.mika.MikaApp
 import com.wangzan101.mika.R
+import com.wangzan101.mika.enterForeground
 import com.wangzan101.mika.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,14 +47,9 @@ class CallStandbyService : Service() {
         // Always acknowledge the OS start before rejecting a stale or cancelled request. Android may
         // crash the process if we stop before acknowledging a startForegroundService delivery.
         val notificationAllowed = notificationsAvailable(this, create = true)
-        if (!promoted) promoted = runCatching {
-            val notification = notification(Notice(getString(R.string.calls_standby_checking), null))
-            if (Build.VERSION.SDK_INT >= 34) {
-                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-            } else {
-                startForeground(NOTIFICATION_ID, notification)
-            }
-        }.isSuccess
+        if (!promoted) promoted = enterForeground(NOTIFICATION_ID) {
+            notification(Notice(getString(R.string.calls_standby_checking), null))
+        }
         if (!promoted) {
             if (explicit || intent == null) calls?.onStandbyStartFailed(getString(R.string.calls_standby_start_blocked))
             requestStop(startId)

@@ -33,8 +33,9 @@ internal suspend fun CallRuntime.probeAudio(): Boolean {
     val ready = probe?.getBoolean("ready") == true
     if (epoch == probeEpoch) {
         audioReady = ready
-        audioDetail = if (ready) "音频路径具备运行条件，仍需双向实机验证"
-            else probe?.getString("reason")?.take(160)?.takeIf { it.isNotBlank() } ?: "内置助手无法检测电话音频"
+        audioDetail = if (ready) app.getString(R.string.calls_audio_probe_ready)
+            else probe?.getString("reason")?.take(160)?.takeIf { it.isNotBlank() }
+                ?: app.getString(R.string.calls_audio_probe_unavailable)
         publish()
     }
     return ready
@@ -43,7 +44,8 @@ internal suspend fun CallRuntime.probeAudio(): Boolean {
 /** [pushOwnerTask]:实时通话里所属任务的状态变了要推一句(标准通话每轮附注里就有,不用推);[canCue]:见 [PhoneDesk.canCue]。 */
 internal suspend fun CallRuntime.runAudio(w: Work, helper: IMikaShell, session: CallRealtimeSession, pushOwnerTask: Boolean = false,
                                          canCue: Boolean = true) {
-    val greeting = CallPolicy.spokenGreeting(w.config.greeting, hasTask = w.task != null)
+    val languageTag = callLanguageTag()
+    val greeting = CallPolicy.spokenGreeting(w.config.greeting, hasTask = w.task != null, languageTag = languageTag)
     val notification = app.getString(
         if (greeting.isBlank()) R.string.calls_notification_connected_waiting else R.string.calls_notification_connected,
     )
@@ -117,6 +119,7 @@ internal suspend fun CallRuntime.runAudio(w: Work, helper: IMikaShell, session: 
         unrelayed = { reply -> scope.launch { appendTranscript(w.transcript, CallTranscriptLine.OWNER_UNRELAYED, reply) } },
         context = { text -> session.sendContext(text) },
         canCue = canCue,
+        languageTag = languageTag,
     )
     try {
         withTimeoutOrNull(remaining ?: Long.MAX_VALUE) {
@@ -128,7 +131,7 @@ internal suspend fun CallRuntime.runAudio(w: Work, helper: IMikaShell, session: 
                         delay(closingAt)
                         if (work === w && w.stopReason.value == null && w.aiActive &&
                             !target.suppressed && sameActiveMuteTarget(w, target)) {
-                            runCatching { session.sendGreeting(CallPolicy.CLOSING_LINE) }
+                            runCatching { session.sendGreeting(CallPolicy.closingLine(languageTag)) }
                         }
                     }
                 }

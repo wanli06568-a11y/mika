@@ -5,6 +5,8 @@ import com.wangzan101.mika.chat.CurrentChat
 import com.wangzan101.mika.chat.DeleteBatch
 import com.wangzan101.mika.chat.SharedDraft
 import com.wangzan101.mika.chat.SharedDraftAttachment
+import com.wangzan101.mika.chat.SharedFile
+import com.wangzan101.mika.core.agent.Turn
 import com.wangzan101.mika.memory.RunNotes
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -175,8 +177,15 @@ internal class ChatSession(private val vm: ChatViewModel) {
     }
 
     /** 这个对话存下的轮次,连同各轮导出的文件和此刻的记忆与技能提示。 */
-    fun saved(conversationId: String): List<Exchange> =
-        runCatching { store.records(conversationId) }.getOrDefault(emptyList()).map { (t, files) -> withSummarizing(withNotes(fromTurn(t).copy(files = files), runNotes.value)) }
+    fun saved(conversationId: String): List<Exchange> = saved(savedRecords(conversationId))
+
+    /** 读盘、解析这个对话存下的轮次;可以在后台线程调(解析整份对话 JSON 不该占主线程)。 */
+    fun savedRecords(conversationId: String): List<Pair<Turn, List<SharedFile>>> =
+        runCatching { store.records(conversationId) }.getOrDefault(emptyList())
+
+    /** 把读到的轮次换成屏上的条目,配上此刻的记忆备注和总结状态;在主线程调。 */
+    fun saved(records: List<Pair<Turn, List<SharedFile>>>): List<Exchange> =
+        records.map { (t, files) -> withSummarizing(withNotes(fromTurn(t).copy(files = files), runNotes.value)) }
 
     /** 这个对话存下的项目 id;项目不存在时回落为 null。 */
     fun projectFor(conversationId: String?): String? =

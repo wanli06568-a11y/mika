@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">Tin nhắn riêng có thể khởi tạo tác vụ Mika</string>
     <string name="wechat_turn_off">Tắt</string>
     <string name="wechat_title">WeChat</string>
-    <string name="wechat_settings_sub">Giao tác vụ cho Mika trong WeChat</string>
     <string name="wechat_status_disconnected">Chưa kết nối</string>
     <string name="wechat_status_connecting">Đang kết nối</string>
     <string name="wechat_status_connected">Đã kết nối</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">Quét trong WeChat và xác nhận ủy quyền. Sau đó mở trò chuyện riêng của bot và gửi văn bản hoặc hình ảnh. Mã QR này chỉ dành cho lần liên kết này; đừng chuyển tiếp nó.</string>
     <string name="wechat_connection">Kết nối</string>
     <string name="wechat_receive">Nhận tác vụ WeChat</string>
-    <string name="wechat_receive_sub">Khi tắt, Mika ngừng đọc tin nhắn mới</string>
     <string name="wechat_allow_unlock">Cho phép tác vụ WeChat đánh thức và mở khóa</string>
     <string name="wechat_allow_unlock_sub">Chỉ tác vụ từ trò chuyện riêng WeChat đã liên kết của chính bạn mới có thể thử đánh thức và mở khóa điện thoại này.</string>
     <string name="wechat_allow_unlock_foot">Tắt theo mặc định; liên kết lại sẽ tắt nó. Trước tiên bật “%3$s” trong “%1$s › %2$s” và lưu mã PIN hoặc mật khẩu màn hình khóa của bạn ở đó, nếu bạn dùng. Công tắc này không thay đổi quyền đó và không dùng thông tin xác thực gửi qua WeChat.</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">Văn bản riêng, hình ảnh và tác vụ thật</string>
     <string name="wechat_capability_replies">Câu hỏi, kết quả &amp; thông báo của Mika</string>
     <string name="wechat_capability_phone">Xác nhận thanh toán &amp; tiếp quản điện thoại</string>
-    <string name="wechat_capability_phone_sub">Vẫn hoàn thành trên điện thoại này</string>
     <string name="wechat_capability_later">Giọng nói, tệp, nhóm &amp; nhiều tài khoản</string>
     <string name="wechat_supported">Được hỗ trợ</string>
     <string name="wechat_phone_only">Điện thoại</string>

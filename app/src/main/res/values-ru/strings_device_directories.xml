@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">Доступ запрещён</string>
     <string name="device_dirs_unknown">Статус недоступен</string>
     <string name="device_dirs_entry">Подсказки о папках</string>
-    <string name="device_dirs_entry_sub">Помогают Mika находить скачанные файлы</string>
     <string name="device_dirs_source_preset">Предустановлено</string>
     <string name="device_dirs_source_user">Изменено вами</string>
     <string name="device_dirs_source_mika">Изменено Mika</string>

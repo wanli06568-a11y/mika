@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">Estado da chamada</string>
-    <string name="calls_dtmf_open">Teclado</string>
     <string name="calls_dtmf_title">Teclado da chamada</string>
     <string name="calls_dtmf_close">Fechar</string>
     <string name="calls_dtmf_batch">Inserir sequência</string>

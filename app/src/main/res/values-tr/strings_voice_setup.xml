@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d kullanılabilir</string>
     <string name="voice_hub_footer">Her işi kimin yapacağını seçin. Ses hizmetleri, bu seçeneklerin geldiği hesaplardır.</string>
     <string name="voice_hub_setup">Kur</string>
-    <string name="voice_hub_ready">Hazır</string>
     <string name="voice_hub_off">Kapalı</string>
     <string name="voice_hub_none">Seçilmedi</string>
     <string name="voice_source_device">Bu telefon · ücretsiz</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">Bir sohbet hesabını silmeden önce hangi ses kullanımlarının etkileneceği size bildirilir.</string>
     <string name="voice_add_advanced">Gelişmiş</string>
     <string name="voice_add_custom">Özel</string>
-    <string name="voice_add_custom_sub">Model kimliklerini, protokolleri ve uç noktaları kendiniz girin</string>
     <string name="voice_preset_compat">OpenAI uyumlu hizmet</string>
     <string name="voice_preset_compat_sub">Sesle giriş · sesli okuma · gerçek zamanlı · adres + anahtar</string>
     <string name="voice_preset_selfhosted">Kendi sunucunuzda tanıma</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">Sesli aramalar için kullan</string>
     <string name="voice_result_in_use">Kullanımda</string>
     <string name="voice_result_done">Bitti</string>
-    <string name="calls_who_speaks">Kim konuşacak</string>
-    <string name="calls_what_to_say">Telefonda ne söylenecek</string>
-    <string name="calls_profile_summary">Karşılama, talimatlar ve arama süresi</string>
     <string name="calls_voice_title">Arama sesi</string>
     <string name="calls_voice_shared_note">Bu ses tonu sohbetteki sesli aramalarla ortaktır.</string>
     <string name="calls_audio_title">Telefon araması sesi</string>

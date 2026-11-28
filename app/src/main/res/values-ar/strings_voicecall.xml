@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="voicecall_see_task_page">يتطلب الأمر تدخلك — افتح صفحة المهمة</string>
-    <string name="voicecall_task_paused">المهمة متوقفة مؤقتًا</string>
     <string name="voicecall_task_running">جارٍ العمل</string>
     <string name="voicecall_task_done">اكتمل</string>
     <string name="voicecall_task_open">عرض سير المهمة</string>
@@ -63,7 +62,6 @@
     <string name="voicecall_log_end_idle">انتهت المكالمة · %1$s · صمت طويل</string>
     <string name="voicecall_log_silent">مكالمة صوتية · %1$s · لم يُقل شيء</string>
     <string name="voicecall_log_live">في مكالمة</string>
-    <string name="voicecall_more">المزيد</string>
     <string name="voicecall_records">سجل المكالمات</string>
     <string name="voicecall_records_hint">اضغط على مكالمة لرؤيتها في الدردشة</string>
     <string name="voicecall_records_empty">لا توجد مكالمات في هذه المحادثة بعد</string>

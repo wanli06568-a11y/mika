@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="jev_title">Model keputusan · Jev</string>
-    <string name="jev_row_sub">Penilaian maksud dan pemilihan rute opsional</string>
     <string name="jev_enabled">Gunakan model keputusan</string>
     <string name="jev_privacy">Jika diaktifkan, permintaan, konteks percakapan terbaru, dan rute kandidat dikirim ke penyedia yang diatur untuk menilai maksud dan memilih rute. Jika gagal, Mika menggunakan model sebelumnya. Pengaturan model utama, visual, dan ringan tetap terpisah.</string>
     <string name="jev_provider">Penyedia</string>

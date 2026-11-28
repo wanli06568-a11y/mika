@@ -27,7 +27,6 @@
     <string name="export_done">Exportado</string>
     <string name="export_failed">Falha na exportação: %1$s</string>
     <string name="export_no_messages">Nenhuma mensagem para exportar</string>
-    <string name="export_current_turn">O turno em andamento não é incluído.</string>
     <string name="export_warnings">%1$d itens não puderam ser incluídos.</string>
     <string name="export_filename_fallback">Conversa do Mika</string>
     <string name="export_label_user">Usuário</string>

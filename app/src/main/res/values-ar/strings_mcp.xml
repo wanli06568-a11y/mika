@@ -31,7 +31,6 @@
     <string name="mcp_last_request">آخر طلب %1$s</string>
     <string name="mcp_advanced">الإعدادات المتقدمة</string>
     <string name="mcp_advanced_hide">إخفاء الإعدادات المتقدمة</string>
-    <string name="mcp_advanced_sub">مفاتيح الوصول والرموز والإيقاظ عن بُعد</string>
     <string name="mcp_port_detail">المنفذ %1$d. يتوقف الوصول عبر USB بعد إعادة تشغيل الهاتف.</string>
     <string name="mcp_port_title">منفذ الاستماع</string>
     <string name="mcp_port_dialog_sub">غيّره إذا كان المنفذ الافتراضي مستخدمًا من خدمة أخرى على هذا الهاتف. يُطبَّق فورًا ويعيد الحاسوب الاتصال عبر المنفذ الجديد.</string>

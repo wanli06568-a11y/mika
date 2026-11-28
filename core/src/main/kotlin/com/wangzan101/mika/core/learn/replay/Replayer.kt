@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.learn.replay
 
+import com.wangzan101.mika.core.net.jsonObjectOrNull
 import com.wangzan101.mika.core.action.ActionExecutor
 import com.wangzan101.mika.core.action.ActionOutcome
 import com.wangzan101.mika.core.action.Origin
@@ -165,7 +166,7 @@ class Replayer(
 
     /** 去掉编号;每个字符串参数里的 `{n}` 都换成槽值。槽号超出范围、或非字符串参数里带着槽,为 null。 */
     private fun build(step: RouteStep, slots: List<String>): JsonObject? {
-        val o = try { Json.parseToJsonElement(step.argsJson) as? JsonObject } catch (e: Exception) { null } ?: return null
+        val o = Json.jsonObjectOrNull(step.argsJson) ?: return null
         val out = mutableMapOf<String, JsonElement>()
         for ((k, v) in o) {
             if (k == "ref" || k == "snapshotId" || k == "target") continue
@@ -225,7 +226,7 @@ class Replayer(
 
         /** 给模型看的一步说明。 */
         fun describe(step: RouteStep, slots: List<String>): String {
-            val o = try { Json.parseToJsonElement(step.argsJson) as? JsonObject } catch (e: Exception) { null }
+            val o = Json.jsonObjectOrNull(step.argsJson)
             val what = listOfNotNull(
                 step.target?.name?.let { fill(it, slots) }?.takeIf { it.isNotEmpty() }?.let { "「$it」" },
                 (o?.get("text") as? JsonPrimitive)?.contentOrNull?.let { fill(it, slots) }?.let { "type 「$it」" },

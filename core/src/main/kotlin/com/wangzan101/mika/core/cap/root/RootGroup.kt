@@ -94,9 +94,8 @@ internal object RootRunCommand : AgentTool {
             place = Place.command("root_run_command「${command.take(200)}」"), trust = Trust.Untrusted, authored = command)))
     }
 
-    private fun fail(error: String, message: String) = ToolExecution(buildJsonObject {
-        put("ok", false); put("error", error); put("message", message); put("recoverable", false)
-    })
+    /** root 命令失败一律不可重试。 */
+    private fun fail(error: String, message: String) = com.wangzan101.mika.core.tool.fail(error, message, recoverable = false)
 
     override fun logTarget(o: JsonObject, r: ToolExecution, ctx: ToolContext) = o.argStr("command")
 }

@@ -3,6 +3,7 @@ package com.wangzan101.mika.core.model.decision
 import com.wangzan101.mika.core.model.ModelError
 import com.wangzan101.mika.core.model.ModelHttp
 import com.wangzan101.mika.core.model.Usage
+import com.wangzan101.mika.core.model.headerOrReject
 import com.wangzan101.mika.core.net.NetProxy
 import com.wangzan101.mika.core.model.usage.ConversationMeter
 import com.wangzan101.mika.core.model.usage.RunUsageTally
@@ -77,7 +78,7 @@ class SystemOneDecisionModel(
                 }
             }
             val request = Request.Builder().url(url)
-                .header("Authorization", "Bearer $key")
+                .headerOrReject("Authorization", "Bearer $key")
                 .header("Accept", "application/json")
                 .post(payload.toString().toRequestBody(JSON))
                 .build()

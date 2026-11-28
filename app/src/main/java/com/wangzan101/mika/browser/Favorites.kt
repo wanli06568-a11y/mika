@@ -2,6 +2,7 @@ package com.wangzan101.mika.browser
 
 import com.wangzan101.mika.cap.web.SiteEntry
 import com.wangzan101.mika.core.cap.web.WebUrlPolicy
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,12 +72,7 @@ class BrowserFavorites(dir: File) {
             put("hidden", JsonArray(e.hidden.sorted().map(::JsonPrimitive)))
         }.toString()
         // 先写临时文件再改名,写到一半被杀不会留下半个文件
-        val tmp = File(file.parentFile, "$FILE.tmp")
-        tmp.writeText(json)
-        if (!tmp.renameTo(file)) {
-            file.writeText(json)
-            tmp.delete()
-        }
+        AtomicFiles.write(file, json, durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.WriteDirect)
     }
 
     companion object {

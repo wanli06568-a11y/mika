@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d available</string>
     <string name="voice_hub_footer">Pick who does each job. Voice services are the accounts these choices come from.</string>
     <string name="voice_hub_setup">Set up</string>
-    <string name="voice_hub_ready">Ready</string>
     <string name="voice_hub_off">Off</string>
     <string name="voice_hub_none">Not chosen</string>
     <string name="voice_source_device">This phone · free</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">Deleting a chat account first tells you which voice uses it affects.</string>
     <string name="voice_add_advanced">Advanced</string>
     <string name="voice_add_custom">Custom</string>
-    <string name="voice_add_custom_sub">Enter model IDs, protocols and endpoints yourself</string>
     <string name="voice_preset_compat">OpenAI-compatible service</string>
     <string name="voice_preset_compat_sub">Speech input · read aloud · realtime · address + key</string>
     <string name="voice_preset_selfhosted">Self-hosted recognition</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">Use for voice calls</string>
     <string name="voice_result_in_use">In use</string>
     <string name="voice_result_done">Done</string>
-    <string name="calls_who_speaks">Who speaks</string>
-    <string name="calls_what_to_say">What to say on the phone</string>
-    <string name="calls_profile_summary">Greeting, instructions and call length</string>
     <string name="calls_voice_title">Call voice</string>
     <string name="calls_voice_shared_note">This voice is shared with voice calls in chat.</string>
     <string name="calls_audio_title">Phone call audio</string>

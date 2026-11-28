@@ -31,7 +31,6 @@
     <string name="mcp_last_request">마지막 요청 %1$s</string>
     <string name="mcp_advanced">고급 설정</string>
     <string name="mcp_advanced_hide">고급 설정 숨기기</string>
-    <string name="mcp_advanced_sub">접속 스위치, 토큰, 원격 깨우기</string>
     <string name="mcp_port_detail">%1$d번 포트. 휴대전화를 재부팅하면 USB 접속이 꺼져요.</string>
     <string name="mcp_port_title">수신 포트</string>
     <string name="mcp_port_dialog_sub">기본 포트가 이 휴대폰의 다른 서비스에 사용 중일 때 변경하세요. 즉시 적용되며 컴퓨터는 새 포트로 다시 연결합니다.</string>

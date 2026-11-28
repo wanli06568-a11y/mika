@@ -31,7 +31,6 @@
     <string name="mcp_last_request">Son istek %1$s</string>
     <string name="mcp_advanced">Gelişmiş ayarlar</string>
     <string name="mcp_advanced_hide">Gelişmiş ayarları gizle</string>
-    <string name="mcp_advanced_sub">Erişim anahtarları, belirteçler ve uzaktan uyandırma</string>
     <string name="mcp_port_detail">Port %1$d. USB erişimi telefon yeniden başladığında kapanır.</string>
     <string name="mcp_port_title">Dinleme portu</string>
     <string name="mcp_port_dialog_sub">Varsayılan port bu telefondaki başka bir hizmet tarafından alındığında değiştirin. Anında geçerli olur; bilgisayar yeni porta yeniden bağlanır.</string>

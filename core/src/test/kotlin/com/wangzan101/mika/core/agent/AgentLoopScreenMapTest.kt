@@ -14,6 +14,7 @@ import com.wangzan101.mika.core.screen.uistate.UiElement
 import com.wangzan101.mika.core.tool.FakeScreen
 import com.wangzan101.mika.core.assembly.toolDispatcher
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -104,7 +105,8 @@ class AgentLoopScreenMapTest {
     @Test fun screenMapSurvivesCompression() {
         val model = FakeModel(reply(call("phone_observe")),
             *(1..15).map { reply(call("wait", """{"seconds":${it / 10.0}}""")) }.toTypedArray(), finish, contextTokens = 100)
-        runBlocking {
+        // 虚拟时间:15 次 wait 不真等
+        runTest {
             AgentLoop(model, toolDispatcher(MapScreen(listOf(el("@h", "首页"), el("@m", "我的")))),
                 "B", knowledge = KnowledgeStore(listOf(KnowledgeEntry("alpha", "alpha", Surface.Android, listOf("p.a"),
                     emptyList(), listOf("alpha"), null, "", "APP.md正文"))),

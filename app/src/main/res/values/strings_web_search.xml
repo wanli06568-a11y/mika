@@ -12,7 +12,6 @@
     <string name="web_search_missing_key">%1$s needs an API key to work.</string>
     <string name="web_search_get_key">Get an API key</string>
     <string name="web_search_privacy">The key is stored encrypted on this phone. Search results are treated as untrusted.</string>
-    <string name="web_search_row_sub">Optional search service; browser search is always available</string>
     <string name="web_search_enabled">Enable web search</string>
     <string name="web_search_api_key">API key (optional)</string>
     <string name="web_search_invalid_endpoint">Enter an HTTP or HTTPS URL without query parameters.</string>

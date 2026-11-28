@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.device.adb
 
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -211,9 +212,7 @@ class WrappedKeyFile(private val file: File, private val wrappingKey: () -> Secr
         val iv = c.iv
         val out = byteArrayOf(iv.size.toByte()) + iv + c.doFinal(pkcs8)
         file.parentFile?.mkdirs()
-        val tmp = File(file.path + ".tmp")
-        tmp.writeBytes(out)
-        check(tmp.renameTo(file)) { "cannot write ${file.name}" }
+        check(AtomicFiles.write(file, out, durable = false, move = AtomicFiles.Move.Rename)) { "cannot write ${file.name}" }
     }
 
     override fun clear() {

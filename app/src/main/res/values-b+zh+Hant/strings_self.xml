@@ -3,7 +3,6 @@
     <string name="settings_self_operate">允許 Mika 操作自己的介面</string>
     <string name="settings_self_operate_sub">開啟瀏覽器連結前仍會先問你。</string>
     <string name="settings_pip_operate">直接操作小畫面</string>
-    <string name="settings_pip_operate_sub">在小窗裡點、滑，直接控制螢幕</string>
     <string name="settings_external_schedule">允許指令碼建立排程任務</string>
     <string name="settings_external_schedule_sub">其他 App 可經廣播提交任務，頻率受限並標記來源。</string>
     <string name="self_notify_channel">Mika 的操作</string>

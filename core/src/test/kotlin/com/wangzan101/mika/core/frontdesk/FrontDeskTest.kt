@@ -108,12 +108,14 @@ class FrontDeskTest {
     @Test
     fun reportWaitsForCurrentReplyAndIsDeliveredOnce() = runTest {
         val state = port.add("t1")
+        port.positions["t1"] = 1
         val desk = desk()
         val first = FakeSurface().apply { hold = true }
         desk.attach(first)
         desk.track("t1", "订会议室")
         runCurrent()
 
+        port.positions.remove("t1")
         state.value = running()
         runCurrent()
         state.value = TaskState.WaitingInput("订几点的?")
@@ -184,8 +186,34 @@ class FrontDeskTest {
         state.value = TaskState.Failed("不该再看到", FailKind.GaveUp)
         runCurrent()
 
-        assertEquals(listOf(DeskEvent.Started("t1"), DeskEvent.Succeeded("t1", "订好了")), surface.delivered.map { it.event })
+        assertEquals(listOf(DeskEvent.Succeeded("t1", "订好了")), surface.delivered.map { it.event })
         assertEquals(DeskTaskPhase.Done, desk.active.value.single().state)
+    }
+
+    /**
+     * 派单当场就开始的(没排过队):派单结果里已经说了在办,前台不再报「开始了」;
+     * 进度的安静期仍从开始时算起,不会一开始就紧跟着报一句进度。
+     */
+    @Test
+    fun taskStartedRightAwayIsNotReportedAsStarted() = runTest {
+        val state = port.add("t1")
+        val desk = desk()
+        val surface = FakeSurface()
+        desk.attach(surface)
+        desk.track("t1", "订会议室")
+        runCurrent()
+
+        state.value = running("打开日历")
+        runCurrent()
+        now = 10_000
+        state.value = running("找日程")
+        runCurrent()
+        assertTrue(surface.delivered.isEmpty())
+
+        now = 90_000
+        state.value = running("选时间")
+        runCurrent()
+        assertEquals(listOf(DeskEvent.Progress("t1", "选时间")), surface.delivered.map { it.event })
     }
 
     @Test

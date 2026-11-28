@@ -27,7 +27,6 @@
     <string name="export_done">تم التصدير</string>
     <string name="export_failed">فشل التصدير: %1$s</string>
     <string name="export_no_messages">لا توجد رسائل للتصدير</string>
-    <string name="export_current_turn">لا تُضمَّن الجولة الجارية.</string>
     <string name="export_warnings">تعذّر تضمين %1$d عناصر.</string>
     <string name="export_filename_fallback">محادثة Mika</string>
     <string name="export_label_user">المستخدم</string>

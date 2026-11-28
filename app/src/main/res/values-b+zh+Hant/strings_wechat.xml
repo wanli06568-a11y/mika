@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">私聊訊息可以交給 Mika 執行任務</string>
     <string name="wechat_turn_off">關閉</string>
     <string name="wechat_title">微信</string>
-    <string name="wechat_settings_sub">在微信裡給 Mika 安排任務</string>
     <string name="wechat_status_disconnected">未連線</string>
     <string name="wechat_status_connecting">連線中</string>
     <string name="wechat_status_connected">已連線</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">在微信中掃描並確認授權。綁定後，開啟這個 Bot 的私聊，傳送文字或圖片。QR Code 僅用於本次綁定，請勿轉傳。</string>
     <string name="wechat_connection">連線</string>
     <string name="wechat_receive">接收微信任務</string>
-    <string name="wechat_receive_sub">關閉後不再讀取新訊息</string>
     <string name="wechat_allow_unlock">允許微信任務喚醒與解鎖</string>
     <string name="wechat_allow_unlock_sub">僅允許本人綁定微信的私聊任務嘗試喚醒並解鎖這支手機。</string>
     <string name="wechat_allow_unlock_foot">預設關閉，重新綁定後關閉。請先在「%1$s › %2$s」開啟「%3$s」，並在本機儲存鎖定螢幕的 PIN 或密碼（如有）。本開關不會代為開啟該權限，也不會使用微信訊息中的憑證解鎖。</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">私聊文字、圖片與實際任務</string>
     <string name="wechat_capability_replies">Mika 追問、任務結果與通知</string>
     <string name="wechat_capability_phone">付款確認與手機接管</string>
-    <string name="wechat_capability_phone_sub">仍需在手機上完成</string>
     <string name="wechat_capability_later">語音、檔案、群聊、多帳號</string>
     <string name="wechat_supported">支援</string>
     <string name="wechat_phone_only">手機</string>

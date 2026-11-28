@@ -20,7 +20,6 @@
     <string name="recommendations_drag_hint">拖曳右側把手調整顯示順序。</string>
     <string name="recommendations_move_up">上移</string>
     <string name="recommendations_move_down">下移</string>
-    <string name="recommendations_sub">管理首頁顯示的任務和提示詞</string>
     <string name="recommendations_add">新增常用任務</string>
     <string name="recommendations_edit">編輯常用任務</string>
     <string name="recommendations_empty">還沒有常用任務</string>
@@ -62,7 +61,6 @@
     <string name="drawer_personal">個人助理</string>
     <string name="chat_new">新對話</string>
     <string name="chat_expand_steps">展開步驟</string>
-    <string name="chat_collapse_steps">收起步驟</string>
     <string name="chat_view_process">檢視過程</string>
     <string name="chat_unlock_body">手機螢幕鎖定了,解鎖後會自動繼續。</string>
     <string name="chat_input_body">%1$s\n可以點選項,也可以在下面輸入。%2$s</string>
@@ -75,9 +73,7 @@
     <string name="chat_restart_task">重新開始</string>
     <string name="chat_resume_request">從斷點繼續：%1$s</string>
     <string name="chat_restart_request">重新開始：%1$s</string>
-    <string name="chat_view_source">檢視來源</string>
     <string name="chat_open">開啟</string>
-    <string name="chat_attach_rejected">沒能新增:%1$s(單個檔案不超過 200 MB)</string>
     <string name="chat_stop">停止</string>
     <string name="chat_send">傳送</string>
     <string name="chat_scroll_to_bottom">回到底部</string>
@@ -159,9 +155,6 @@
     <string name="steer_interrupted_reply">被你的新訊息打斷</string>
     <string name="steer_next">目前任務已結束，已排到下一件</string>
     <string name="steer_cancelled">已取消</string>
-    <plurals name="chat_steps_done">
-        <item quantity="other">做了 %1$d 步</item>
-    </plurals>
     <string name="step_viewed">看了%1$s</string>
     <string name="step_viewed_part">看了%1$s的%2$s</string>
     <string name="step_failed">沒成功</string>
@@ -175,7 +168,6 @@
         <item quantity="other">%1$d 張截圖</item>
     </plurals>
     <string name="attach_add">新增附件</string>
-    <string name="attach_close">收起附件面板</string>
     <string name="attach_blocked_running">任務執行中暫不支援新增附件，可切換到排隊模式</string>
     <string name="attach_camera">相機</string>
     <string name="attach_album">相簿</string>
@@ -217,9 +209,6 @@
     <string name="zoom_in">放大看</string>
     <string name="chat_message_actions">訊息操作</string>
     <string name="chat_copy">複製</string>
-    <string name="share_card_question">問</string>
-    <string name="share_card_answer">答</string>
-    <string name="share_card_made_by">由 Mika 完成</string>
     <string name="chat_quote">引用</string>
     <string name="chat_select_text">選取文字</string>
     <string name="chat_copied">已複製</string>
@@ -231,7 +220,6 @@
     <string name="chat_branch_attachments_skipped">附件沒有全部複製</string>
     <string name="chat_branch_retry">從這裡重新問</string>
     <string name="chat_branch_attachments_readd">附件需要重新加入</string>
-    <string name="chat_attach_unavailable">沒能加入：%1$s。請確認檔案存在且未超過大小限制。</string>
     <string name="chat_attach_too_large">%1$s：超過 %2$s 限制</string>
     <string name="chat_attach_low_device_space">%1$s：手機儲存空間不足，請清理空間後重試</string>
     <string name="chat_attach_workspace_limit">%1$s：工作區儲存已達上限，請清理工作區檔案後重試</string>
@@ -261,9 +249,6 @@
     <string name="chat_task_cost_unavailable">暫無法估算費用</string>
     <string name="follow_up_steer">引導</string>
     <string name="follow_up_queue">排隊</string>
-    <string name="follow_up_steer_hint">下一步就按這句話調整</string>
-    <string name="follow_up_steer_hint_paused">任務暫停中，繼續後生效</string>
-    <string name="follow_up_steer_hint_queued">開始後按這句話調整</string>
     <string name="follow_up_queue_hint">目前任務結束後自動開始</string>
     <string name="follow_up_count">排隊中 · %1$d 件</string>
     <string name="follow_up_edit">編輯</string>
@@ -272,7 +257,6 @@
     <string name="follow_up_idle_hint">開始任務時依次處理</string>
     <string name="follow_up_already_started">這一件已經開始了，可以直接停止它</string>
     <string name="chat_placeholder_queue">寫下下一件事…</string>
-    <string name="voice_placeholder_queue">說下一件事…</string>
     <string name="steer_received_paused">已收到，任務繼續後處理</string>
     <plurals name="drawer_archive_many_done">
         <item quantity="other">已歸檔 %1$d 個對話</item>
@@ -296,20 +280,11 @@
     <string name="task_field_insert">插入</string>
     <string name="task_fields_too_many">最多新增 %1$d 個不同的填寫項目。</string>
     <string name="task_fill_apply">填入輸入框</string>
-    <string name="chat_read_aloud">Read aloud</string>
-    <string name="chat_stop_speaking">Stop speaking</string>
     <string name="chat_audio">Audio</string>
     <string name="chat_audio_play">Play</string>
     <string name="chat_audio_stop">Stop</string>
-    <string name="plus_sub_album">從相冊選,可多選</string>
-    <string name="plus_sub_files">文件、PDF、壓縮包</string>
-    <string name="plus_sub_device">瀏覽手機裡的資料夾</string>
     <string name="plus_clipboard">剪貼簿</string>
-    <string name="plus_sub_clipboard">貼上剛剛複製的內容</string>
     <string name="plus_sub_teach">做一遍,讓它學會</string>
-    <string name="plus_sub_skills">用在這一輪</string>
-    <string name="plus_sub_tasks">把常用的說法填進輸入框</string>
-    <string name="plus_sub_browser">內建瀏覽器</string>
     <string name="plus_skills_empty">還沒有個人技能。Mika 從做成的任務裡學會的技能會出現在這裡。</string>
     <string name="plus_clipboard_empty">剪貼簿裡沒有可貼上的文字</string>
     <string name="plus_skill_directive">用「%1$s」技能：</string>

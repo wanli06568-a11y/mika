@@ -121,11 +121,11 @@ class ChatViewModel(
     /** 当前任务导出的文件;任务开始时由服务清空。 */
     internal val sharedFiles: StateFlow<List<SharedFile>> = MutableStateFlow(emptyList()),
     /** 当前任务生成并留在工作区里的音频;任务开始时由服务清空。 */
-    internal val generatedAudios: StateFlow<List<com.wangzan101.mika.core.chat.GeneratedAudio>> = MutableStateFlow(emptyList()),
+    internal val generatedAudios: StateFlow<List<com.wangzan101.mika.core.agent.GeneratedAudio>> = MutableStateFlow(emptyList()),
     /** 当前任务生成并留在工作区里的图;任务开始时由服务清空。 */
-    internal val generatedPhotos: StateFlow<List<com.wangzan101.mika.core.chat.GeneratedPhoto>> = MutableStateFlow(emptyList()),
+    internal val generatedPhotos: StateFlow<List<com.wangzan101.mika.core.agent.GeneratedPhoto>> = MutableStateFlow(emptyList()),
     /** 当前任务生成并留在工作区里的视频;任务开始时由服务清空。 */
-    internal val generatedVideos: StateFlow<List<com.wangzan101.mika.core.chat.GeneratedVideo>> = MutableStateFlow(emptyList()),
+    internal val generatedVideos: StateFlow<List<com.wangzan101.mika.core.agent.GeneratedVideo>> = MutableStateFlow(emptyList()),
     /** 把选中的文件(内容 URI 字符串)复制进对话工作区的 inbox/。 */
     internal val importAttachments: suspend (conversationId: String, uris: List<String>) -> ImportResult = { _, _ -> ImportResult(emptyList(), emptyList()) },
     /** 读出选中文件(内容 URI 字符串)的名字、大小和是不是照片;读盘的活由调用方放到后台线程。 */
@@ -152,7 +152,7 @@ class ChatViewModel(
     val keptPage: StateFlow<KeptPage?> = MutableStateFlow(null),
     /** 关掉留着的那一页(用户点了那一行上的「关闭」)。 */
     private val closeKept: () -> Unit = {},
-    /** 分支时复制源对话工作区的 inbox/(附件);没注入就只复制轮次。 */
+    /** 分支时复制源对话工作区的 inbox/(附件)和生成的音频、图片、视频(out/audio、out/images、out/video);没注入就只复制轮次。 */
     internal val branchWorkspace: BranchWorkspace? = null,
     /** 分支标题:在源标题或第一句话后面加本地化后缀(太长时截断);默认原样。 */
     internal val branchTitle: (String) -> String = { it },
@@ -368,8 +368,12 @@ class ChatViewModel(
         scope.launch {
             store.changes.collect { id ->
                 if (id == _ui.value.conversationId) {
-                    live.syncSaved(id)
-                    refreshMainModel()
+                    // 任务跑着时每存一轮就来一次:整份对话 JSON 在后台读、解析,回主线程只做合并
+                    val records = kotlinx.coroutines.withContext(io) { session.savedRecords(id) }
+                    if (id == _ui.value.conversationId) {
+                        live.syncSaved(id, session.saved(records))
+                        refreshMainModel()
+                    }
                 }
                 // 删掉的对话又有人往里存了:重新列出来
                 if (id in _deleted.value && id !in deleting && store.turns(id).isNotEmpty()) _deleted.update { it - id }

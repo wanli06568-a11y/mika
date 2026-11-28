@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">Değiştirin</string>
     <string name="calls_disable_sub">Gelen aramalar ve aramalar sistem telefonuna geri döner</string>
     <string name="calls_how_to_talk">Yanıtlayınca</string>
-    <string name="calls_greeting_empty">Boş · arayanın önce konuşmasını bekle</string>
-    <string name="calls_talk_settings_sub">Talimatlar ve yapay zekânın en uzun konuşma süresi</string>
     <string name="calls_stage_listen">Dinler</string>
     <string name="calls_stage_think">Düşünür</string>
     <string name="calls_stage_speak">Konuşur</string>

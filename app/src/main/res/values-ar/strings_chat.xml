@@ -20,7 +20,6 @@
     <string name="recommendations_drag_hint">اسحب المقبض لتغيير ترتيب العرض.</string>
     <string name="recommendations_move_up">نقل لأعلى</string>
     <string name="recommendations_move_down">نقل لأسفل</string>
-    <string name="recommendations_sub">إدارة المهام والنصوص المعروضة في الشاشة الرئيسية</string>
     <string name="recommendations_add">إضافة مهمة</string>
     <string name="recommendations_edit">تعديل مهمة</string>
     <string name="recommendations_empty">لا توجد مهام مقترحة</string>
@@ -67,7 +66,6 @@
     <string name="drawer_personal">المساعد الشخصي</string>
     <string name="chat_new">محادثة جديدة</string>
     <string name="chat_expand_steps">عرض الخطوات</string>
-    <string name="chat_collapse_steps">إخفاء الخطوات</string>
     <string name="chat_view_process">عرض ما حدث</string>
     <string name="chat_unlock_body">هاتفك مقفل. ستتابع Mika العمل بعد إلغاء قفله.</string>
     <string name="chat_input_body">%1$s\nانقر على خيار أو اكتب أدناه. %2$s</string>
@@ -80,9 +78,7 @@
     <string name="chat_restart_task">البدء من جديد</string>
     <string name="chat_resume_request">تابع من نقطة التوقف: %1$s</string>
     <string name="chat_restart_request">ابدأ من جديد: %1$s</string>
-    <string name="chat_view_source">عرض المصدر</string>
     <string name="chat_open">فتح</string>
-    <string name="chat_attach_rejected">تعذّر الإضافة: %1$s (يجب أن يكون حجم كل ملف أقل من 200 MB)</string>
     <string name="chat_stop">إيقاف</string>
     <string name="chat_send">إرسال</string>
     <string name="chat_scroll_to_bottom">الانتقال إلى الأسفل</string>
@@ -204,14 +200,6 @@
     <string name="steer_interrupted_reply">قوطعت رسالتك</string>
     <string name="steer_next">انتهت المهمة الحالية؛ أُضيفت إلى قائمة الانتظار كمهمة تالية</string>
     <string name="steer_cancelled">أُلغيت</string>
-    <plurals name="chat_steps_done">
-        <item quantity="zero">لا توجد خطوات (%1$d)</item>
-        <item quantity="one">خطوة واحدة (%1$d)</item>
-        <item quantity="two">خطوتان (%1$d)</item>
-        <item quantity="few">%1$d من الخطوات</item>
-        <item quantity="many">%1$d خطوة</item>
-        <item quantity="other">%1$d خطوة</item>
-    </plurals>
     <string name="step_viewed">تم عرض %1$s</string>
     <string name="step_viewed_part">تم عرض %2$s في %1$s</string>
     <string name="step_failed">فشلت</string>
@@ -230,7 +218,6 @@
         <item quantity="other">%1$d لقطة شاشة</item>
     </plurals>
     <string name="attach_add">إضافة مرفق</string>
-    <string name="attach_close">إغلاق لوحة المرفقات</string>
     <string name="attach_blocked_running">لا يمكن إضافة مرفقات أثناء تشغيل المهمة — بدّل إلى وضع الانتظار أولاً</string>
     <string name="attach_camera">الكاميرا</string>
     <string name="attach_album">الصور</string>
@@ -277,9 +264,6 @@
     <string name="zoom_in">تكبير</string>
     <string name="chat_message_actions">خيارات الرسالة</string>
     <string name="chat_copy">نسخ</string>
-    <string name="share_card_question">سؤال</string>
-    <string name="share_card_answer">الإجابة</string>
-    <string name="share_card_made_by">أنجزها Mika</string>
     <string name="chat_quote">اقتباس</string>
     <string name="chat_select_text">تحديد النص</string>
     <string name="chat_copied">تم النسخ</string>
@@ -291,7 +275,6 @@
     <string name="chat_branch_attachments_skipped">لم تُنسخ كل المرفقات</string>
     <string name="chat_branch_retry">اسأل مجددًا من هنا</string>
     <string name="chat_branch_attachments_readd">أعد إضافة المرفقات التي تريد تضمينها</string>
-    <string name="chat_attach_unavailable">تعذّرت إضافة: %1$s. تأكد من توفر الملفات وأن حجمها ضمن الحد المسموح.</string>
     <string name="chat_attach_too_large">%1$s: يتجاوز حد %2$s</string>
     <string name="chat_attach_low_device_space">%1$s: مساحة تخزين الهاتف غير كافية؛ أفرغ بعض المساحة وحاول مجددًا</string>
     <string name="chat_attach_workspace_limit">%1$s: بلغت مساحة تخزين مساحة العمل الحد الأقصى؛ احذف ملفات من مساحة العمل وحاول مجددًا</string>
@@ -321,9 +304,6 @@
     <string name="chat_task_cost_unavailable">تعذّر تقدير التكلفة</string>
     <string name="follow_up_steer">توجيه</string>
     <string name="follow_up_queue">انتظار</string>
-    <string name="follow_up_steer_hint">ستعدّل الخطوة التالية المهمة الحالية</string>
-    <string name="follow_up_steer_hint_paused">المهمة متوقفة مؤقتًا؛ سيسري هذا عند متابعتها</string>
-    <string name="follow_up_steer_hint_queued">سيسري هذا عند بدء المهمة</string>
     <string name="follow_up_queue_hint">تبدأ بعد انتهاء المهمة الحالية</string>
     <string name="follow_up_count">في الانتظار · %1$d</string>
     <string name="follow_up_edit">تعديل</string>
@@ -332,7 +312,6 @@
     <string name="follow_up_idle_hint">ستعمل واحدة تلو الأخرى عند بدء مهمة</string>
     <string name="follow_up_already_started">بدأت هذه المهمة بالفعل؛ أوقفها مباشرة إذا لزم</string>
     <string name="chat_placeholder_queue">اكتب المهمة التالية…</string>
-    <string name="voice_placeholder_queue">تحدّث عن المهمة التالية…</string>
     <string name="steer_received_paused">تم الاستلام — سيُستخدم عند متابعة المهمة</string>
     <plurals name="drawer_archive_many_done">
         <item quantity="zero">%1$d محادثة مؤرشفة</item>
@@ -366,20 +345,11 @@
     <string name="task_field_insert">إدراج</string>
     <string name="task_fields_too_many">استخدم %1$d حقول مختلفة كحد أقصى.</string>
     <string name="task_fill_apply">ملء مربع الإدخال</string>
-    <string name="chat_read_aloud">Read aloud</string>
-    <string name="chat_stop_speaking">Stop speaking</string>
     <string name="chat_audio">Audio</string>
     <string name="chat_audio_play">Play</string>
     <string name="chat_audio_stop">Stop</string>
-    <string name="plus_sub_album">اختر من صورك، يمكن اختيار عدة صور</string>
-    <string name="plus_sub_files">مستندات وملفات PDF وأرشيفات</string>
-    <string name="plus_sub_device">تصفّح مجلدات هذا الهاتف</string>
     <string name="plus_clipboard">الحافظة</string>
-    <string name="plus_sub_clipboard">الصق ما نسخته للتو</string>
     <string name="plus_sub_teach">أظهرها مرة واحدة ليتعلّمها Mika</string>
-    <string name="plus_sub_skills">استخدم مهارة لهذه الجولة</string>
-    <string name="plus_sub_tasks">املأ مهمة محفوظة في حقل الإدخال</string>
-    <string name="plus_sub_browser">المتصفح المدمج</string>
     <string name="plus_skills_empty">لا توجد مهارات شخصية بعد. المهارات التي يتعلّمها Mika من المهام المكتملة ستظهر هنا.</string>
     <string name="plus_clipboard_empty">لا يوجد نص للصقه من الحافظة</string>
     <string name="plus_skill_directive">استخدم مهارة «%1$s»: </string>

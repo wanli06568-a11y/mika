@@ -1,14 +1,13 @@
 package com.wangzan101.mika.settings
 
 import com.wangzan101.mika.core.cap.phone.sms.SmsLoginProfile
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 @Serializable
 class SmsLoginSaved(val version: Int = 2, val enabled: Boolean = false, val profiles: List<SmsLoginProfile> = emptyList())
@@ -43,8 +42,7 @@ class SmsLoginSettings(private val file: File, private val cipher: KeyCipher = K
         val tmp = File(file.path + ".tmp")
         val bytes = Json.encodeToString(SmsLoginSaved(enabled = next.enabled, profiles = next.profiles)).toByteArray()
         try {
-            tmp.writeBytes(cipher.encrypt(bytes))
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            AtomicFiles.write(file, cipher.encrypt(bytes), durable = false, temp = tmp)
             mutable.value = next
         } catch (e: Exception) { file.delete(); throw e }
         finally { bytes.fill(0); tmp.delete() }

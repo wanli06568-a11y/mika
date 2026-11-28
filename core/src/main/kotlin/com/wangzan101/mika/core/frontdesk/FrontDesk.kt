@@ -130,21 +130,30 @@ class FrontDesk(
         if (!report && current is TaskState.Terminal) return
         scope.launch {
             var previous: TaskState? = if (report) null else current
+            // 排过队才说「开始了」:派单当场就开始的,派单结果里已经告诉用户在办了,再说一遍是重复。
+            var queued = phaseOf(taskId, current) == DeskTaskPhase.Queued
             // 收到终态那一条就停止订阅,之后状态流再变也不再理会。
             states.transformWhile { emit(it); it !is TaskState.Terminal }.collect { next ->
                 val event = DeskEvents.classify(taskId, previous, next)
                 previous = next
                 updateView(taskId, title, next)
-                if (event != null && policy.shouldReport(event)) reports.trySend(DeskReport(event, title))
+                val wasQueued = queued
+                if (phaseOf(taskId, next) == DeskTaskPhase.Queued) queued = true
+                // 不说的「开始了」也照样过一遍汇报规则,进度的安静期从开始时算起,不会一开始就紧跟着报一句进度。
+                val say = event != null && policy.shouldReport(event) && (event !is DeskEvent.Started || wasQueued)
+                if (say) reports.trySend(DeskReport(event!!, title))
             }
         }
     }
 
+    /** 刚派出、任务服务还没接手的(Idle):不在开始队列里就是正在开始,不当成排队(否则卡片先闪「排队中」,前台也照着说还在排队)。 */
+    private fun phaseOf(taskId: String, state: TaskState): DeskTaskPhase =
+        if (state == TaskState.Idle && tasks.queuePosition(taskId) == null) DeskTaskPhase.Running else deskPhaseOf(state)
+
     private fun updateView(taskId: String, title: String, state: TaskState) {
         val now = clock()
         views.update { list ->
-            // 刚派出、任务服务还没接手的(Idle):不在开始队列里就是正在开始,不当成排队(否则卡片先闪「排队中」,前台也照着说还在排队)
-            val phase = if (state == TaskState.Idle && tasks.queuePosition(taskId) == null) DeskTaskPhase.Running else deskPhaseOf(state)
+            val phase = phaseOf(taskId, state)
             val line = lineOf(state)
             val old = list.firstOrNull { it.taskId == taskId }
             val before = old?.recent.orEmpty()

@@ -22,10 +22,4 @@
     <string name="calls_voice_default_name">Голос по умолчанию</string>
     <string name="calls_voice_protocol">Интегрированный голосовой сервис: распознавание, диалог и синтез речи выполняются одной службой.</string>
     <string name="calls_voice_credentials_keep">Оставьте пустым, чтобы сохранить учётные данные. Новые учётные данные заменят прежние и потребуют повторной проверки.</string>
-    <string name="calls_back_settings">Назад к настройкам</string>
-    <string name="calls_enabled_summary">ИИ может отвечать и звонить; автоматический ответ включается отдельно.</string>
-    <string name="calls_settings_device_group">Устройство и работа</string>
-    <string name="calls_settings_data_group">Данные</string>
-    <string name="calls_history_entry_summary">Сводки, задачи и исходный текст</string>
-    <string name="calls_voice_setup">Настроить и проверить голосовую службу</string>
 </resources>

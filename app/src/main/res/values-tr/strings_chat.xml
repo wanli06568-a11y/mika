@@ -20,7 +20,6 @@
     <string name="recommendations_drag_hint">Sırayı değiştirmek için tutamacı sürükleyin.</string>
     <string name="recommendations_move_up">Yukarı taşı</string>
     <string name="recommendations_move_down">Aşağı taşı</string>
-    <string name="recommendations_sub">Kayıtlı görev başlıklarını ve talimatları yönetin</string>
     <string name="recommendations_add">Görev ekle</string>
     <string name="recommendations_edit">Görevi düzenle</string>
     <string name="recommendations_empty">Kayıtlı görev yok</string>
@@ -63,7 +62,6 @@
     <string name="drawer_personal">Kişisel Asistan</string>
     <string name="chat_new">Yeni sohbet</string>
     <string name="chat_expand_steps">Adımları göster</string>
-    <string name="chat_collapse_steps">Adımları gizle</string>
     <string name="chat_view_process">Nasıl gittiğini gör</string>
     <string name="chat_unlock_body">Telefonunuz kilitli. Kilidi açtığınızda Mika devam eder.</string>
     <string name="chat_input_body">%1$s\nBir seçeneğe dokunun veya aşağıya yazın. %2$s</string>
@@ -76,9 +74,7 @@
     <string name="chat_restart_task">Baştan başla</string>
     <string name="chat_resume_request">Kontrol noktasından devam et: %1$s</string>
     <string name="chat_restart_request">Baştan yeniden başla: %1$s</string>
-    <string name="chat_view_source">Kaynağı görüntüle</string>
     <string name="chat_open">Aç</string>
-    <string name="chat_attach_rejected">Eklenemedi: %1$s (her dosya 200 MB altında olmalı)</string>
     <string name="chat_stop">Durdur</string>
     <string name="chat_send">Gönder</string>
     <string name="chat_scroll_to_bottom">En alta kaydır</string>
@@ -168,10 +164,6 @@
     <string name="steer_interrupted_reply">Mesajınız tarafından kesildi</string>
     <string name="steer_next">Mevcut görev sona erdi; sonraki olarak sıraya alındı</string>
     <string name="steer_cancelled">İptal edildi</string>
-    <plurals name="chat_steps_done">
-        <item quantity="one">%1$d adım</item>
-        <item quantity="other">%1$d adım</item>
-    </plurals>
     <string name="step_viewed">%1$s görüntülendi</string>
     <string name="step_viewed_part">%1$s içinde %2$s görüntülendi</string>
     <string name="step_failed">Başarısız</string>
@@ -186,7 +178,6 @@
         <item quantity="other">%1$d ekran görüntüsü</item>
     </plurals>
     <string name="attach_add">Ek ekle</string>
-    <string name="attach_close">Ek panelini kapat</string>
     <string name="attach_blocked_running">Bir görev çalışırken ek eklenemez — önce eklemek için sıra moduna geçin</string>
     <string name="attach_camera">Kamera</string>
     <string name="attach_album">Fotoğraflar</string>
@@ -229,9 +220,6 @@
     <string name="zoom_in">Yakınlaştır</string>
     <string name="chat_message_actions">Mesaj seçenekleri</string>
     <string name="chat_copy">Kopyala</string>
-    <string name="share_card_question">S</string>
-    <string name="share_card_answer">Y</string>
-    <string name="share_card_made_by">Mika tarafından tamamlandı</string>
     <string name="chat_quote">Alıntıla</string>
     <string name="chat_select_text">Metni seç</string>
     <string name="chat_copied">Kopyalandı</string>
@@ -243,7 +231,6 @@
     <string name="chat_branch_attachments_skipped">Tüm ekler kopyalanmadı</string>
     <string name="chat_branch_retry">Buradan tekrar sor</string>
     <string name="chat_branch_attachments_readd">Eklemek istediğiniz ekleri yeniden ekleyin</string>
-    <string name="chat_attach_unavailable">Eklenemedi: %1$s. Dosyaların mevcut olduğunu ve boyut sınırı içinde olduğunu kontrol edin.</string>
     <string name="chat_attach_too_large">%1$s: %2$s sınırını aşıyor</string>
     <string name="chat_attach_low_device_space">%1$s: yetersiz cihaz depolaması; alan boşaltıp tekrar deneyin</string>
     <string name="chat_attach_workspace_limit">%1$s: çalışma alanı depolama sınırına ulaşıldı; çalışma alanı dosyalarını kaldırıp tekrar deneyin</string>
@@ -273,9 +260,6 @@
     <string name="chat_task_cost_unavailable">Maliyet kullanılamıyor</string>
     <string name="follow_up_steer">Yönlendir</string>
     <string name="follow_up_queue">Sıraya al</string>
-    <string name="follow_up_steer_hint">Sonraki adım mevcut görevi ayarlayacak</string>
-    <string name="follow_up_steer_hint_paused">Görev duraklatıldı; bu, devam ettiğinde geçerli olur</string>
-    <string name="follow_up_steer_hint_queued">Bu, görev başladığında geçerli olur</string>
     <string name="follow_up_queue_hint">Mevcut görev bittikten sonra başlar</string>
     <string name="follow_up_count">Sırada · %1$d</string>
     <string name="follow_up_edit">Düzenle</string>
@@ -284,7 +268,6 @@
     <string name="follow_up_idle_hint">Bir görev başlattığınızda tek tek çalışırlar</string>
     <string name="follow_up_already_started">Bu zaten başladı — gerekirse doğrudan durdurun</string>
     <string name="chat_placeholder_queue">Sonraki görevi yazın…</string>
-    <string name="voice_placeholder_queue">Sonraki görevi söyleyin…</string>
     <string name="steer_received_paused">Anlaşıldı — görev devam ettiğinde kullanılacak</string>
     <plurals name="drawer_archive_many_done">
         <item quantity="one">%1$d sohbet arşivlendi</item>
@@ -310,20 +293,11 @@
     <string name="task_field_insert">Ekle</string>
     <string name="task_fields_too_many">En fazla %1$d farklı alan kullanın.</string>
     <string name="task_fill_apply">Girişi doldur</string>
-    <string name="chat_read_aloud">Sesli oku</string>
-    <string name="chat_stop_speaking">Konuşmayı durdur</string>
     <string name="chat_audio">Ses</string>
     <string name="chat_audio_play">Oynat</string>
     <string name="chat_audio_stop">Durdur</string>
-    <string name="plus_sub_album">Fotoğraflarından seç, birden fazla olabilir</string>
-    <string name="plus_sub_files">Belgeler, PDF dosyaları, arşivler</string>
-    <string name="plus_sub_device">Bu telefondaki klasörlere göz at</string>
     <string name="plus_clipboard">Pano</string>
-    <string name="plus_sub_clipboard">Kopyaladığın şeyi yapıştır</string>
     <string name="plus_sub_teach">Bir kez göster, Mika öğrensin</string>
-    <string name="plus_sub_skills">Bu tur için bir beceri seç</string>
-    <string name="plus_sub_tasks">Kayıtlı görevi giriş alanına doldur</string>
-    <string name="plus_sub_browser">Yerleşik tarayıcı</string>
     <string name="plus_skills_empty">Henüz kişisel beceri yok. Mika\'nın tamamlanan görevlerden öğrendiği beceriler burada görünür.</string>
     <string name="plus_clipboard_empty">Panodan yapıştırılacak metin yok</string>
     <string name="plus_skill_directive">“%1$s” becerisini kullan: </string>

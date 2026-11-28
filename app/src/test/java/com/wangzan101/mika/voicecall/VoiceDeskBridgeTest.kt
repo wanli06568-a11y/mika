@@ -143,9 +143,6 @@ class VoiceDeskBridgeTest {
         r.realtime.endsAtOnce = false
         r.bridge.onFunctionCall("c1", DeskTools.DISPATCH, dispatch("帮我订明晚的日料"))
         runCurrent()
-        // 开工那条说完
-        r.realtime.endNotice(spoken = true)
-        runCurrent()
         val before = r.realtime.notices.size
         r.port.states.getValue("t1").value = TaskState.WaitingInput("要几点?")
         runCurrent()
@@ -190,7 +187,7 @@ class VoiceDeskBridgeTest {
         runCurrent()
         r.port.states.getValue("t1").value = TaskState.Succeeded("订好了")
         runCurrent()
-        assertEquals(listOf("t1", "t1"), chat)
+        assertEquals(listOf("t1"), chat)
         assertTrue(r.sink.recorded.isEmpty())
     }
 }

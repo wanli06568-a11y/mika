@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">Compatibility self-check</string>
-    <string name="selfcheck_row_sub">See what works on this phone and report it</string>
     <string name="selfcheck_intro">Takes about 1 minute. It doesn’t touch your other apps, doesn’t change settings and doesn’t use the network. Please stay on this page while it runs.</string>
     <string name="selfcheck_start">Start</string>
     <string name="selfcheck_again">Run again</string>

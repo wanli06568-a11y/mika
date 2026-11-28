@@ -20,7 +20,6 @@
     <string name="recommendations_drag_hint">Seret pegangan untuk mengubah urutan tampilan.</string>
     <string name="recommendations_move_up">Pindahkan ke atas</string>
     <string name="recommendations_move_down">Pindahkan ke bawah</string>
-    <string name="recommendations_sub">Kelola tugas dan prompt yang tampil di beranda</string>
     <string name="recommendations_add">Tambah tugas</string>
     <string name="recommendations_edit">Edit tugas</string>
     <string name="recommendations_empty">Belum ada tugas rekomendasi</string>
@@ -62,7 +61,6 @@
     <string name="drawer_personal">Asisten pribadi</string>
     <string name="chat_new">Obrolan baru</string>
     <string name="chat_expand_steps">Tampilkan langkah</string>
-    <string name="chat_collapse_steps">Sembunyikan langkah</string>
     <string name="chat_view_process">Lihat prosesnya</string>
     <string name="chat_unlock_body">Ponsel Anda terkunci. Mika akan melanjutkan setelah Anda membukanya.</string>
     <string name="chat_input_body">%1$s\nKetuk pilihan atau ketik di bawah. %2$s</string>
@@ -75,9 +73,7 @@
     <string name="chat_restart_task">Mulai ulang</string>
     <string name="chat_resume_request">Lanjutkan dari titik terakhir: %1$s</string>
     <string name="chat_restart_request">Mulai ulang dari awal: %1$s</string>
-    <string name="chat_view_source">Lihat sumber</string>
     <string name="chat_open">Buka</string>
-    <string name="chat_attach_rejected">Gagal menambahkan: %1$s (setiap berkas harus di bawah 200 MB)</string>
     <string name="chat_stop">Hentikan</string>
     <string name="chat_send">Kirim</string>
     <string name="chat_scroll_to_bottom">Gulir ke bawah</string>
@@ -159,9 +155,6 @@
     <string name="steer_interrupted_reply">Terpotong oleh pesan Anda</string>
     <string name="steer_next">Tugas saat ini sudah selesai; diantrekan sebagai tugas berikutnya</string>
     <string name="steer_cancelled">Dibatalkan</string>
-    <plurals name="chat_steps_done">
-        <item quantity="other">%1$d langkah</item>
-    </plurals>
     <string name="step_viewed">Melihat %1$s</string>
     <string name="step_viewed_part">Melihat %2$s di %1$s</string>
     <string name="step_failed">Gagal</string>
@@ -175,7 +168,6 @@
         <item quantity="other">%1$d tangkapan layar</item>
     </plurals>
     <string name="attach_add">Tambah lampiran</string>
-    <string name="attach_close">Tutup panel lampiran</string>
     <string name="attach_blocked_running">Tidak bisa menambah lampiran saat tugas berjalan — pindah ke mode antre dulu</string>
     <string name="attach_camera">Kamera</string>
     <string name="attach_album">Foto</string>
@@ -217,9 +209,6 @@
     <string name="zoom_in">Perbesar</string>
     <string name="chat_message_actions">Opsi pesan</string>
     <string name="chat_copy">Salin</string>
-    <string name="share_card_question">Pertanyaan</string>
-    <string name="share_card_answer">Jawaban</string>
-    <string name="share_card_made_by">Diselesaikan oleh Mika</string>
     <string name="chat_quote">Kutip</string>
     <string name="chat_select_text">Pilih teks</string>
     <string name="chat_copied">Disalin</string>
@@ -231,7 +220,6 @@
     <string name="chat_branch_attachments_skipped">Tidak semua lampiran tersalin</string>
     <string name="chat_branch_retry">Tanya ulang dari sini</string>
     <string name="chat_branch_attachments_readd">Tambahkan ulang lampiran yang ingin disertakan</string>
-    <string name="chat_attach_unavailable">Tidak dapat menambahkan: %1$s. Pastikan berkas tersedia dan tidak melebihi batas ukuran.</string>
     <string name="chat_attach_too_large">%1$s: melebihi batas %2$s</string>
     <string name="chat_attach_low_device_space">%1$s: ruang penyimpanan ponsel tidak cukup; kosongkan ruang lalu coba lagi</string>
     <string name="chat_attach_workspace_limit">%1$s: penyimpanan ruang kerja mencapai batas; hapus berkas di ruang kerja lalu coba lagi</string>
@@ -261,9 +249,6 @@
     <string name="chat_task_cost_unavailable">Biaya tidak tersedia</string>
     <string name="follow_up_steer">Arahkan</string>
     <string name="follow_up_queue">Antrekan</string>
-    <string name="follow_up_steer_hint">Langkah berikutnya akan menyesuaikan tugas saat ini</string>
-    <string name="follow_up_steer_hint_paused">Tugas sedang dijeda; ini berlaku saat dilanjutkan</string>
-    <string name="follow_up_steer_hint_queued">Ini berlaku saat tugas dimulai</string>
     <string name="follow_up_queue_hint">Dimulai setelah tugas saat ini selesai</string>
     <string name="follow_up_count">Dalam antrean · %1$d</string>
     <string name="follow_up_edit">Ubah</string>
@@ -272,7 +257,6 @@
     <string name="follow_up_idle_hint">Akan dijalankan satu per satu saat Anda memulai tugas</string>
     <string name="follow_up_already_started">Yang ini sudah dimulai; hentikan langsung jika perlu</string>
     <string name="chat_placeholder_queue">Tulis tugas berikutnya…</string>
-    <string name="voice_placeholder_queue">Ucapkan tugas berikutnya…</string>
     <string name="steer_received_paused">Dimengerti — akan dipakai saat tugas dilanjutkan</string>
     <plurals name="drawer_archive_many_done">
         <item quantity="other">%1$d chat diarsipkan</item>
@@ -296,20 +280,11 @@
     <string name="task_field_insert">Sisipkan</string>
     <string name="task_fields_too_many">Gunakan maksimal %1$d isian berbeda.</string>
     <string name="task_fill_apply">Isi kotak pesan</string>
-    <string name="chat_read_aloud">Read aloud</string>
-    <string name="chat_stop_speaking">Stop speaking</string>
     <string name="chat_audio">Audio</string>
     <string name="chat_audio_play">Play</string>
     <string name="chat_audio_stop">Stop</string>
-    <string name="plus_sub_album">Pilih dari foto, boleh beberapa</string>
-    <string name="plus_sub_files">Dokumen, PDF, arsip</string>
-    <string name="plus_sub_device">Jelajahi folder di ponsel ini</string>
     <string name="plus_clipboard">Papan klip</string>
-    <string name="plus_sub_clipboard">Tempel yang baru saja disalin</string>
     <string name="plus_sub_teach">Tunjukkan sekali, Mika akan belajar</string>
-    <string name="plus_sub_skills">Pilih skill untuk giliran ini</string>
-    <string name="plus_sub_tasks">Isi tugas tersimpan ke kolom input</string>
-    <string name="plus_sub_browser">Browser bawaan</string>
     <string name="plus_skills_empty">Belum ada skill pribadi. Skill yang dipelajari Mika dari tugas yang selesai akan muncul di sini.</string>
     <string name="plus_clipboard_empty">Tidak ada teks untuk ditempel dari papan klip</string>
     <string name="plus_skill_directive">Gunakan skill “%1$s”: </string>

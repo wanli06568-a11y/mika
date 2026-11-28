@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">يلزم التغيير</string>
     <string name="calls_disable_sub">تعود المكالمات الواردة والصادرة إلى هاتف النظام</string>
     <string name="calls_how_to_talk">عند الرد</string>
-    <string name="calls_greeting_empty">فارغ · انتظر حتى يتكلم المتصل أولًا</string>
-    <string name="calls_talk_settings_sub">التعليمات وأقصى مدة يتكلم فيها الذكاء الاصطناعي</string>
     <string name="calls_stage_listen">يستمع</string>
     <string name="calls_stage_think">يفكر</string>
     <string name="calls_stage_speak">يتكلم</string>

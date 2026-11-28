@@ -63,7 +63,6 @@
         <item quantity="other">%1$d steps</item>
     </plurals>
     <string name="timeline_criteria">What counts as done</string>
-    <string name="timeline_outcome">Outcome</string>
     <string name="timeline_check">Check</string>
     <string name="timeline_duration">Time taken</string>
     <string name="timeline_more">More details</string>
@@ -85,8 +84,6 @@
         <item quantity="other">Viewed %1$d times</item>
     </plurals>
     <string name="effect_small_change">Changed a little</string>
-    <string name="timeline_hide_screen">Hide screen</string>
-    <string name="timeline_show_screen">See the screen at the time</string>
     <string name="timeline_step_screen">Screen at step %1$d</string>
     <string name="timeline_export">Export usage records</string>
     <string name="timeline_export_hint">Save the token usage of each model reply and context compaction events as JSONL.</string>

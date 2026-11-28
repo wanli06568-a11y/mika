@@ -32,7 +32,6 @@
     <string name="memory_tasks">Lembrar tarefas anteriores</string>
     <string name="memory_tasks_sub">Guarda um pequeno resumo de cada tarefa concluída para relembrar da próxima vez</string>
     <string name="memory_tasks_title">Tarefas anteriores</string>
-    <string name="memory_clear_sub">Excluir toda a memória e as habilidades aprendidas</string>
     <string name="edit_it">Editar</string>
     <string name="unpin">Desafixar</string>
     <string name="pin">Fixar</string>
@@ -87,7 +86,6 @@
     <string name="skills_get">Obter habilidades</string>
     <string name="skills_share">Compartilhar habilidade</string>
     <string name="skills_import">Importar uma habilidade</string>
-    <string name="skills_import_sub">Cole uma habilidade que alguém compartilhou com você</string>
     <string name="skills_import_hint">Ela vai primeiro para “Para revisar” e só é usada depois que você ler e aceitar.</string>
     <string name="skills_import_confirm">Importar</string>
     <string name="skill_imported">Importada. Revise em “Para revisar”.</string>
@@ -95,7 +93,6 @@
     <string name="skill_builtin_name">Já existe uma habilidade integrada com esse nome. Mude o nome e tente de novo.</string>
     <string name="skill_draft_pending">Já há um rascunho com esse nome esperando revisão. Resolva esse primeiro.</string>
     <string name="market_title">Mercado de habilidades</string>
-    <string name="market_sub">Explore habilidades compartilhadas no GitHub</string>
     <string name="market_source">Fonte das habilidades</string>
     <string name="market_add">Adicionar para revisão</string>
     <string name="market_network_error">Não foi possível baixar. Verifique o repositório e a conexão.</string>

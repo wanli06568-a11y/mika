@@ -121,8 +121,9 @@ private class ConfiguredRealtimeProvider(
         credentials: VolcRealtimeCredentials,
         systemPrompt: String,
         enablePhoneDtmf: Boolean,
+        languageTag: String?,
     ): CallRealtimeSession = try {
-        CategorizedRealtimeSession(delegate.connect(this.profile, this.credentials, systemPrompt, enablePhoneDtmf))
+        CategorizedRealtimeSession(delegate.connect(this.profile, this.credentials, systemPrompt, enablePhoneDtmf, languageTag))
     } catch (error: CancellationException) {
         throw error
     } catch (error: Throwable) {

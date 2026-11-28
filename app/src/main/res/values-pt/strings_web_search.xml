@@ -12,7 +12,6 @@
     <string name="web_search_missing_key">O %1$s precisa de uma chave de API para funcionar.</string>
     <string name="web_search_get_key">Obter uma chave de API</string>
     <string name="web_search_privacy">A chave é armazenada criptografada neste telefone. Os resultados são tratados como conteúdo não confiável.</string>
-    <string name="web_search_row_sub">Serviço de pesquisa opcional; a pesquisa no navegador está sempre disponível</string>
     <string name="web_search_enabled">Ativar pesquisa na web</string>
     <string name="web_search_api_key">Chave de API (opcional)</string>
     <string name="web_search_invalid_endpoint">Digite um URL HTTP ou HTTPS sem parâmetros de consulta.</string>

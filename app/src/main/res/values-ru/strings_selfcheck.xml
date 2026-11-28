@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">Проверка совместимости</string>
-    <string name="selfcheck_row_sub">Узнайте, что работает на этом телефоне, и сообщите об этом</string>
     <string name="selfcheck_intro">Занимает около минуты. Другие приложения не затрагиваются, настройки не меняются, сеть не используется. Пока идёт проверка, оставайтесь на этой странице.</string>
     <string name="selfcheck_start">Начать</string>
     <string name="selfcheck_again">Запустить снова</string>

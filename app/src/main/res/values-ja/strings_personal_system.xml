@@ -5,10 +5,6 @@
     <string name="personal_system_reply_failed">返信に失敗しました。しばらくしてからもう一度お試しください。</string>
     <string name="personal_system_task_start_failed">タスクの開始に失敗しました</string>
     <string name="personal_system_task_cancelled">タスクをキャンセルしました</string>
-    <string name="personal_system_task_completed">タスクが完了しました</string>
-    <string name="personal_system_task_failed">タスクに失敗しました</string>
-    <string name="personal_system_task_running">タスクを実行中</string>
-    <string name="personal_system_task_queued">タスクは待機中</string>
     <string name="personal_system_no_model">まず設定でメインモデルを選択してから、ここに戻って会話を続けてください。</string>
     <string name="personal_system_context_long">このメッセージは現在のモデルのコンテキスト上限を超えています。複数に分けて送信してください。</string>
     <string name="personal_system_empty_reply">モデルから表示できる応答が返されませんでした。もう一度お試しください。</string>

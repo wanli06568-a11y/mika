@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">無權存取</string>
     <string name="device_dirs_unknown">狀態暫不可用</string>
     <string name="device_dirs_entry">手機目錄線索</string>
-    <string name="device_dirs_entry_sub">幫助 Mika 尋找下載的檔案</string>
     <string name="device_dirs_source_preset">系統預設</string>
     <string name="device_dirs_source_user">使用者填寫</string>
     <string name="device_dirs_source_mika">Mika 更新</string>

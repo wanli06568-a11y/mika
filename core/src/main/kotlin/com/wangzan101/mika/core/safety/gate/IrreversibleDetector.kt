@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.safety.gate
 
+import com.wangzan101.mika.core.net.str
 import com.wangzan101.mika.core.screen.uistate.CdpKeys
 import com.wangzan101.mika.core.screen.uistate.KeyCombo
 import com.wangzan101.mika.core.screen.uistate.KeyModifier
@@ -183,11 +184,11 @@ object IrreversibleDetector {
         GateTarget.Swipe -> horizontal(args) != null
         // 网页上能触发提交的交互都判:每个组合键按焦点判,拖动按起点和终点(滑动支付、拖进删除区),
         // 下拉选择按下拉框和选中的那一项(页面可能一改就提交);悬停不会提交
-        GateTarget.Interact -> when (str(args, "action")) {
+        GateTarget.Interact -> when (args.str("action")) {
             "key" -> combo(args) != null
             "drag", "select" -> true
             // 点页面弹框的「确定」可能就是提交(确认删除、确认付款):按弹框的字判;取消不判
-            "dialog" -> str(args, "answer") == "accept"
+            "dialog" -> args.str("answer") == "accept"
             else -> false
         }
         null -> false
@@ -202,7 +203,7 @@ object IrreversibleDetector {
                 ?: if (bool(args, "pressEnter")) enterHit(args, snapshot, fresh ?: snapshot, KEY_ENTER) else null
             GateTarget.Key -> enterHit(args, snapshot, fresh ?: snapshot, key(args)!!)
             GateTarget.Swipe -> swipeHit(args, fresh ?: snapshot)
-            GateTarget.Interact -> when (str(args, "action")) {
+            GateTarget.Interact -> when (args.str("action")) {
                 "key" -> comboHit(args, snapshot, fresh ?: snapshot)
                 "select" -> selectHit(args, snapshot, fresh)
                 "dialog" -> dialogHit(fresh ?: snapshot)
@@ -212,10 +213,10 @@ object IrreversibleDetector {
         }
     }
 
-    private fun combo(args: JsonObject) = str(args, "key")?.let(CdpKeys::parseCombo)
+    private fun combo(args: JsonObject) = args.str("key")?.let(CdpKeys::parseCombo)
 
     /** 打字给的是一个点(坐标,或换成坐标之前的 @vN),不是树里的元素。 */
-    private fun atPoint(args: JsonObject) = args["x"] != null || str(args, "ref")?.let(LOCATED_REF::matches) == true
+    private fun atPoint(args: JsonObject) = args["x"] != null || args.str("ref")?.let(LOCATED_REF::matches) == true
 
     /**
      * 组合键按它能对焦点做什么来判:
@@ -272,17 +273,17 @@ object IrreversibleDetector {
     /** 下拉选择:下拉框按点击判,选中的那一项的文字按按钮名判。 */
     private fun selectHit(args: JsonObject, snapshot: ScreenSnapshot?, fresh: ScreenSnapshot?): Irreversible? {
         tapHit(args, snapshot, fresh)?.let { return it }
-        val option = str(args, "option") ?: return null
+        val option = args.str("option") ?: return null
         return matchName(option, fresh ?: snapshot)?.let { Irreversible(it, "option:${option.trim()}") }
     }
 
     /** 拖动的起点、终点各按一次点击来判(编号共用 snapshotId)。 */
     private fun dragHit(args: JsonObject, snapshot: ScreenSnapshot?, fresh: ScreenSnapshot?): Irreversible? {
         fun end(ref: String, x: String, y: String) = buildJsonObject {
-            val r = str(args, ref)
+            val r = args.str(ref)
             if (r != null) {
                 put("ref", r)
-                str(args, "snapshotId")?.let { put("snapshotId", it) }
+                args.str("snapshotId")?.let { put("snapshotId", it) }
             } else {
                 args[x]?.let { put("x", it) }
                 args[y]?.let { put("y", it) }
@@ -488,7 +489,7 @@ object IrreversibleDetector {
         if (targets.isNotEmpty() && targets.all { (e, s) -> editsField(e, s) }) return null
         for ((e, s) in targets) elementHit(e, s)?.let { return it }
         // 坐标点上没有带名字的元素(自绘界面、没名字的图标,看图找到的点常这样):按同一行的文字判
-        if (str(args, "ref") == null && targets.all { (e, s) -> withChildren(e, s).all { it.name.isBlank() } }) {
+        if (args.str("ref") == null && targets.all { (e, s) -> withChildren(e, s).all { it.name.isBlank() } }) {
             val s = fresh ?: snapshot
             val y = num(args, "y")
             if (s != null && y != null) rowHit(s, y)?.let { return it }
@@ -496,7 +497,7 @@ object IrreversibleDetector {
         // 元素找不到、或是没有文字的图标时,模型自己写的 target 也算数;
         // 看图找到的点另带找的原文(text)和模型看到的字(seen),一样判
         return listOf("target", "text", "seen").firstNotNullOfOrNull { k ->
-            str(args, k)?.let { t -> matchName(t, fresh ?: snapshot)?.let { Irreversible(it, t.trim()) } }
+            args.str(k)?.let { t -> matchName(t, fresh ?: snapshot)?.let { Irreversible(it, t.trim()) } }
         }
     }
 
@@ -505,9 +506,9 @@ object IrreversibleDetector {
      * 坐标 → 此刻那一点上最小的可点元素。
      */
     private fun tapTargets(args: JsonObject, snapshot: ScreenSnapshot?, fresh: ScreenSnapshot?): List<Pair<UiElement, ScreenSnapshot>> {
-        val ref = str(args, "ref")
+        val ref = args.str("ref")
         if (ref != null) {
-            val s = snapshot?.takeIf { it.snapshotId == str(args, "snapshotId") } ?: return emptyList()
+            val s = snapshot?.takeIf { it.snapshotId == args.str("snapshotId") } ?: return emptyList()
             val e = s.elements.firstOrNull { it.ref == ref } ?: return emptyList()
             val now = fresh?.let { f -> center(e)?.let { (x, y) -> at(f, x, y) }?.let { it to f } }
             return listOfNotNull(e to s, now)
@@ -543,9 +544,9 @@ object IrreversibleDetector {
      */
     private fun enterHit(args: JsonObject, snapshot: ScreenSnapshot?, s: ScreenSnapshot?, key: Int): Irreversible? {
         val keyName = if (key == KEY_SPACE) "空格" else "回车"
-        val ref = str(args, "ref")
+        val ref = args.str("ref")
         val field = if (ref == null) null
-        else snapshot?.takeIf { it.snapshotId == str(args, "snapshotId") }?.elements?.firstOrNull { it.ref == ref }
+        else snapshot?.takeIf { it.snapshotId == args.str("snapshotId") }?.elements?.firstOrNull { it.ref == ref }
         val focused = field ?: s?.elements?.firstOrNull { it.focused }
         if (focused != null) {
             if (focused.editable) {
@@ -607,7 +608,7 @@ object IrreversibleDetector {
             val dx = abs(x2 - x1)
             return if (dx >= SWIPE_DELETE_MIN && dx > abs(y2 - y1)) x1 to y1 else null
         }
-        val dir = str(args, "direction") ?: return null
+        val dir = args.str("direction") ?: return null
         if (dir != "left" && dir != "right") return null
         val dist = min(650, (num(args, "amount") ?: 3) * 100)
         if (dist < SWIPE_DELETE_MIN) return null
@@ -616,7 +617,7 @@ object IrreversibleDetector {
         return max(50, min(949, (cx - dx / 2.0).roundToInt())) to cy
     }
 
-    private fun key(args: JsonObject): Int? = str(args, "key")?.let(PressKeys::resolve)
+    private fun key(args: JsonObject): Int? = args.str("key")?.let(PressKeys::resolve)
 
     private fun label(e: UiElement) = e.name.trim().ifEmpty { e.resourceId ?: e.ref }
 
@@ -637,8 +638,6 @@ object IrreversibleDetector {
 
     private fun area(e: UiElement): Long =
         if (e.bounds.size != 4) Long.MAX_VALUE else (e.bounds[2] - e.bounds[0]).toLong() * (e.bounds[3] - e.bounds[1])
-
-    private fun str(o: JsonObject, k: String) = (o[k] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
     /** 和 tap 一样容忍 [a,b](取中点)。 */
     private fun num(o: JsonObject, k: String): Int? {

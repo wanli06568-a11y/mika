@@ -5,8 +5,6 @@
     <string name="teach_goal_label">Cần học gì</string>
     <string name="teach_goal_hint">ví dụ: điểm danh trên ứng dụng chấm công mỗi sáng</string>
     <string name="teach_disclosure">Các bước chỉ lưu trên điện thoại này, và chỉ sau khi bạn nhấn Bắt đầu trình diễn. Nếu đã thiết lập mô hình, việc tạo kỹ năng sẽ gửi bản tóm tắt đã lược bỏ thông tin nhạy cảm về mục tiêu và các bước cho mô hình đó. Mật khẩu, mã xác minh và thông tin thanh toán sẽ bị loại ra. Nếu chưa thiết lập mô hình, bản nháp được viết trên điện thoại này và không có gì được tải lên. Bản nháp chưa được dùng cho đến khi bạn chấp nhận, và chưa được chạy thử.</string>
-    <string name="teach_continue">Tiếp tục</string>
-    <string name="teach_ready_body">Mika sẽ quan sát và không thao tác trên điện thoại. Bạn có thể tạm dừng, kết thúc hoặc hủy bỏ. Không có gì được ghi lại cho đến khi bạn nhấn Bắt đầu trình diễn.</string>
     <string name="teach_start">Bắt đầu trình diễn</string>
     <string name="teach_learning">Đang học</string>
     <string name="teach_paused">Đã tạm dừng</string>
@@ -14,7 +12,6 @@
     <string name="teach_resume">Tiếp tục</string>
     <string name="teach_end">Kết thúc trình diễn</string>
     <string name="teach_discard">Hủy bỏ</string>
-    <string name="teach_discard_body">Hủy buổi trình diễn này và xóa các bước đã lưu?</string>
     <string name="teach_busy">Một tác vụ đang chạy. Hãy đợi tác vụ kết thúc trước khi dạy.</string>
     <string name="teach_need_a11y">Hãy bật hỗ trợ tiếp cận trước khi trình diễn. Mika không thể thấy các lần nhấn nếu thiếu tính năng này.</string>
     <string name="teach_interrupted">Buổi trình diễn đã dừng vì ứng dụng khởi động lại hoặc hỗ trợ tiếp cận bị tắt. Không có gì được ghi lại cho đến khi bạn nhấn Tiếp tục.</string>

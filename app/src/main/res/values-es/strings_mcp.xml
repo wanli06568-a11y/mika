@@ -31,7 +31,6 @@
     <string name="mcp_last_request">Última solicitud %1$s</string>
     <string name="mcp_advanced">Ajustes avanzados</string>
     <string name="mcp_advanced_hide">Ocultar ajustes avanzados</string>
-    <string name="mcp_advanced_sub">Interruptores de acceso, tokens y activación remota</string>
     <string name="mcp_port_detail">Puerto %1$d. El acceso por USB se desactiva al reiniciar el teléfono.</string>
     <string name="mcp_port_title">Puerto de escucha</string>
     <string name="mcp_port_dialog_sub">Cámbialo cuando otra parte use el puerto predeterminado en este teléfono. Se aplica al momento; el equipo se reconecta por el nuevo puerto.</string>

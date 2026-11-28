@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">Change</string>
     <string name="calls_disable_sub">Incoming calls and dialing all go back to the system phone</string>
     <string name="calls_how_to_talk">When it answers</string>
-    <string name="calls_greeting_empty">Empty · wait for the caller to speak first</string>
-    <string name="calls_talk_settings_sub">Instructions and the longest the AI talks</string>
     <string name="calls_stage_listen">Listen</string>
     <string name="calls_stage_think">Think</string>
     <string name="calls_stage_speak">Speak</string>

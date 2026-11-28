@@ -31,7 +31,6 @@
     <string name="browser_download_running">Mengunduh…</string>
     <string name="browser_download_done">Selesai diunduh</string>
     <string name="browser_download_failed">Unduhan gagal</string>
-    <string name="browser_download_open">Buka</string>
     <string name="browser_download_cancel">Batalkan unduhan</string>
     <string name="browser_download_delete">Hapus</string>
     <string name="browser_download_delete_q">Hapus unduhan ini?</string>
@@ -43,7 +42,6 @@
     <string name="browser_permission_location">Lokasi</string>
     <string name="browser_permission_allow">Izinkan</string>
     <string name="browser_permission_block">Blokir</string>
-    <string name="browser_no_download">Browser belum bisa mengunduh berkas.</string>
     <string name="browser_crashed">Halaman mengalami masalah dan ditutup. Anda bisa membukanya lagi.</string>
     <string name="browser_logged_in">Sudah masuk — Mika juga bisa memakainya untuk tugas.</string>
     <string name="browser_desktop">Desktop</string>

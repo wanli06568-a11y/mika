@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">要変更</string>
     <string name="calls_disable_sub">着信と発信をすべてシステムの電話に戻します</string>
     <string name="calls_how_to_talk">応答したら</string>
-    <string name="calls_greeting_empty">空欄 · 相手が先に話すのを待つ</string>
-    <string name="calls_talk_settings_sub">通話の説明と AI の最長通話時間</string>
     <string name="calls_stage_listen">聞く</string>
     <string name="calls_stage_think">考える</string>
     <string name="calls_stage_speak">話す</string>

@@ -5,8 +5,6 @@
     <string name="teach_goal_label">Yang diajarkan</string>
     <string name="teach_goal_hint">mis. absen setiap pagi di aplikasi kehadiran</string>
     <string name="teach_disclosure">Langkah hanya disimpan di ponsel ini, dan hanya setelah Anda mengetuk Mulai demonstrasi. Jika model sudah diatur, membuat keterampilan mengirim ringkasan tujuan dan langkah yang sudah disensor ke model itu. Kata sandi, kode, dan detail pembayaran tidak ikut. Jika tidak ada model, draf ditulis di ponsel dan tidak ada yang diunggah. Draf tidak dipakai sebelum diterima, dan belum berhasil diuji coba.</string>
-    <string name="teach_continue">Lanjut</string>
-    <string name="teach_ready_body">Mika hanya melihat dan tidak mengoperasikan ponsel. Anda bisa menjeda, mengakhiri, atau membuang. Tidak ada yang direkam sebelum mengetuk Mulai demonstrasi.</string>
     <string name="teach_start">Mulai demonstrasi</string>
     <string name="teach_learning">Sedang belajar</string>
     <string name="teach_paused">Dijeda</string>
@@ -14,7 +12,6 @@
     <string name="teach_resume">Lanjutkan</string>
     <string name="teach_end">Akhiri demonstrasi</string>
     <string name="teach_discard">Buang</string>
-    <string name="teach_discard_body">Buang demonstrasi ini dan hapus langkah yang tersimpan?</string>
     <string name="teach_busy">Ada tugas yang berjalan. Tunggu selesai sebelum mengajar.</string>
     <string name="teach_need_a11y">Nyalakan aksesibilitas sebelum demonstrasi. Tanpa itu Mika tidak melihat ketukan.</string>
     <string name="teach_interrupted">Demonstrasi berhenti karena aplikasi dimulai ulang atau aksesibilitas dimatikan. Tidak ada yang direkam sampai Anda melanjutkan.</string>

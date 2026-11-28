@@ -87,6 +87,35 @@ class LazyPhoneScreenTest {
         assertEquals(listOf("shareAudio"), calls)
     }
 
+    @Test fun imageAndVideoCapabilitiesDoNotConnectThePhone() {
+        var builds = 0
+        val lazy = LazyPhoneScreen(1080, 2400, listApps = { emptyList() }, canShareImage = true, canShareVideo = true) {
+            builds++
+            error("checking the capability must stay lazy")
+        }
+        assertTrue(lazy.canShareImage)
+        assertTrue(lazy.canShareVideo)
+        assertEquals(0, builds)
+    }
+
+    @Test fun shareImageAndVideoAreForwardedAfterLazyBuild() = runTest {
+        val calls = mutableListOf<String>()
+        val inner = Proxy.newProxyInstance(ScreenPort::class.java.classLoader, arrayOf(ScreenPort::class.java)) { _, method, _ ->
+            calls += method.name
+            if (method.name == "shareImage" || method.name == "shareVideo") ActionResult.Ok() else null
+        } as ScreenPort
+        var builds = 0
+        val lazy = LazyPhoneScreen(1080, 2400, listApps = { emptyList() }, canShareImage = true, canShareVideo = true) {
+            builds++
+            inner
+        }
+
+        assertEquals(ActionResult.Ok(), lazy.shareImage("com.example.app", "/workspace/out/a.png", null))
+        assertEquals(ActionResult.Ok(), lazy.shareVideo("com.example.app", "/workspace/out/a.mp4", "hi"))
+        assertEquals(1, builds)
+        assertEquals(listOf("shareImage", "shareVideo"), calls)
+    }
+
     @Test fun bulkCalendarInsertUsesInjectedWriterWithoutBuildingThePhone() = runTest {
         var builds = 0
         var received: List<SystemAction.AddCalendarEvent>? = null

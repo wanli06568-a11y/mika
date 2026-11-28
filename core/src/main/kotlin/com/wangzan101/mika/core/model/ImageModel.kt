@@ -1,6 +1,5 @@
 package com.wangzan101.mika.core.model
 
-import kotlinx.serialization.json.JsonObject
 import java.util.Base64
 
 /**
@@ -168,13 +167,4 @@ internal fun extensionOf(mime: String): String = when (mime.substringAfter('/', 
     "webp" -> "webp"
     "gif" -> "gif"
     else -> "png"
-}
-
-/** 把图片请求的参数摘要成 tracing/用量用的 JSON（multipart 请求也能记一条）。 */
-internal fun imageTracePayload(model: String, request: ImageRequest): JsonObject = kotlinx.serialization.json.buildJsonObject {
-    put("model", kotlinx.serialization.json.JsonPrimitive(model))
-    put("prompt", kotlinx.serialization.json.JsonPrimitive(request.prompt.take(200)))
-    put("aspect", kotlinx.serialization.json.JsonPrimitive(request.aspect.wire))
-    put("count", kotlinx.serialization.json.JsonPrimitive(request.count))
-    if (request.references.isNotEmpty()) put("references", kotlinx.serialization.json.JsonPrimitive(request.references.size))
 }

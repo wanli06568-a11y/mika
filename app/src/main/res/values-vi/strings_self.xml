@@ -3,7 +3,6 @@
     <string name="settings_self_operate">Cho phép Mika thao tác trên màn hình của chính nó</string>
     <string name="settings_self_operate_sub">Vẫn hỏi trước khi mở liên kết trong trình duyệt của bạn.</string>
     <string name="settings_pip_operate">Thao tác trực tiếp trên khung xem nhỏ</string>
-    <string name="settings_pip_operate_sub">Nhấn và vuốt trong cửa sổ nhỏ để điều khiển màn hình</string>
     <string name="settings_external_schedule">Cho phép script tạo tác vụ theo lịch</string>
     <string name="settings_external_schedule_sub">Ứng dụng khác có thể gửi tác vụ qua broadcast, có giới hạn tốc độ và được đánh dấu là do script tạo.</string>
     <string name="self_notify_channel">Hành động của Mika</string>

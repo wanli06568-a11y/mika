@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">개인 메시지로 Mika 작업을 시작할 수 있어요</string>
     <string name="wechat_turn_off">끄기</string>
     <string name="wechat_title">WeChat</string>
-    <string name="wechat_settings_sub">WeChat에서 Mika에게 작업 맡기기</string>
     <string name="wechat_status_disconnected">연결 안 됨</string>
     <string name="wechat_status_connecting">연결 중</string>
     <string name="wechat_status_connected">연결됨</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">WeChat에서 스캔하고 권한을 승인한 후 봇의 개인 대화에서 문자나 이미지를 보내세요. 이 QR 코드는 이번 연동에만 사용되니 전달하지 마세요.</string>
     <string name="wechat_connection">연결</string>
     <string name="wechat_receive">WeChat 작업 받기</string>
-    <string name="wechat_receive_sub">끄면 새 메시지를 읽지 않아요</string>
     <string name="wechat_allow_unlock">WeChat 작업의 화면 깨우기 및 잠금 해제 허용</string>
     <string name="wechat_allow_unlock_sub">연결된 본인 WeChat 계정의 개인 채팅에서 보낸 작업만 이 휴대전화의 화면을 깨우고 잠금 해제를 시도할 수 있습니다.</string>
     <string name="wechat_allow_unlock_foot">기본값은 꺼짐이며 다시 연결하면 꺼집니다. 먼저 “%1$s › %2$s”에서 “%3$s”를 켜고, 화면 잠금 PIN 또는 비밀번호를 사용한다면 이 휴대전화에 저장하세요. 이 스위치는 해당 권한을 변경하지 않으며 WeChat으로 전송된 인증 정보를 잠금 해제에 사용하지 않습니다.</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">개인 문자, 이미지와 실제 작업</string>
     <string name="wechat_capability_replies">Mika의 질문, 작업 결과와 알림</string>
     <string name="wechat_capability_phone">결제 확인과 전화기 직접 제어</string>
-    <string name="wechat_capability_phone_sub">이 전화기에서 완료해야 해요</string>
     <string name="wechat_capability_later">음성, 파일, 그룹, 다중 계정</string>
     <string name="wechat_supported">지원</string>
     <string name="wechat_phone_only">전화기</string>

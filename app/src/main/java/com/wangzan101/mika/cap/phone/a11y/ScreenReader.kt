@@ -69,8 +69,7 @@ internal object ScreenReader {
             var clippedBounds = listOf(0, 0, 0, 0)
             if (visible) {
                 n.getBoundsInScreen(rect)
-                hash = mix(hash, n.className, n.text, n.contentDescription, rect.flattenToString(),
-                    states(n))
+                hash = mixNode(hash, n, rect)
                 if (n.isPassword) password = true
                 val own = if (n.isPassword) n.hintText?.toString()?.trim()?.ifEmpty { null } else ownLabel(n)
                 own?.let(texts::add)
@@ -195,15 +194,7 @@ internal object ScreenReader {
         return cls.endsWith("RecyclerView") || cls.endsWith("ListView") || cls.endsWith("GridView")
     }
 
-    private fun inList(n: AccessibilityNodeInfo): Boolean {
-        var p = n.parent
-        var depth = 0
-        while (p != null && depth++ < MAX_DEPTH) {
-            if (isList(p)) return true
-            p = p.parent
-        }
-        return false
-    }
+    private fun inList(n: AccessibilityNodeInfo): Boolean = n.ancestors(MAX_DEPTH).any(::isList)
 
     private fun clip(rect: Rect, width: Int, height: Int) {
         if (!rect.intersect(0, 0, width, height)) rect.setEmpty()
@@ -221,8 +212,7 @@ internal object ScreenReader {
             if (depth > MAX_DEPTH) return
             if (n.isVisibleToUser) {
                 n.getBoundsInScreen(rect)
-                hash = mix(hash, n.className, n.text, n.contentDescription, rect.flattenToString(),
-                    states(n))
+                hash = mixNode(hash, n, rect)
             }
             for (i in 0 until n.childCount) n.getChild(i)?.let { visit(it, depth + 1) }
         }
@@ -238,10 +228,27 @@ internal object ScreenReader {
         if (!n.isEnabled) add(UiStates.DISABLED)
     }
 
-    // isChecked 在 API 36 起被三态的 checked 取代;minSdk 30 仍需用它
+    /**
+     * 把一个可见节点并进界面指纹:类名、文字、描述、屏上位置([rect],调用方刚读好)和控件状态。
+     * 位置和状态直接按数值混进去,不拼字符串;指纹只在同一进程里前后比对,算法变了不影响别处。
+     */
+    // isChecked 在 API 36 起被三态的 checked 取代;minSdk 29 仍需用它
     @Suppress("DEPRECATION")
-    private fun states(n: AccessibilityNodeInfo) =
-        "${n.isChecked}${n.isSelected}${n.isEnabled}${n.isFocused}${n.textSelectionStart}:${n.textSelectionEnd}"
+    private fun mixNode(h0: Long, n: AccessibilityNodeInfo, rect: Rect): Long {
+        var h = mix(h0, n.className)
+        h = mix(h, n.text)
+        h = mix(h, n.contentDescription)
+        h = mixInt(h, rect.left)
+        h = mixInt(h, rect.top)
+        h = mixInt(h, rect.right)
+        h = mixInt(h, rect.bottom)
+        h = mixBool(h, n.isChecked)
+        h = mixBool(h, n.isSelected)
+        h = mixBool(h, n.isEnabled)
+        h = mixBool(h, n.isFocused)
+        h = mixInt(h, n.textSelectionStart)
+        return mixInt(h, n.textSelectionEnd)
+    }
 
     /** 节点自己的名字:文字(提示语也算,输入框靠它说明用途),没有就用内容描述。 */
     fun ownLabel(n: AccessibilityNodeInfo): String? {
@@ -306,22 +313,36 @@ internal object ScreenReader {
         return if (joined.length > AGGREGATE_MAX) joined.take(AGGREGATE_MAX) + "…" else joined
     }
 
+    // 每个节点都要判一次,正则只编译一回
+    private val ID_WORD = Regex("^[A-Za-z0-9_]{4,}$")
+    private val ID_LETTERS = Regex("[A-Za-z]{3}")
+
     /** `com.x:id/cart_icon` → `cart_icon`;混淆过的短名认不出用途,不给。 */
     private fun readableResourceId(id: String?): String? {
         val short = id?.substringAfterLast('/') ?: return null
-        return short.takeIf { Regex("^[A-Za-z0-9_]{4,}$").matches(it) && Regex("[A-Za-z]{3}").containsMatchIn(it) }
+        return short.takeIf { ID_WORD.matches(it) && ID_LETTERS.containsMatchIn(it) }
     }
 
     private const val FNV_OFFSET = -0x340d631b7bdddcdbL
     private const val FNV_PRIME = 0x100000001b3L
 
-    private fun mix(h0: Long, vararg parts: Any?): Long {
+    // 每段之后混一个分隔值,免得相邻两段的内容挪个位置算出同样的结果
+    private fun end(h: Long) = (h xor 0x1f) * FNV_PRIME
+
+    /** 文字逐字符混入;null 和空串区分开。 */
+    private fun mix(h0: Long, s: CharSequence?): Long {
+        if (s == null) return end(h0 * FNV_PRIME) // 等于混入一个 0 字符
         var h = h0
-        for (p in parts) {
-            val s = p?.toString() ?: "\u0000"
-            for (c in s) h = (h xor c.code.toLong()) * FNV_PRIME
-            h = (h xor 0x1f) * FNV_PRIME
-        }
-        return h
+        for (i in 0 until s.length) h = (h xor s[i].code.toLong()) * FNV_PRIME
+        return end(h)
     }
+
+    /** 整数按 4 个字节混入。 */
+    private fun mixInt(h0: Long, v: Int): Long {
+        var h = h0
+        for (shift in 0 until 32 step 8) h = (h xor ((v ushr shift) and 0xff).toLong()) * FNV_PRIME
+        return end(h)
+    }
+
+    private fun mixBool(h: Long, b: Boolean) = end((h xor if (b) 1L else 2L) * FNV_PRIME)
 }

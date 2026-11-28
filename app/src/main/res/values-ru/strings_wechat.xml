@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">Личные сообщения могут запускать задачи Mika</string>
     <string name="wechat_turn_off">Выключить</string>
     <string name="wechat_title">WeChat</string>
-    <string name="wechat_settings_sub">Давайте задачи Mika через WeChat</string>
     <string name="wechat_status_disconnected">Не подключено</string>
     <string name="wechat_status_connecting">Подключение</string>
     <string name="wechat_status_connected">Подключено</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">Отсканируйте код в WeChat и подтвердите авторизацию. Затем откройте личный чат бота и отправьте текст или изображения. Этот QR-код предназначен только для текущей привязки, не пересылайте его.</string>
     <string name="wechat_connection">Подключение</string>
     <string name="wechat_receive">Получать задачи из WeChat</string>
-    <string name="wechat_receive_sub">После выключения Mika перестанет читать новые сообщения</string>
     <string name="wechat_allow_unlock">Разрешить задачам WeChat пробуждать и разблокировать телефон</string>
     <string name="wechat_allow_unlock_sub">Только задачи из личного чата вашего привязанного аккаунта WeChat могут пытаться пробудить и разблокировать этот телефон.</string>
     <string name="wechat_allow_unlock_foot">По умолчанию выключено; повторная привязка отключает разрешение. Сначала включите «%3$s» в разделе «%1$s › %2$s» и сохраните на этом телефоне PIN-код или пароль блокировки экрана, если он установлен. Этот переключатель не меняет указанное разрешение и не использует данные для разблокировки из сообщений WeChat.</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">Личные тексты, изображения и настоящие задачи</string>
     <string name="wechat_capability_replies">Вопросы, результаты и уведомления Mika</string>
     <string name="wechat_capability_phone">Подтверждение платежей и управление телефоном</string>
-    <string name="wechat_capability_phone_sub">По-прежнему выполняется на этом телефоне</string>
     <string name="wechat_capability_later">Голос, файлы, группы и несколько аккаунтов</string>
     <string name="wechat_supported">Поддерживается</string>
     <string name="wechat_phone_only">Телефон</string>

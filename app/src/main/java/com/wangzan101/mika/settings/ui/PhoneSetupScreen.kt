@@ -30,12 +30,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import com.wangzan101.mika.ui.components.MikaDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import com.wangzan101.mika.ui.components.MikaTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,7 +57,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.wangzan101.mika.core.device.shell.BuiltinShellFailure
 import com.wangzan101.mika.core.device.shell.BuiltinShellFix
-import com.wangzan101.mika.core.device.shell.BuiltinShellStatus
 import com.wangzan101.mika.core.device.shell.HelperRestart
 import com.wangzan101.mika.core.device.shell.PairingCode
 import com.wangzan101.mika.core.device.shell.PairingNotifyIssue
@@ -73,13 +70,10 @@ import com.wangzan101.mika.cap.phone.PhoneServices
 import com.wangzan101.mika.ui.components.PageBackground
 import com.wangzan101.mika.ui.components.GroupCard
 import com.wangzan101.mika.ui.components.TopBar
-import com.wangzan101.mika.ui.components.ListRow
 import com.wangzan101.mika.ui.components.RowValue
 import com.wangzan101.mika.ui.components.ValueTone
 import com.wangzan101.mika.ui.theme.MikaTheme
 import com.wangzan101.mika.ui.theme.MikaIcons
-import com.wangzan101.mika.ui.components.TileTone
-import com.wangzan101.mika.ui.components.RowChevron
 import com.wangzan101.mika.ui.components.MikaButton
 import com.wangzan101.mika.ui.components.ButtonKind
 import com.wangzan101.mika.ui.components.ButtonSize
@@ -93,7 +87,6 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.wangzan101.mika.chat.ui.StepRow
-import com.wangzan101.mika.memory.ui.Link
 import com.wangzan101.mika.settings.ui.models.refresh
 import com.wangzan101.mika.setup.ui.Onboarding
 import com.wangzan101.mika.setup.ui.OnboardingStep
@@ -653,35 +646,6 @@ private fun PillButton(text: String, primary: Boolean, tag: String? = null, onCl
 }
 
 // ---------- 设置页「高级」 ----------
-
-/** 「高级」分组里内置助手的三行:状态、重新配对、解除配对(要确认)。没配对过时不能解除。 */
-@Composable
-fun PhoneHelperSection(status: BuiltinShellStatus, onRepair: () -> Unit, onUnpair: () -> Unit, usbDebugging: Boolean = true) {
-    var confirming by remember { mutableStateOf(false) }
-    GroupCard {
-        val (value, tone) = PhoneSetupCopy.statusValue(status)
-        ListRow(MikaIcons.Phone, PhoneSetupCopy.ROW_TITLE, PhoneSetupCopy.statusLine(status, usbDebugging), first = true) {
-            RowValue(value, tone)
-        }
-        ListRow(MikaIcons.Link, PhoneSetupCopy.REPAIR, note = PhoneSetupCopy.REPAIR_SUBTITLE, onClick = onRepair) {
-            RowChevron()
-        }
-        val paired = status != BuiltinShellStatus.NotPaired
-        ListRow(
-            MikaIcons.Close, PhoneSetupCopy.UNPAIR,
-            titleColor = if (paired) MikaTheme.colors.bad else MikaTheme.colors.ink3, tone = if (paired) TileTone.Bad else TileTone.Neutral, onClick = if (paired) ({ confirming = true }) else null,
-        )
-    }
-    if (confirming) {
-        MikaDialog(
-            onDismissRequest = { confirming = false },
-            title = { Text(PhoneSetupCopy.UNPAIR_TITLE) },
-            text = { Text(PhoneSetupCopy.UNPAIR_BODY) },
-            confirmButton = { TextButton({ confirming = false; onUnpair() }) { Text(PhoneSetupCopy.UNPAIR_CONFIRM, color = MikaTheme.colors.bad) } },
-            dismissButton = { TextButton({ confirming = false }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
-}
 
 // ---------- 对话页 ----------
 

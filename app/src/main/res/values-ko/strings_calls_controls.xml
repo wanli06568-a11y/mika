@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">통화 상태</string>
-    <string name="calls_dtmf_open">키패드</string>
     <string name="calls_dtmf_title">통화 키패드</string>
     <string name="calls_dtmf_close">닫기</string>
     <string name="calls_dtmf_batch">연속 입력</string>

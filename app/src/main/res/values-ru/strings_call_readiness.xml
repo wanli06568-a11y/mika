@@ -2,20 +2,7 @@
 <resources>
     <string name="calls_device_allow_notifications">Разрешить уведомления</string>
     <string name="calls_device_allow_phone">Разрешить доступ к телефону</string>
-    <string name="calls_device_helper">Встроенный помощник</string>
-    <string name="calls_device_helper_connected">Подключён</string>
-    <string name="calls_device_notifications">Уведомления о звонках</string>
-    <string name="calls_device_notifications_app_off">Уведомления приложения отключены</string>
-    <string name="calls_device_notifications_calls_off">Канал уведомлений о звонках с ИИ отключён</string>
-    <string name="calls_device_notifications_permission_missing">Разрешение на уведомления не выдано</string>
-    <string name="calls_device_notifications_standby_off">Канал уведомлений о фоновом ожидании отключён</string>
-    <string name="calls_device_notifications_unknown">Не удалось проверить состояние уведомлений</string>
     <string name="calls_device_open_app_settings">Открыть разрешения приложения</string>
-    <string name="calls_device_pair_helper">Подключить помощника</string>
-    <string name="calls_device_permission_granted">Разрешено</string>
-    <string name="calls_device_phone_permissions">Разрешения телефона</string>
-    <string name="calls_device_phone_permissions_note">Разрешите определять состояние вызовов и совершать звонки</string>
-    <string name="calls_device_ready_to_test">Готово к ручной проверке звука</string>
     <string name="calls_device_system_settings_failed">Не удалось открыть системные настройки. Откройте сведения о приложении в настройках Android.</string>
     <string name="calls_background_auto_off">Автоответ отключён</string>
     <string name="calls_background_battery">Батарея и фоновая активность</string>

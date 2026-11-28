@@ -51,7 +51,6 @@
     <string name="ok_got_it">Đã hiểu</string>
     <string name="cancel">Hủy</string>
     <string name="model_reasoning_title">Mức độ suy luận · %1$s</string>
-    <string name="model_reasoning_value">Mức độ suy luận: %1$s</string>
     <string name="model_reasoning_note">Mức độ cao hơn có thể giúp xử lý các tác vụ khó, nhưng có thể mất nhiều thời gian hơn và dùng nhiều token hơn. Mặc định để nhà cung cấp quyết định.</string>
     <string name="model_reasoning_unknown">Nhà cung cấp này chưa liệt kê các mức khả dụng. Lựa chọn không được hỗ trợ có thể khiến tác vụ thất bại; hãy chọn Mặc định nếu điều đó xảy ra.</string>
     <string name="model_reasoning_unavailable">Nhà cung cấp không còn liệt kê mức đã lưu. Hãy chọn Mặc định hoặc một mức khác.</string>

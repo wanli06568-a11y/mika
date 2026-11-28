@@ -63,7 +63,6 @@
         <item quantity="other">%1$d مرحله</item>
     </plurals>
     <string name="timeline_criteria">معیار اتمام</string>
-    <string name="timeline_outcome">نتیجه</string>
     <string name="timeline_check">بررسی</string>
     <string name="timeline_duration">زمان صرف‌شده</string>
     <string name="timeline_more">جزئیات بیشتر</string>
@@ -85,8 +84,6 @@
         <item quantity="other">%1$d بار مشاهده شد</item>
     </plurals>
     <string name="effect_small_change">اندکی تغییر کرد</string>
-    <string name="timeline_hide_screen">پنهان کردن صفحه</string>
-    <string name="timeline_show_screen">مشاهدهٔ صفحه در آن زمان</string>
     <string name="timeline_step_screen">صفحه در مرحلهٔ %1$d</string>
     <string name="timeline_export">دریافت خروجی سوابق مصرف</string>
     <string name="timeline_export_hint">مصرف توکن هر پاسخ مدل و رویدادهای خلاصه‌سازی زمینه را به‌صورت JSONL ذخیره کنید.</string>

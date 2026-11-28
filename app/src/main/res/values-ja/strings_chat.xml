@@ -20,7 +20,6 @@
     <string name="recommendations_drag_hint">ハンドルをドラッグして表示順を変更できます。</string>
     <string name="recommendations_move_up">上に移動</string>
     <string name="recommendations_move_down">下に移動</string>
-    <string name="recommendations_sub">ホームに表示するタスクとプロンプトを管理</string>
     <string name="recommendations_add">タスクを追加</string>
     <string name="recommendations_edit">タスクを編集</string>
     <string name="recommendations_empty">おすすめタスクはまだありません</string>
@@ -62,7 +61,6 @@
     <string name="drawer_personal">パーソナルアシスタント</string>
     <string name="chat_new">新しいチャット</string>
     <string name="chat_expand_steps">ステップを表示</string>
-    <string name="chat_collapse_steps">ステップを非表示</string>
     <string name="chat_view_process">経過を見る</string>
     <string name="chat_unlock_body">スマホがロックされています。ロックを解除すると、Mika が続きを進めます。</string>
     <string name="chat_input_body">%1$s\n選択肢をタップするか、下に入力してください。%2$s</string>
@@ -75,9 +73,7 @@
     <string name="chat_restart_task">最初からやり直す</string>
     <string name="chat_resume_request">中断箇所から続ける：%1$s</string>
     <string name="chat_restart_request">最初からやり直す：%1$s</string>
-    <string name="chat_view_source">ソースを見る</string>
     <string name="chat_open">開く</string>
-    <string name="chat_attach_rejected">追加できませんでした: %1$s(ファイルは 1 つあたり 200 MB 未満にしてください)</string>
     <string name="chat_stop">停止</string>
     <string name="chat_send">送信</string>
     <string name="chat_scroll_to_bottom">一番下へ移動</string>
@@ -159,9 +155,6 @@
     <string name="steer_interrupted_reply">メッセージにより中断されました</string>
     <string name="steer_next">現在のタスクは終了しました。次のタスクとして待機しています</string>
     <string name="steer_cancelled">キャンセルしました</string>
-    <plurals name="chat_steps_done">
-        <item quantity="other">%1$d ステップ</item>
-    </plurals>
     <string name="step_viewed">%1$s を確認</string>
     <string name="step_viewed_part">%1$s の %2$s を確認</string>
     <string name="step_failed">失敗</string>
@@ -175,7 +168,6 @@
         <item quantity="other">スクリーンショット %1$d 枚</item>
     </plurals>
     <string name="attach_add">添付を追加</string>
-    <string name="attach_close">添付パネルを閉じる</string>
     <string name="attach_blocked_running">タスク実行中は添付を追加できません。先に待機モードに切り替えてください</string>
     <string name="attach_camera">カメラ</string>
     <string name="attach_album">写真</string>
@@ -217,9 +209,6 @@
     <string name="zoom_in">拡大</string>
     <string name="chat_message_actions">メッセージのオプション</string>
     <string name="chat_copy">コピー</string>
-    <string name="share_card_question">質問</string>
-    <string name="share_card_answer">回答</string>
-    <string name="share_card_made_by">Mika が完了</string>
     <string name="chat_quote">引用</string>
     <string name="chat_select_text">テキストを選択</string>
     <string name="chat_copied">コピーしました</string>
@@ -231,7 +220,6 @@
     <string name="chat_branch_attachments_skipped">添付ファイルをすべてコピーできませんでした</string>
     <string name="chat_branch_retry">ここから聞き直す</string>
     <string name="chat_branch_attachments_readd">添付ファイルは追加し直してください</string>
-    <string name="chat_attach_unavailable">追加できませんでした: %1$s。ファイルが存在し、サイズ制限内であることを確認してください。</string>
     <string name="chat_attach_too_large">%1$s: %2$s の上限を超えています</string>
     <string name="chat_attach_low_device_space">%1$s: 端末の空き容量が不足しています。空き容量を増やしてから再試行してください</string>
     <string name="chat_attach_workspace_limit">%1$s: ワークスペースのストレージが上限に達しました。ワークスペースのファイルを削除してから再試行してください</string>
@@ -261,9 +249,6 @@
     <string name="chat_task_cost_unavailable">費用を見積もれません</string>
     <string name="follow_up_steer">ガイド</string>
     <string name="follow_up_queue">待機</string>
-    <string name="follow_up_steer_hint">次のステップでこの内容に合わせます</string>
-    <string name="follow_up_steer_hint_paused">タスクは一時停止中です。再開後に反映されます</string>
-    <string name="follow_up_steer_hint_queued">タスク開始後に反映されます</string>
     <string name="follow_up_queue_hint">現在のタスクが終わると自動で開始します</string>
     <string name="follow_up_count">待機中 · %1$d 件</string>
     <string name="follow_up_edit">編集</string>
@@ -272,7 +257,6 @@
     <string name="follow_up_idle_hint">タスクを開始すると順番に実行します</string>
     <string name="follow_up_already_started">この項目はすでに開始されています。必要なら直接停止してください</string>
     <string name="chat_placeholder_queue">次のタスクを入力…</string>
-    <string name="voice_placeholder_queue">次のタスクを話す…</string>
     <string name="steer_received_paused">了解です — タスクの再開後に反映されます</string>
     <plurals name="drawer_archive_many_done">
         <item quantity="other">%1$d 件のチャットをアーカイブしました</item>
@@ -296,20 +280,11 @@
     <string name="task_field_insert">挿入</string>
     <string name="task_fields_too_many">入力項目は最大%1$d種類です。</string>
     <string name="task_fill_apply">入力欄に反映</string>
-    <string name="chat_read_aloud">Read aloud</string>
-    <string name="chat_stop_speaking">Stop speaking</string>
     <string name="chat_audio">Audio</string>
     <string name="chat_audio_play">Play</string>
     <string name="chat_audio_stop">Stop</string>
-    <string name="plus_sub_album">写真から選択、複数可</string>
-    <string name="plus_sub_files">文書、PDF、圧縮ファイル</string>
-    <string name="plus_sub_device">このスマホのフォルダーを参照</string>
     <string name="plus_clipboard">クリップボード</string>
-    <string name="plus_sub_clipboard">コピーした内容を貼り付け</string>
     <string name="plus_sub_teach">一度見せれば Mika が覚えます</string>
-    <string name="plus_sub_skills">このターンで使うスキルを選ぶ</string>
-    <string name="plus_sub_tasks">保存したタスクを入力欄に入れる</string>
-    <string name="plus_sub_browser">内蔵ブラウザー</string>
     <string name="plus_skills_empty">個人スキルはまだありません。やり遂げたタスクから Mika が覚えたスキルがここに表示されます。</string>
     <string name="plus_clipboard_empty">クリップボードに貼り付けられる文字がありません</string>
     <string name="plus_skill_directive">「%1$s」スキルを使う：</string>

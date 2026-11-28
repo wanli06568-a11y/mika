@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">نماذج الصوت</string>
-    <string name="models_voice_catalog_sub">إدارة نماذج تحويل الكلام إلى نص، وتحويل النص إلى كلام، والمكالمات المباشرة في مكان واحد</string>
     <string name="voice_catalog_title">نماذج الصوت</string>
     <string name="voice_catalog_sub">إدارة نماذج تحويل الكلام إلى نص، وتحويل النص إلى كلام، والمكالمات المباشرة في مكان واحد. تُعلَن القدرات والبروتوكولات هنا؛ وصفحات الإدخال الصوتي والقراءة والمكالمات تختار التفضيلات وتستخدمها فقط.</string>
     <string name="voice_catalog_add">إضافة نموذج</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">غير مُتحقق</string>
     <string name="voice_catalog_testing">جارٍ الاختبار…</string>
     <string name="voice_catalog_listening">أستمع، قُل شيئًا…</string>
+    <string name="voice_catalog_no_speech">لم يتم اكتشاف أي كلام</string>
     <string name="voice_catalog_incomplete">املأ تفاصيل الحساب المطلوبة أولاً</string>
     <string name="voice_catalog_protocol_stt_android_system">نظام Android</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">تفريغ الصوت</string>

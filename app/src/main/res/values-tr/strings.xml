@@ -51,7 +51,6 @@
     <string name="ok_got_it">Anladım</string>
     <string name="cancel">İptal</string>
     <string name="model_reasoning_title">Düşünme çabası · %1$s</string>
-    <string name="model_reasoning_value">Düşünme çabası: %1$s</string>
     <string name="model_reasoning_note">Daha yüksek çaba zor görevlerde yardımcı olabilir, ancak daha uzun sürebilir ve daha fazla token kullanabilir. Varsayılan, kararı sağlayıcıya bırakır.</string>
     <string name="model_reasoning_unknown">Bu sağlayıcı kullanılabilir düzeyleri listelemedi. Desteklenmeyen bir seçim görevlerin başarısız olmasına neden olabilir; böyle olursa Varsayılan\'ı seçin.</string>
     <string name="model_reasoning_unavailable">Sağlayıcı artık kayıtlı düzeyi listelemiyor. Varsayılan\'ı veya başka bir düzeyi seçin.</string>

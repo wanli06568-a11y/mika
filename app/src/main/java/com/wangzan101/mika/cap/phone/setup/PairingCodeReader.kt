@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.Display
 import android.view.accessibility.AccessibilityNodeInfo
 import com.wangzan101.mika.cap.phone.a11y.ScreenAccessibility
+import com.wangzan101.mika.cap.phone.a11y.breadthFirst
 import com.wangzan101.mika.cap.phone.a11y.SystemPickers
 import com.wangzan101.mika.core.device.shell.BuiltinShellControl
 import com.wangzan101.mika.core.device.shell.PairingDiscovery
@@ -78,15 +79,6 @@ internal object PairingCodeReader {
             PairingScreen.read(texts(root))
         }
 
-    private fun texts(root: AccessibilityNodeInfo): List<String> {
-        val out = mutableListOf<String>()
-        val queue = ArrayDeque(listOf(root))
-        var seen = 0
-        while (queue.isNotEmpty() && seen++ < MAX_NODES) {
-            val n = queue.removeFirst()
-            n.text?.toString()?.takeIf { it.isNotBlank() }?.let(out::add)
-            for (i in 0 until n.childCount) n.getChild(i)?.let(queue::add)
-        }
-        return out
-    }
+    private fun texts(root: AccessibilityNodeInfo): List<String> =
+        root.breadthFirst(MAX_NODES).mapNotNull { n -> n.text?.toString()?.takeIf { it.isNotBlank() } }.toList()
 }

@@ -5,10 +5,6 @@
     <string name="personal_system_reply_failed">Trả lời thất bại. Vui lòng thử lại sau.</string>
     <string name="personal_system_task_start_failed">Không thể bắt đầu tác vụ</string>
     <string name="personal_system_task_cancelled">Đã hủy tác vụ</string>
-    <string name="personal_system_task_completed">Đã hoàn thành tác vụ</string>
-    <string name="personal_system_task_failed">Tác vụ thất bại</string>
-    <string name="personal_system_task_running">Tác vụ đang thực hiện</string>
-    <string name="personal_system_task_queued">Tác vụ đang chờ</string>
     <string name="personal_system_no_model">Vui lòng chọn mô hình chính trong Cài đặt, rồi quay lại để tiếp tục cuộc trò chuyện.</string>
     <string name="personal_system_context_long">Tin nhắn này vượt quá giới hạn ngữ cảnh của mô hình hiện tại. Vui lòng chia thành nhiều tin nhắn.</string>
     <string name="personal_system_empty_reply">Mô hình không trả về câu trả lời có thể hiển thị. Vui lòng thử lại.</string>

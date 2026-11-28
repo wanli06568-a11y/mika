@@ -65,7 +65,6 @@
         <item quantity="other">%1$d шага</item>
     </plurals>
     <string name="timeline_criteria">Что считается выполненным</string>
-    <string name="timeline_outcome">Итог</string>
     <string name="timeline_check">Проверка</string>
     <string name="timeline_duration">Затраченное время</string>
     <string name="timeline_more">Подробнее</string>
@@ -93,8 +92,6 @@
         <item quantity="other">Просмотрено %1$d раза</item>
     </plurals>
     <string name="effect_small_change">Немного изменилось</string>
-    <string name="timeline_hide_screen">Скрыть экран</string>
-    <string name="timeline_show_screen">Посмотреть экран в тот момент</string>
     <string name="timeline_step_screen">Экран на шаге %1$d</string>
     <string name="timeline_export">Экспортировать записи расхода</string>
     <string name="timeline_export_hint">Сохранить в формате JSONL расход токенов по каждому ответу модели и события сжатия контекста.</string>

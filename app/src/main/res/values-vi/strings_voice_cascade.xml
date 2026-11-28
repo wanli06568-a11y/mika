@@ -15,7 +15,6 @@
     <string name="call_mode_speak">Nói</string>
     <string name="call_mode_think_light">Mô hình nhẹ</string>
     <string name="call_mode_think_main">Mô hình chính</string>
-    <string name="call_mode_think_note">Mô hình Mika dùng để trả lời (trò chuyện và cuộc gọi)</string>
     <string name="call_mode_think_light_note">Trả lời nhanh hơn; dùng mô hình chính khi chưa đặt mô hình nhẹ</string>
     <string name="call_mode_listen_device">Nhận dạng trên thiết bị không nghe được âm thanh cuộc gọi. Hãy chọn một mô hình dịch vụ để nghe.</string>
     <string name="call_mode_rhythm">Luân phiên lượt nói</string>

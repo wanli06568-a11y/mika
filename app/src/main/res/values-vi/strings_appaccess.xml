@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="appaccess_title">Quyền truy cập ứng dụng</string>
-    <string name="appaccess_row_sub">Chặn ứng dụng và chia sẻ màn hình theo từng ứng dụng</string>
     <string name="appaccess_intro">Chọn những ứng dụng Mika được đọc và thao tác bằng các công cụ điện thoại tiêu chuẩn. Lệnh shell, hộp cát và quyền truy cập máy tính (MCP) không bị giới hạn bởi cài đặt này.</string>
     <string name="appaccess_privacy">Việc phân loại sẽ gửi tên ứng dụng và tên gói cho mô hình AI; “Làm mới danh sách ứng dụng” sẽ hỏi bạn trước.</string>
     <string name="appaccess_unavailable">Không đọc được cài đặt quyền truy cập ứng dụng, nên quyền truy cập điện thoại tiêu chuẩn đã tạm dừng. Đặt lại sẽ xóa các quyền và phân loại đã lưu.</string>

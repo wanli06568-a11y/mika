@@ -20,7 +20,6 @@
     <string name="recommendations_drag_hint">Arrastra el control para cambiar el orden.</string>
     <string name="recommendations_move_up">Subir</string>
     <string name="recommendations_move_down">Bajar</string>
-    <string name="recommendations_sub">Administra las tareas y los prompts de la pantalla de inicio</string>
     <string name="recommendations_add">Añadir tarea</string>
     <string name="recommendations_edit">Editar tarea</string>
     <string name="recommendations_empty">No hay tareas recomendadas</string>
@@ -64,7 +63,6 @@
     <string name="drawer_personal">Asistente personal</string>
     <string name="chat_new">Chat nuevo</string>
     <string name="chat_expand_steps">Mostrar pasos</string>
-    <string name="chat_collapse_steps">Ocultar pasos</string>
     <string name="chat_view_process">Ver cómo fue</string>
     <string name="chat_unlock_body">Tu teléfono está bloqueado. Mika continuará cuando lo desbloquees.</string>
     <string name="chat_input_body">%1$s\nToca una opción o escribe abajo. %2$s</string>
@@ -77,9 +75,7 @@
     <string name="chat_restart_task">Empezar de nuevo</string>
     <string name="chat_resume_request">Continúa desde el punto de interrupción: %1$s</string>
     <string name="chat_restart_request">Empieza de nuevo: %1$s</string>
-    <string name="chat_view_source">Ver origen</string>
     <string name="chat_open">Abrir</string>
-    <string name="chat_attach_rejected">No se pudo añadir: %1$s (cada archivo debe pesar menos de 200 MB)</string>
     <string name="chat_stop">Detener</string>
     <string name="chat_send">Enviar</string>
     <string name="chat_scroll_to_bottom">Ir al final</string>
@@ -177,11 +173,6 @@
     <string name="steer_interrupted_reply">Interrumpido por tu mensaje</string>
     <string name="steer_next">La tarea actual ha terminado; queda en cola como la siguiente</string>
     <string name="steer_cancelled">Cancelado</string>
-    <plurals name="chat_steps_done">
-        <item quantity="one">%1$d paso</item>
-        <item quantity="many">%1$d pasos</item>
-        <item quantity="other">%1$d pasos</item>
-    </plurals>
     <string name="step_viewed">Se miró %1$s</string>
     <string name="step_viewed_part">Se miró %2$s en %1$s</string>
     <string name="step_failed">Falló</string>
@@ -197,7 +188,6 @@
         <item quantity="other">%1$d capturas de pantalla</item>
     </plurals>
     <string name="attach_add">Añadir adjunto</string>
-    <string name="attach_close">Cerrar el panel de adjuntos</string>
     <string name="attach_blocked_running">No puedes añadir adjuntos mientras se ejecuta una tarea; cambia al modo de cola para adjuntar</string>
     <string name="attach_camera">Cámara</string>
     <string name="attach_album">Fotos</string>
@@ -241,9 +231,6 @@
     <string name="zoom_in">Acercar</string>
     <string name="chat_message_actions">Opciones del mensaje</string>
     <string name="chat_copy">Copiar</string>
-    <string name="share_card_question">Pregunta</string>
-    <string name="share_card_answer">Respuesta</string>
-    <string name="share_card_made_by">Completado por Mika</string>
     <string name="chat_quote">Citar</string>
     <string name="chat_select_text">Seleccionar texto</string>
     <string name="chat_copied">Copiado</string>
@@ -255,7 +242,6 @@
     <string name="chat_branch_attachments_skipped">No se copiaron todos los adjuntos</string>
     <string name="chat_branch_retry">Volver a preguntar desde aquí</string>
     <string name="chat_branch_attachments_readd">Vuelve a adjuntar los archivos que quieras incluir</string>
-    <string name="chat_attach_unavailable">No se pudo añadir: %1$s. Comprueba que los archivos estén disponibles y no superen el límite de tamaño.</string>
     <string name="chat_attach_too_large">%1$s: supera el límite de %2$s</string>
     <string name="chat_attach_low_device_space">%1$s: no hay suficiente espacio en el teléfono; libera espacio y vuelve a intentarlo</string>
     <string name="chat_attach_workspace_limit">%1$s: se alcanzó el límite de almacenamiento del espacio de trabajo; elimina archivos del espacio de trabajo y vuelve a intentarlo</string>
@@ -285,9 +271,6 @@
     <string name="chat_task_cost_unavailable">Coste no disponible</string>
     <string name="follow_up_steer">Guiar</string>
     <string name="follow_up_queue">En cola</string>
-    <string name="follow_up_steer_hint">El siguiente paso ajustará la tarea actual</string>
-    <string name="follow_up_steer_hint_paused">La tarea está en pausa; se aplicará al continuar</string>
-    <string name="follow_up_steer_hint_queued">Se aplicará cuando empiece la tarea</string>
     <string name="follow_up_queue_hint">Empieza cuando termine la tarea actual</string>
     <string name="follow_up_count">En cola · %1$d</string>
     <string name="follow_up_edit">Editar</string>
@@ -296,7 +279,6 @@
     <string name="follow_up_idle_hint">Se ejecutarán una por una al iniciar una tarea</string>
     <string name="follow_up_already_started">Esta ya ha empezado; detenla directamente si hace falta</string>
     <string name="chat_placeholder_queue">Escribe la siguiente tarea…</string>
-    <string name="voice_placeholder_queue">Di la siguiente tarea…</string>
     <string name="steer_received_paused">Entendido — se usará cuando continúe la tarea</string>
     <plurals name="drawer_archive_many_done">
         <item quantity="one">%1$d chat archivado</item>
@@ -324,20 +306,11 @@
     <string name="task_field_insert">Insertar</string>
     <string name="task_fields_too_many">Usa como máximo %1$d campos diferentes.</string>
     <string name="task_fill_apply">Rellenar entrada</string>
-    <string name="chat_read_aloud">Read aloud</string>
-    <string name="chat_stop_speaking">Stop speaking</string>
     <string name="chat_audio">Audio</string>
     <string name="chat_audio_play">Play</string>
     <string name="chat_audio_stop">Stop</string>
-    <string name="plus_sub_album">Elegir de tus fotos, varias permitidas</string>
-    <string name="plus_sub_files">Documentos, PDF, archivos</string>
-    <string name="plus_sub_device">Explorar carpetas del teléfono</string>
     <string name="plus_clipboard">Portapapeles</string>
-    <string name="plus_sub_clipboard">Pegar lo que acabas de copiar</string>
     <string name="plus_sub_teach">Muéstraselo una vez y Mika lo aprende</string>
-    <string name="plus_sub_skills">Usar una habilidad en este turno</string>
-    <string name="plus_sub_tasks">Rellenar una tarea guardada en la entrada</string>
-    <string name="plus_sub_browser">Navegador integrado</string>
     <string name="plus_skills_empty">Aún no hay habilidades personales. Las que Mika aprenda de tareas completadas aparecerán aquí.</string>
     <string name="plus_clipboard_empty">No hay texto que pegar del portapapeles</string>
     <string name="plus_skill_directive">Usar la habilidad «%1$s»: </string>

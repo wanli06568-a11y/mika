@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">Status panggilan</string>
-    <string name="calls_dtmf_open">Papan tombol</string>
     <string name="calls_dtmf_title">Papan tombol panggilan</string>
     <string name="calls_dtmf_close">Tutup</string>
     <string name="calls_dtmf_batch">Masukkan urutan</string>

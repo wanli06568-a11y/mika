@@ -76,15 +76,13 @@
     <string name="about_auto_update_confirm_title">Phiên bản Mika mới đã sẵn sàng</string>
     <string name="about_auto_update_confirm_detail">Cài đặt %1$s ngay, hoặc tắt tự động cập nhật và kiểm tra cập nhật thủ công trong Cài đặt.</string>
     <string name="about_auto_update_now">Cập nhật ngay</string>
-    <string name="about_mirror_download">Dùng mirror để cập nhật</string>
-    <string name="about_mirror_download_detail">Kiểm tra cập nhật bằng mirror và GitHub; tải xuống thử mirror trước. Các gói vẫn được kiểm tra chữ ký.</string>
+    <string name="about_mirror_download">Dùng mirror để tải xuống</string>
+    <string name="about_mirror_download_detail">Dùng cho bản cập nhật ứng dụng và gói giọng nói ngoại tuyến: kiểm tra cập nhật dùng mirror và GitHub, tải xuống thử mirror trước. Ứng dụng vẫn được kiểm tra chữ ký, gói giọng nói được kiểm tra checksum.</string>
     <string name="about_mirror_sources">Mirror cập nhật</string>
-    <string name="about_mirror_sources_detail">Đổi thứ tự, thêm hoặc xóa</string>
     <string name="about_mirrors_intro">Kiểm tra cập nhật thử mirror và GitHub song song. Tải xuống thử các mirror theo thứ tự, rồi đến GitHub. Các gói vẫn được kiểm tra tên gói, phiên bản và chứng chỉ ký trước khi cài đặt.</string>
     <string name="about_mirrors_empty">Không có mirror</string>
     <string name="about_mirrors_empty_sub">Thêm mirror bên dưới, hoặc tiếp tục dùng GitHub chính thức.</string>
     <string name="about_mirrors_official">GitHub chính thức</string>
-    <string name="about_mirrors_official_sub">Luôn là phương án dự phòng cuối cùng; không thể xóa</string>
     <string name="about_mirrors_add">Thêm mirror</string>
     <string name="about_mirrors_edit">Sửa mirror</string>
     <string name="about_mirrors_name">Tên (tùy chọn)</string>

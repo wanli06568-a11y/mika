@@ -6,7 +6,6 @@
     <string name="plugins_empty">Belum ada plugin</string>
     <string name="plugins_empty_sub">Pasang zip plugin untuk menambah keterampilan yang bisa dibaca Mika. Plugin tidak dapat mengubah setelan aplikasi atau membaca data Anda yang lain.</string>
     <string name="plugins_enabled">Aktif</string>
-    <string name="plugins_disabled">Nonaktif</string>
     <string name="plugins_skills">Keterampilan</string>
     <string name="plugins_no_skills">Tidak ada keterampilan</string>
     <string name="plugins_permissions">Izin</string>

@@ -14,6 +14,8 @@ import android.os.SystemClock
 import com.wangzan101.mika.calls.CallPlaybackQueue
 import com.wangzan101.mika.calls.CallInputPacer
 import com.wangzan101.mika.calls.VolcRealtimeClient
+import com.wangzan101.mika.voice.pcm16MinBuffer
+import com.wangzan101.mika.voice.pcm16Track
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,14 +69,11 @@ internal class AndroidVoiceBriefingAudio(context: Context) : VoiceBriefingAudio 
             synchronized(lock) {
                 checkGate(mayUseAudio)
                 val minInput = AudioRecord.getMinBufferSize(INPUT_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-                val minOutput = AudioTrack.getMinBufferSize(OUTPUT_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+                val minOutput = pcm16MinBuffer(OUTPUT_RATE)
                 if (minInput <= 0 || minOutput <= 0) throw VoiceBriefingFailure("设备语音输入输出不可用，未拨号")
                 recorder = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, INPUT_RATE,
                     AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minInput, CHUNK_BYTES * 4))
-                player = AudioTrack.Builder().setAudioAttributes(attributes)
-                    .setAudioFormat(AudioFormat.Builder().setSampleRate(OUTPUT_RATE)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO).setEncoding(AudioFormat.ENCODING_PCM_16BIT).build())
-                    .setTransferMode(AudioTrack.MODE_STREAM).setBufferSizeInBytes(maxOf(minOutput, 9_600)).build()
+                player = pcm16Track(attributes, OUTPUT_RATE, maxOf(minOutput, 9_600))
                 if (recorder!!.state != AudioRecord.STATE_INITIALIZED || player!!.state != AudioTrack.STATE_INITIALIZED) {
                     throw VoiceBriefingFailure("设备语音输入输出启动失败，未拨号")
                 }

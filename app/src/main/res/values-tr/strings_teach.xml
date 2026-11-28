@@ -5,8 +5,6 @@
     <string name="teach_goal_label">Öğrenilecek iş</string>
     <string name="teach_goal_hint">örn. her sabah mesai uygulamasında giriş yapmak</string>
     <string name="teach_disclosure">Adımlar bu telefonda kalır ve yalnızca Gösterimi başlat\'a dokunduktan sonra. Bir model kuruluysa, beceri oluşturmak amacın ve adımların redakte edilmiş bir özetini o modele gönderir. Parolalar, doğrulama kodları ve ödeme ayrıntıları hariç tutulur. Model kurulu değilse taslak bu telefonda yazılır ve hiçbir şey yüklenmez. Taslak siz kabul edene kadar kullanılmaz ve deneme çalıştırması yapılmamıştır.</string>
-    <string name="teach_continue">Devam et</string>
-    <string name="teach_ready_body">Mika izler ve telefonu çalıştırmaz. Duraklatabilir, bitirebilir veya atabilirsiniz. Gösterimi başlat\'a dokunana kadar hiçbir şey kaydedilmez.</string>
     <string name="teach_start">Gösterimi başlat</string>
     <string name="teach_learning">Öğreniyor</string>
     <string name="teach_paused">Duraklatıldı</string>
@@ -14,7 +12,6 @@
     <string name="teach_resume">Sürdür</string>
     <string name="teach_end">Gösterimi bitir</string>
     <string name="teach_discard">At</string>
-    <string name="teach_discard_body">Bu gösterim atılsın ve kayıtlı adımlar silinsin mi?</string>
     <string name="teach_busy">Bir görev çalışıyor. Öğretmeden önce bitmesini bekleyin.</string>
     <string name="teach_need_a11y">Gösterimden önce erişilebilirliği açın. Mika, onsuz dokunuşları göremez.</string>
     <string name="teach_interrupted">Uygulama yeniden başladığı veya erişilebilirlik kapandığı için gösterim durdu. Sürdür\'e dokunana kadar hiçbir şey kaydedilmez.</string>

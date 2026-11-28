@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.learn.skills
 
+import com.wangzan101.mika.core.net.jsonObjectOrNull
 import com.wangzan101.mika.core.model.Author
 import com.wangzan101.mika.core.learn.knowledge.FrontMatter
 import com.wangzan101.mika.core.learn.knowledge.PERSONAL_KIND
@@ -243,7 +244,7 @@ class SkillDrafter(private val model: ChatModel) {
     private fun typedTexts(events: List<RunEvent>, tools: ToolIndex): List<String> = events.filterIsInstance<RunEvent.ModelReply>()
         .filter { tools.verb(it.tool) == Verb.TypeText }
         .mapNotNull { e ->
-            val o = try { Json.parseToJsonElement(e.argsJson ?: return@mapNotNull null) as? JsonObject } catch (x: Exception) { null }
+            val o = Json.jsonObjectOrNull(e.argsJson ?: return@mapNotNull null)
             (o?.get("text") as? JsonPrimitive)?.contentOrNull?.takeIf { it != "***" }
         }
 

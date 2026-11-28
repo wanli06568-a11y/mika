@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d 件利用可能</string>
     <string name="voice_hub_footer">それぞれの役割を選びます。音声サービスは、これらの選択肢の元になるアカウントです。</string>
     <string name="voice_hub_setup">設定する</string>
-    <string name="voice_hub_ready">利用可能</string>
     <string name="voice_hub_off">オフ</string>
     <string name="voice_hub_none">未選択</string>
     <string name="voice_source_device">この端末 · 無料</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">チャットアカウントを削除する前に、影響する音声の用途をお知らせします。</string>
     <string name="voice_add_advanced">詳細</string>
     <string name="voice_add_custom">カスタム</string>
-    <string name="voice_add_custom_sub">モデル ID・プロトコル・エンドポイントを自分で入力</string>
     <string name="voice_preset_compat">OpenAI 互換サービス</string>
     <string name="voice_preset_compat_sub">音声入力 · 読み上げ · リアルタイム · アドレス + キー</string>
     <string name="voice_preset_selfhosted">セルフホスト認識</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">音声通話に使う</string>
     <string name="voice_result_in_use">使用中</string>
     <string name="voice_result_done">完了</string>
-    <string name="calls_who_speaks">誰が話すか</string>
-    <string name="calls_what_to_say">電話で話す内容</string>
-    <string name="calls_profile_summary">あいさつ・指示・通話時間</string>
     <string name="calls_voice_title">通話の音声</string>
     <string name="calls_voice_shared_note">この声はチャットの音声通話と共通です。</string>
     <string name="calls_audio_title">電話の音声経路</string>

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="appaccess_title">Acesso a apps</string>
-    <string name="appaccess_row_sub">Bloqueie apps e o compartilhamento de tela por app</string>
     <string name="appaccess_intro">Escolha quais apps o Mika pode ler e operar com as ferramentas padrão do celular. Comandos de shell, o sandbox e o acesso ao computador (MCP) não são limitados por esta configuração.</string>
     <string name="appaccess_privacy">Para categorizar, os nomes e os nomes de pacote dos apps são enviados ao modelo de IA; “Atualizar lista de apps” pergunta antes.</string>
     <string name="appaccess_unavailable">Não foi possível ler as configurações de acesso a apps, então o acesso padrão ao celular está pausado. Redefinir apaga as permissões e categorias salvas.</string>

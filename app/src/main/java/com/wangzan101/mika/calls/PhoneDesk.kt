@@ -49,6 +49,7 @@ class PhoneDesk(
     private val context: (text: String) -> Boolean = { false },
     /** 这条通话的协议能不能收提示([cue]);不能时回复不会自己到,让模型再请示一次去取。见 [canCue]。 */
     private val canCue: Boolean = true,
+    private val languageTag: String? = null,
     private val unrelayed: (reply: String) -> Unit = {},
 ) {
     private val lock = Any()
@@ -107,7 +108,7 @@ class PhoneDesk(
         "or after a short while, then relay it in your own words."
 
     /** 这通电话所属任务此刻的状态,一句话;没有所属任务时为 null。 */
-    fun ownerTaskLine(): String? = renderOwnerTask(ownerTask()?.value)
+    fun ownerTaskLine(): String? = renderOwnerTask(ownerTask()?.value, languageTag)
 
     /**
      * 实时通话:开场的状态已经写进提示词,之后状态变了(在做 → 做完这一级的变化,不是每一步)就当背景推一句,不让模型为此开口。
@@ -115,10 +116,11 @@ class PhoneDesk(
      */
     suspend fun pushOwnerTaskChanges() {
         val flow = ownerTask() ?: return
+        val cueMark = cueMarkFor(languageTag)
         coroutineScope {
             val watcher = launch {
-                flow.map { renderOwnerTask(it) }.distinctUntilChanged().drop(1).collect { line ->
-                    if (line != null && !isClosed()) context(CUE_MARK + line)
+                flow.map { renderOwnerTask(it, languageTag) }.distinctUntilChanged().drop(1).collect { line ->
+                    if (line != null && !isClosed()) context(cueMark + line)
                 }
             }
             ended.await()
@@ -145,7 +147,7 @@ class PhoneDesk(
         if (attemptsLeft <= 0) return hold(reply)
         if (isClosed()) return unrelayed(reply)
         if (!canCue) return hold(reply)
-        val accepted = cue(replyCue(reply)) { spoken -> if (!spoken) relay(reply, attemptsLeft - 1) }
+        val accepted = cue(replyCue(reply, languageTag)) { spoken -> if (!spoken) relay(reply, attemptsLeft - 1) }
         // 协议没有提示输入:重发也没用,直接留给下一次请示
         if (!accepted) hold(reply)
     }
@@ -172,23 +174,45 @@ class PhoneDesk(
     companion object {
         /** 提示的开头:告诉模型这不是对方说的话,也不要照念。 */
         const val CUE_MARK = "[Mika 给你的提示，不是对方说的话，不要照念] "
+        const val CUE_MARK_EN = "[Mika hint for you, not spoken by the other party; do not read verbatim] "
         const val OWNER_TASK_PREFIX = "这通电话所属的任务："
+        const val OWNER_TASK_PREFIX_EN = "Call task status: "
         const val MAX_QUESTION_CHARS = 300
 
+        private fun isChinese(languageTag: String?): Boolean =
+            languageTag == null || CallPolicy.isChineseLanguage(languageTag)
+
+        fun cueMarkFor(languageTag: String? = null): String =
+            if (isChinese(languageTag)) CUE_MARK else CUE_MARK_EN
+
         /** 主人回复交给模型的那条提示。 */
-        fun replyCue(reply: String): String = CUE_MARK + "主人回复了你刚才的请示：「" + reply + "」。用你自己的话简短转告对方。"
+        fun replyCue(reply: String, languageTag: String? = null): String =
+            if (isChinese(languageTag)) CUE_MARK + "主人回复了你刚才的请示：「" + reply + "」。用你自己的话简短转告对方。"
+            else CUE_MARK_EN + "The owner replied to your question: \"" + reply + "\". Relay this briefly in your own words."
 
         /** 标准通话的尾随附注:每次调模型前取一次 [owner] 的当前状态,不进 system 提示(保住缓存前缀)。 */
-        fun background(owner: StateFlow<TaskState>): DeskBackground = DeskBackground { renderOwnerTask(owner.value) }
+        fun background(owner: StateFlow<TaskState>, languageTag: String? = null): DeskBackground =
+            DeskBackground { renderOwnerTask(owner.value, languageTag) }
 
-        fun renderOwnerTask(state: TaskState?): String? = state?.let {
-            OWNER_TASK_PREFIX + when (deskPhaseOf(it)) {
-                DeskTaskPhase.Running -> "进行中"
-                DeskTaskPhase.Queued -> "排队中"
-                DeskTaskPhase.NeedsYou -> "等主人处理"
-                DeskTaskPhase.Done -> "已完成"
-                DeskTaskPhase.Failed -> "没做成"
-                DeskTaskPhase.Cancelled -> "已取消"
+        fun renderOwnerTask(state: TaskState?, languageTag: String? = null): String? = state?.let {
+            if (isChinese(languageTag)) {
+                OWNER_TASK_PREFIX + when (deskPhaseOf(it)) {
+                    DeskTaskPhase.Running -> "进行中"
+                    DeskTaskPhase.Queued -> "排队中"
+                    DeskTaskPhase.NeedsYou -> "等主人处理"
+                    DeskTaskPhase.Done -> "已完成"
+                    DeskTaskPhase.Failed -> "没做成"
+                    DeskTaskPhase.Cancelled -> "已取消"
+                }
+            } else {
+                OWNER_TASK_PREFIX_EN + when (deskPhaseOf(it)) {
+                    DeskTaskPhase.Running -> "Running"
+                    DeskTaskPhase.Queued -> "Queued"
+                    DeskTaskPhase.NeedsYou -> "Waiting for owner"
+                    DeskTaskPhase.Done -> "Completed"
+                    DeskTaskPhase.Failed -> "Failed"
+                    DeskTaskPhase.Cancelled -> "Cancelled"
+                }
             }
         }
 
@@ -196,17 +220,32 @@ class PhoneDesk(
          * 电话的系统提示:现有电话提示([phonePrompt],含通话规则和本次任务)在前,前台说明在后。
          * [openingOwnerTask] 只在实时通话给(开场时的任务状态);标准通话的状态走尾随附注,提示保持字节不变。
          */
-        fun systemPrompt(phonePrompt: String, task: CallTaskBrief?, openingOwnerTask: String?, canCue: Boolean = true): String {
+        fun systemPrompt(
+            phonePrompt: String,
+            task: CallTaskBrief?,
+            openingOwnerTask: String?,
+            canCue: Boolean = true,
+            languageTag: String? = null,
+        ): String {
+            val chinese = isChinese(languageTag)
             val brief = buildString {
-                append(task?.let { "目标：" + it.goal } ?: "本通电话没有交代具体目标。")
-                task?.questions?.takeIf { it.isNotEmpty() }?.let { append("\n必问事项：").append(it.joinToString("；")) }
-                openingOwnerTask?.let { append('\n').append(it) }
-                append('\n').append(if (canCue) RELAY_BY_CUE else RELAY_BY_ASKING)
+                if (chinese) {
+                    append(task?.let { "目标：" + it.goal } ?: "本通电话没有交代具体目标。")
+                    task?.questions?.takeIf { it.isNotEmpty() }?.let { append("\n必问事项：").append(it.joinToString("；")) }
+                    openingOwnerTask?.let { append('\n').append(it) }
+                    append('\n').append(if (canCue) RELAY_BY_CUE else RELAY_BY_ASKING)
+                } else {
+                    append(task?.let { "Goal: " + it.goal } ?: "No specific goal was provided for this call.")
+                    task?.questions?.takeIf { it.isNotEmpty() }?.let { append("\nQuestions to ask: ").append(it.joinToString("; ")) }
+                    openingOwnerTask?.let { append('\n').append(it) }
+                    append('\n').append(if (canCue) RELAY_BY_CUE_EN else RELAY_BY_ASKING_EN)
+                }
             }
-            return phonePrompt + "\n\n" + DeskPrompt.phone(brief, POLICY)
+            return phonePrompt + "\n\n" + DeskPrompt.phone(brief, if (chinese) POLICY else POLICY_EN)
         }
 
         private const val POLICY = "以上文的通话规则和授权边界为准；与上文冲突时从严。"
+        private const val POLICY_EN = "Follow the call rules and authorization boundaries above; if anything conflicts, apply the stricter rule."
 
         /**
          * 这条通话能不能把提示交给模型、让它接着说:标准通话(记进模型历史的一轮)和能加 system 文字项的实时协议(加一项再请它回话)能;
@@ -216,9 +255,11 @@ class PhoneDesk(
 
         /** 能收提示的通话:回复会自己送到。 */
         const val RELAY_BY_CUE = "主人的回复会以「[Mika 给你的提示…]」开头的提示送到你这里：用你自己的话转告对方，不要照念提示。"
+        const val RELAY_BY_CUE_EN = "The owner's reply will arrive as a hint starting with \"[Mika hint for you...]\"; relay it in your own words without reading the hint verbatim."
 
         /** 收不了提示的通话:回复不会自己到,要再请示一次去取。 */
         const val RELAY_BY_ASKING = "主人的回复不会自己送到你这里：请示之后，对方在等或过一会儿，再调用一次请示主人去取；" +
             "结果是 owner_replied 就用你自己的话转告对方，是 still_waiting 就请对方稍等或说回头答复。"
+        const val RELAY_BY_ASKING_EN = "The owner's reply will not arrive automatically: after asking, if the other party is waiting or after a brief pause, call ask_owner again to collect it; if the status is owner_replied, relay it in your own words, and if it is still_waiting, ask them to hold or offer to follow up later."
     }
 }

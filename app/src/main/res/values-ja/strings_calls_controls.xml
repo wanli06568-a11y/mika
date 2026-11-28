@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">通話状態</string>
-    <string name="calls_dtmf_open">キーパッド</string>
     <string name="calls_dtmf_title">通話キーパッド</string>
     <string name="calls_dtmf_close">閉じる</string>
     <string name="calls_dtmf_batch">連続入力</string>

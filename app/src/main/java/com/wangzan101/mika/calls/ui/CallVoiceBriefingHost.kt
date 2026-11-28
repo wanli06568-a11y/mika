@@ -54,7 +54,9 @@ internal fun rememberCallVoiceBriefing(
     fun cancel() { attempt++; starting = false; controller.cancel() }
     DisposableEffect(lifecycle, controller) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) { attempt++; starting = false; controller.cancel("已离开前台，未拨号") }
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                attempt++; starting = false; controller.cancel(context.getString(R.string.calls_voice_briefing_left_foreground))
+            }
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); controller.close() }

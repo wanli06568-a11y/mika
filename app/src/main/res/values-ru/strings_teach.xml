@@ -5,8 +5,6 @@
     <string name="teach_goal_label">Чему научить</string>
     <string name="teach_goal_hint">например: каждое утро отмечаться в приложении учёта времени</string>
     <string name="teach_disclosure">Шаги остаются на этом телефоне и только после нажатия «Начать показ». Если модель настроена, при создании навыка ей отправляется краткое описание цели и шагов без паролей, кодов и платежных данных. Если модели нет, черновик пишется на телефоне и ничего не отправляется. Пока вы его не примете, он не используется и не был успешно проверен.</string>
-    <string name="teach_continue">Далее</string>
-    <string name="teach_ready_body">Mika только смотрит и не управляет телефоном. Можно поставить на паузу, закончить или отменить. До нажатия «Начать показ» ничего не записывается.</string>
     <string name="teach_start">Начать показ</string>
     <string name="teach_learning">Учится</string>
     <string name="teach_paused">Пауза</string>
@@ -14,7 +12,6 @@
     <string name="teach_resume">Продолжить показ</string>
     <string name="teach_end">Закончить показ</string>
     <string name="teach_discard">Отменить</string>
-    <string name="teach_discard_body">Отменить этот показ и удалить сохраненные шаги?</string>
     <string name="teach_busy">Задача уже выполняется. Дождитесь конца, прежде чем учить.</string>
     <string name="teach_need_a11y">Сначала включите специальные возможности. Без них Mika не видит нажатия.</string>
     <string name="teach_interrupted">Показ остановился: приложение перезапустилось или специальные возможности выключены. Запись не идет, пока вы не продолжите.</string>

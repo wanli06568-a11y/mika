@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.learn.replay
 
+import com.wangzan101.mika.core.net.jsonObjectOrNull
 import com.wangzan101.mika.core.model.Author
 import com.wangzan101.mika.core.learn.knowledge.KnowledgeStore
 import com.wangzan101.mika.core.model.ChatModel
@@ -121,7 +122,7 @@ class RouteMatcher(
         internal fun parse(text: String, list: List<Route>, goal: String): RouteChoice? {
             val start = text.indexOf('{'); val end = text.lastIndexOf('}')
             if (start < 0 || end <= start) return null
-            val o = try { Json.parseToJsonElement(text.substring(start, end + 1)) as? JsonObject } catch (e: Exception) { null } ?: return null
+            val o = Json.jsonObjectOrNull(text.substring(start, end + 1)) ?: return null
             val pick = o["route"]
             if (pick == null || pick is JsonNull) return null
             val idx = (pick as? JsonPrimitive)?.intOrNull ?: return null

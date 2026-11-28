@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="selfcheck_title">فحص التوافق الذاتي</string>
-    <string name="selfcheck_row_sub">تعرّف على ما يعمل على هذا الهاتف وأرسل تقريرًا</string>
     <string name="selfcheck_intro">يستغرق نحو دقيقة واحدة. لا يؤثر في تطبيقاتك الأخرى، ولا يغيّر الإعدادات، ولا يستخدم الشبكة. يُرجى البقاء في هذه الصفحة أثناء تشغيله.</string>
     <string name="selfcheck_start">ابدأ</string>
     <string name="selfcheck_again">إعادة التشغيل</string>

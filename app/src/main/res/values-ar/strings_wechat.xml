@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">يمكن للرسائل الخاصة بدء مهام Mika</string>
     <string name="wechat_turn_off">إيقاف</string>
     <string name="wechat_title">WeChat</string>
-    <string name="wechat_settings_sub">أسنِد مهام إلى Mika عبر WeChat</string>
     <string name="wechat_status_disconnected">غير متصل</string>
     <string name="wechat_status_connecting">جارٍ الاتصال</string>
     <string name="wechat_status_connected">متصل</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">امسح الرمز في WeChat وأكّد التفويض، ثم افتح الدردشة الخاصة بالبوت وأرسل نصًا أو صورًا. رمز QR هذا مخصص لهذا الربط فقط؛ لا تُعِد توجيهه.</string>
     <string name="wechat_connection">الاتصال</string>
     <string name="wechat_receive">استلام مهام WeChat</string>
-    <string name="wechat_receive_sub">عند الإيقاف، تتوقف Mika عن قراءة الرسائل الجديدة</string>
     <string name="wechat_allow_unlock">السماح لمهام WeChat بإيقاظ الهاتف وإلغاء قفله</string>
     <string name="wechat_allow_unlock_sub">يمكن فقط للمهام الواردة في المحادثة الخاصة لحسابك المرتبط على WeChat محاولة إيقاظ هذا الهاتف وإلغاء قفله.</string>
     <string name="wechat_allow_unlock_foot">معطّل افتراضيًا، ويُعطّل عند إعادة ربط الحساب. فعّل أولًا «%3$s» في «%1$s › %2$s»، واحفظ على هذا الهاتف رمز PIN أو كلمة مرور قفل الشاشة إن كنت تستخدم أحدهما. هذا الخيار لا يغيّر ذلك الإذن ولا يستخدم بيانات القفل المُرسلة عبر WeChat.</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">نصوص وصور خاصة ومهام فعلية</string>
     <string name="wechat_capability_replies">أسئلة Mika والنتائج والإشعارات</string>
     <string name="wechat_capability_phone">تأكيدات الدفع وتولي التحكم في الهاتف</string>
-    <string name="wechat_capability_phone_sub">لا تزال تُنجز على هذا الهاتف</string>
     <string name="wechat_capability_later">الصوت والملفات والمجموعات والحسابات المتعددة</string>
     <string name="wechat_supported">مدعوم</string>
     <string name="wechat_phone_only">الهاتف</string>

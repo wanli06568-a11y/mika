@@ -11,6 +11,7 @@ import com.wangzan101.mika.core.run.record.RunEvent
 import com.wangzan101.mika.core.run.record.RunRecords
 import com.wangzan101.mika.core.run.record.RunSink
 import com.wangzan101.mika.core.run.record.RunSummary
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -128,9 +129,8 @@ class RunStore internal constructor(
             File(dir, EVENTS).appendText(RunEvent.encode(e) + "\n")
             val summaryFile = File(dir, RUN_JSON)
             val summary = RunEvent.json.decodeFromString(RunSummary.serializer(), summaryFile.readText()).with(e)
-            val tmp = File(dir, "$RUN_JSON.tmp")
-            tmp.writeText(RunEvent.json.encodeToString(RunSummary.serializer(), summary))
-            if (!tmp.renameTo(summaryFile)) error("rename failed")
+            val text = RunEvent.json.encodeToString(RunSummary.serializer(), summary)
+            if (!AtomicFiles.write(summaryFile, text, durable = false, move = AtomicFiles.Move.Rename)) error("rename failed")
             if (e is RunEvent.OutcomeJudged) metrics.update(runId) { it.copy(judged = e.outcome) }
         }.onFailure { runCatching { Log.w(TAG, "could not append to run $runId", it) } }
     }
@@ -282,9 +282,8 @@ class RunHandle internal constructor(
     private fun writeSummary() {
         sinceSummary = 0
         safely("summary") {
-            val tmp = File(dir, "${RunStore.RUN_JSON}.tmp")
-            tmp.writeText(RunEvent.json.encodeToString(RunSummary.serializer(), summary))
-            if (!tmp.renameTo(File(dir, RunStore.RUN_JSON))) error("rename failed")
+            val text = RunEvent.json.encodeToString(RunSummary.serializer(), summary)
+            if (!AtomicFiles.write(File(dir, RunStore.RUN_JSON), text, durable = false, move = AtomicFiles.Move.Rename)) error("rename failed")
         }
     }
 

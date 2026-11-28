@@ -20,6 +20,7 @@ import com.wangzan101.mika.core.net.LocalHosts
 import com.wangzan101.mika.core.net.NetProxy
 import com.wangzan101.mika.core.model.oauth.LoopbackCallback
 import com.wangzan101.mika.core.run.ResourceScope
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.core.workspace.SandboxError
 import com.wangzan101.mika.mcp.McpPackageConsent
 import com.wangzan101.mika.mcp.McpPackageProvisioner
@@ -44,8 +45,6 @@ import java.io.Closeable
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -585,9 +584,7 @@ class McpServerStore(
 
     private fun atomicWriteBytes(target: File, bytes: () -> ByteArray) {
         dir.mkdirs()
-        val tmp = File(target.path + ".tmp")
-        tmp.writeBytes(bytes())
-        Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        AtomicFiles.write(target, bytes(), durable = false)
     }
 
     private fun isLocalHost(host: String): Boolean = LocalHosts.isPrivateOrMesh(host)

@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d متاحة</string>
     <string name="voice_hub_footer">اختر من يقوم بكل مهمة. خدمات الصوت هي الحسابات التي تأتي منها هذه الخيارات.</string>
     <string name="voice_hub_setup">إعداد</string>
-    <string name="voice_hub_ready">جاهز</string>
     <string name="voice_hub_off">متوقف</string>
     <string name="voice_hub_none">لم يُختر</string>
     <string name="voice_source_device">هذا الهاتف · مجاني</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">قبل حذف حساب دردشة نخبرك أولًا بالاستخدامات الصوتية التي ستتأثر.</string>
     <string name="voice_add_advanced">متقدم</string>
     <string name="voice_add_custom">مخصص</string>
-    <string name="voice_add_custom_sub">أدخل معرّفات النماذج والبروتوكولات والعناوين بنفسك</string>
     <string name="voice_preset_compat">خدمة متوافقة مع OpenAI</string>
     <string name="voice_preset_compat_sub">إدخال صوتي · قراءة · فوري · عنوان + مفتاح</string>
     <string name="voice_preset_selfhosted">تعرّف باستضافة ذاتية</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">استخدام للمكالمات الصوتية</string>
     <string name="voice_result_in_use">قيد الاستخدام</string>
     <string name="voice_result_done">تم</string>
-    <string name="calls_who_speaks">من يتحدث</string>
-    <string name="calls_what_to_say">ماذا يُقال في الهاتف</string>
-    <string name="calls_profile_summary">التحية والتعليمات ومدة المكالمة</string>
     <string name="calls_voice_title">صوت المكالمة</string>
     <string name="calls_voice_shared_note">هذا الصوت مشترك مع المكالمات الصوتية في الدردشة.</string>
     <string name="calls_audio_title">صوت المكالمة الهاتفية</string>

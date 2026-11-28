@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">음성 모델</string>
-    <string name="models_voice_catalog_sub">음성 인식, 음성 합성, 실시간 통화 모델을 한곳에서 관리</string>
     <string name="voice_catalog_title">음성 모델</string>
     <string name="voice_catalog_sub">음성 인식, 음성 합성, 실시간 통화 모델을 한곳에서 관리합니다. 기능과 프로토콜은 여기에서 선언하며, 음성 입력·읽어주기·통화 설정 페이지에서는 선택과 사용 환경설정만 다룹니다.</string>
     <string name="voice_catalog_add">모델 추가</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">검증 안 됨</string>
     <string name="voice_catalog_testing">테스트 중…</string>
     <string name="voice_catalog_listening">듣는 중입니다. 말씀해 주세요…</string>
+    <string name="voice_catalog_no_speech">음성이 감지되지 않았습니다</string>
     <string name="voice_catalog_incomplete">먼저 계정 정보를 입력하세요</string>
     <string name="voice_catalog_protocol_stt_android_system">Android 시스템</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">오디오 전사</string>

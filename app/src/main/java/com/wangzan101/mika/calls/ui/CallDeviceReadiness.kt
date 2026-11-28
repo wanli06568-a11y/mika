@@ -46,7 +46,6 @@ import com.wangzan101.mika.ui.theme.MikaSpace
 import com.wangzan101.mika.ui.theme.MikaTheme
 import kotlinx.coroutines.launch
 import com.wangzan101.mika.chat.ui.readiness
-import com.wangzan101.mika.memory.ui.Link
 import com.wangzan101.mika.settings.ui.models.Page
 import com.wangzan101.mika.settings.ui.models.refresh
 
@@ -193,45 +192,6 @@ private fun readCallDeviceReadiness(context: Context): CallDeviceReadiness {
         }
     }.getOrDefault(CallBatteryPolicy.Unknown)
     return CallDeviceReadiness(missing, notificationBlock, batteryPolicy)
-}
-
-@Composable
-internal fun CallPermissionRows(device: CallDeviceControls, helperConnected: Boolean, enabled: Boolean, onHelperSetup: () -> Unit) {
-    val checks = device.readiness
-    val phoneAction = device.phoneAction.takeIf { enabled && !checks.phoneAllowed }
-    ListRow(
-        MikaIcons.Phone, stringResource(R.string.calls_device_phone_permissions),
-        stringResource(if (checks.phoneAllowed) R.string.calls_device_permission_granted else R.string.calls_device_phone_permissions_note),
-        tone = if (checks.phoneAllowed) TileTone.Ok else TileTone.Warn,
-        detail = phoneAction?.let { stringResource(device.phoneActionLabel) }, detailColor = MikaTheme.colors.accent,
-        onClick = phoneAction,
-    ) { if (phoneAction != null) RowChevron() }
-
-    val notificationAction = device.notificationAction.takeIf { enabled && !checks.standbyNotificationsAllowed }
-    ListRow(
-        MikaIcons.Bell, stringResource(R.string.calls_device_notifications),
-        stringResource(when (checks.notificationBlock) {
-            CallNotificationBlock.Permission -> R.string.calls_device_notifications_permission_missing
-            CallNotificationBlock.App -> R.string.calls_device_notifications_app_off
-            CallNotificationBlock.CallChannel -> R.string.calls_device_notifications_calls_off
-            CallNotificationBlock.StandbyChannel -> R.string.calls_device_notifications_standby_off
-            CallNotificationBlock.Unknown -> R.string.calls_device_notifications_unknown
-            CallNotificationBlock.None -> R.string.calls_device_permission_granted
-        }),
-        tone = if (checks.standbyNotificationsAllowed) TileTone.Ok else TileTone.Warn,
-        detail = notificationAction?.let { stringResource(device.notificationActionLabel) }, detailColor = MikaTheme.colors.accent,
-        onClick = notificationAction,
-    ) { if (notificationAction != null) RowChevron() }
-
-    val helperAction = onHelperSetup.takeIf { enabled }
-    ListRow(
-        MikaIcons.Link, stringResource(R.string.calls_helper_name),
-        stringResource(if (helperConnected) R.string.calls_device_helper_connected else R.string.calls_helper_disconnected),
-        tone = if (helperConnected) TileTone.Ok else TileTone.Warn,
-        detail = helperAction?.let { stringResource(if (helperConnected) R.string.calls_helper_manage else R.string.calls_helper_set_up) },
-        detailColor = MikaTheme.colors.accent,
-        onClick = helperAction,
-    ) { if (helperAction != null) RowChevron() }
 }
 
 internal fun backgroundStandbyStatus(config: CallConfig, state: CallRuntimeState): Int = when {

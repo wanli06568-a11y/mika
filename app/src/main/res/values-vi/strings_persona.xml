@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="persona_title">Nhân cách</string>
-    <string name="persona_sub">Chọn cách Mika nói chuyện với bạn</string>
     <string name="persona_default">Mặc định</string>
     <string name="persona_default_sub">Giọng nói thường lệ của Mika</string>
     <string name="persona_empty">Chưa có nhân cách nào</string>

@@ -357,12 +357,6 @@ class ProactiveRuntime(
         else -> SourceTier.Mid
     }
 
-    /** 改一个 App 的来源档位。调成低是「不从它归纳」:它已收的事件、原文、句子一并去掉(在串行协程上做)。 */
-    fun setLearnTier(packageName: String, tier: SourceTier) {
-        storeTier(packageName, tier)
-        scope.launch { if (tier == SourceTier.Low) learn.forgetApps(setOf(packageName)) else learn.poke() }
-    }
-
     /** 记下档位(状态流先改,串行协程上的事后做:它们读的是改好的值)。 */
     private fun storeTier(packageName: String, tier: SourceTier) {
         val high = if (tier == SourceTier.High) _learnHigh.value + packageName else _learnHigh.value - packageName

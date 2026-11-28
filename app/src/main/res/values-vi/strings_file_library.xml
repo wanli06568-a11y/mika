@@ -10,8 +10,6 @@
     <string name="file_library_loading">Đang tải tệp…</string>
     <string name="file_library_empty">Không tìm thấy tệp nào</string>
     <string name="file_library_missing">Không khả dụng</string>
-    <string name="file_library_available">Khả dụng</string>
-    <string name="file_library_open">Mở</string>
     <string name="file_library_share">Chia sẻ</string>
     <string name="file_library_add">Thêm vào bản nháp</string>
     <string name="file_library_choose">Chọn một cuộc trò chuyện</string>

@@ -13,6 +13,7 @@ import com.wangzan101.mika.core.model.ModelRole
 import com.wangzan101.mika.core.model.OpenAiServiceTier
 import com.wangzan101.mika.core.model.PromptCaching
 import com.wangzan101.mika.core.model.usage.TokenBudgetLimits
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -32,8 +33,6 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.Base64
 import com.wangzan101.mika.settings.ProviderStore.Companion.LEGACY_DEFAULT_CONTEXT_TOKENS
 import com.wangzan101.mika.settings.ProviderStore.Companion.USE_MODEL
@@ -431,9 +430,7 @@ internal fun ProviderStore.configJson(
 internal fun ProviderStore.keysJson() = buildJsonObject { keys.forEach { (id, v) -> put(id, v) } }.toString()
 
 internal fun ProviderStore.writeAtomically(f: File, text: String) {
-    val tmp = File(f.parentFile, f.name + ".tmp")
-    tmp.writeText(text)
-    Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+    AtomicFiles.write(f, text, durable = false)
 }
 
 internal fun ProviderStore.encode(b: ByteArray) = Base64.getEncoder().encodeToString(b)

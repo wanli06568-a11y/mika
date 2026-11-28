@@ -90,19 +90,47 @@ val chatgptSignInCheck by tasks.registering(JavaExec::class) {
     outputs.upToDateWhen { false }
 }
 
-tasks.test {
-    // 跨语言 CLI 契约由 cliTest 显式运行;纯 JVM 测试不要求电脑安装 Python。
-    exclude("**/RemoteCliContractTest*")
-    // 真网关跨语言测试显式运行,普通 JVM 测试不要求安装 Go。
-    exclude("**/RelayGatewayIntegrationTest*")
+// 读 core 以外仓库文件(文档、README、app 源码与资源、评测任务集)的测试。单独成一个任务,只有它挂这些输入:
+// 只改 app 或文档时 core 的其余测试保持 UP-TO-DATE,不必整套重跑。test 依赖它,./gradlew :core:test 照样全跑。
+val repoTestClasses = listOf(
+    "**/core/DocsConsistencyTest*",
+    "**/docs/ReadmeSectionsTest*",
+    "**/docs/ReadmeTranslationsTest*",
+    "**/capability/PackageDependencyTest*",
+    "**/action/SingleEntryTest*",
+    "**/prompt/RegexPortabilityTest*",
+    "**/general/MemoryRequestsTest*",
+    "**/eval/TaskSetTest*",
+    "**/eval/RescoreEvalRun*",
+)
+
+val repoTest by tasks.registering(Test::class) {
+    group = "verification"
+    description = "读仓库文档、README、app 源码和评测任务集的一致性测试"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
     // testFixtures 会把 core 的 jar 放到测试类路径前面;让目录排在前面,按目录读资源的测试才找得到文件
-    classpath = sourceSets.main.get().output + classpath
+    classpath = sourceSets.main.get().output + sourceSets.test.get().runtimeClasspath
+    include(repoTestClasses)
     // TaskSetTest 读仓库根目录的评测任务集
     inputs.dir(rootProject.file("eval")).withPropertyName("evalTasks")
     // DocsConsistencyTest、ReadmeTranslationsTest 读仓库的文档(根目录 README.md,docs/readme/ 下各语言的译文在 docs 里),并对照 app 的源码;文档或 app 源码变了要重跑
     inputs.files(rootProject.file("README.md"), rootProject.file("tools/sandbox/README.md")).withPropertyName("docsFiles")
     inputs.dir(rootProject.file("docs")).withPropertyName("docsDir")
     inputs.dir(rootProject.file("app/src")).withPropertyName("appSources")
+    // updateReadme 先改写 README,同一次构建里测试要读改写后的
+    mustRunAfter(updateReadme)
+}
+
+tasks.test {
+    // 跨语言 CLI 契约由 cliTest 显式运行;纯 JVM 测试不要求电脑安装 Python。
+    exclude("**/RemoteCliContractTest*")
+    // 真网关跨语言测试显式运行,普通 JVM 测试不要求安装 Go。
+    exclude("**/RelayGatewayIntegrationTest*")
+    // 读仓库文件的测试归 repoTest(见上)
+    exclude(repoTestClasses)
+    dependsOn(repoTest)
+    // testFixtures 会把 core 的 jar 放到测试类路径前面;让目录排在前面,按目录读资源的测试才找得到文件
+    classpath = sourceSets.main.get().output + classpath
     // updateReadme 先改写 README,同一次构建里测试要读改写后的
     mustRunAfter(updateReadme)
     // 循环场景的消息序列金样;-PupdateSnapshots 时重新生成(见 LoopSnapshot)

@@ -32,7 +32,6 @@
     <string name="memory_tasks">Помнить прошлые задачи</string>
     <string name="memory_tasks_sub">Сохранять краткий итог каждой выполненной задачи, чтобы вспомнить в следующий раз</string>
     <string name="memory_tasks_title">Прошлые задачи</string>
-    <string name="memory_clear_sub">Удалить всю память и выученные навыки</string>
     <string name="edit_it">Изменить</string>
     <string name="unpin">Открепить</string>
     <string name="pin">Закрепить</string>
@@ -87,7 +86,6 @@
     <string name="skills_get">Получить навыки</string>
     <string name="skills_share">Поделиться навыком</string>
     <string name="skills_import">Импортировать навык</string>
-    <string name="skills_import_sub">Вставьте навык, которым с вами поделились</string>
     <string name="skills_import_hint">Сначала он попадёт в «На проверке» и не будет использоваться, пока вы его не прочитаете и не примете.</string>
     <string name="skills_import_confirm">Импортировать</string>
     <string name="skill_imported">Импортировано. Проверьте в разделе «На проверке».</string>
@@ -95,7 +93,6 @@
     <string name="skill_builtin_name">Встроенный навык с таким названием уже есть. Переименуйте и попробуйте снова.</string>
     <string name="skill_draft_pending">Черновик с таким названием уже ждёт проверки. Сначала разберитесь с ним.</string>
     <string name="market_title">Каталог навыков</string>
-    <string name="market_sub">Просмотр навыков из GitHub</string>
     <string name="market_source">Источник навыков</string>
     <string name="market_add">Добавить на проверку</string>
     <string name="market_network_error">Не удалось загрузить. Проверьте репозиторий и подключение.</string>

@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.model.oauth
 
+import com.wangzan101.mika.core.net.str
 import com.wangzan101.mika.core.model.HttpSupport
 import com.wangzan101.mika.core.model.ModelError
 import kotlinx.coroutines.CancellationException
@@ -194,4 +195,3 @@ class XaiAuth(
 
 data class XaiEndpoints(val deviceUrl: String, val tokenUrl: String, val userinfoUrl: String?)
 
-private fun JsonObject.str(k: String): String? = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull

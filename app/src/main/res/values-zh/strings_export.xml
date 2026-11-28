@@ -27,7 +27,6 @@
     <string name="export_done">已导出</string>
     <string name="export_failed">导出失败：%1$s</string>
     <string name="export_no_messages">没有可导出的消息</string>
-    <string name="export_current_turn">正在进行的这一轮不参与导出。</string>
     <string name="export_warnings">有 %1$d 项没能带上。</string>
     <string name="export_filename_fallback">Mika 对话</string>
 

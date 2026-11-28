@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">Pemeriksaan kompatibilitas</string>
-    <string name="selfcheck_row_sub">Lihat apa yang berfungsi di ponsel ini dan laporkan</string>
     <string name="selfcheck_intro">Sekitar 1 menit. Tidak menyentuh aplikasi lain Anda, tidak mengubah pengaturan, dan tidak memakai jaringan. Harap tetap di halaman ini selama berjalan.</string>
     <string name="selfcheck_start">Mulai</string>
     <string name="selfcheck_again">Jalankan lagi</string>

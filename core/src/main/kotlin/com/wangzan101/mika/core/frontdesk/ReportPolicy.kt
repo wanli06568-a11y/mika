@@ -3,7 +3,7 @@ package com.wangzan101.mika.core.frontdesk
 import com.wangzan101.mika.core.agent.TaskState
 
 /**
- * 哪些任务事件前台要主动说:开始、排队、要用户回答或动手、收尾一律说;用户自己取消的不说;
+ * 哪些任务事件前台要主动说:开始、排队、要用户回答或动手、收尾一律说(派单当场就开始的不报开始,由 [FrontDesk] 滤掉);用户自己取消的不说;
  * 进度在同一任务上次汇报后 [progressQuietMs] 内不说,免得一直念叨;用户问起进展时前台照任务板答,不靠这里放行。
  * [shouldReport] 返回 true 即视为这次已汇报,从这一刻重新计时。
  */

@@ -32,7 +32,6 @@
     <string name="memory_tasks">Ghi nhớ các tác vụ trước</string>
     <string name="memory_tasks_sub">Giữ một bản tóm tắt ngắn của mỗi tác vụ đã hoàn thành để nhớ lại lần sau</string>
     <string name="memory_tasks_title">Các tác vụ trước</string>
-    <string name="memory_clear_sub">Xóa toàn bộ bộ nhớ và các kỹ năng đã học</string>
     <string name="edit_it">Sửa</string>
     <string name="unpin">Bỏ ghim</string>
     <string name="pin">Ghim</string>
@@ -87,7 +86,6 @@
     <string name="skills_get">Lấy kỹ năng</string>
     <string name="skills_share">Chia sẻ kỹ năng</string>
     <string name="skills_import">Nhập một kỹ năng</string>
-    <string name="skills_import_sub">Dán một kỹ năng mà ai đó đã chia sẻ với bạn</string>
     <string name="skills_import_hint">Nó sẽ vào mục “Cần xem xét” trước và không được dùng cho tới khi bạn đọc và chấp nhận nó.</string>
     <string name="skills_import_confirm">Nhập</string>
     <string name="skill_imported">Đã nhập. Hãy xem lại nó trong mục “Cần xem xét”.</string>
@@ -95,7 +93,6 @@
     <string name="skill_builtin_name">Một kỹ năng tích hợp sẵn đã có tên này. Hãy đổi tên và thử lại.</string>
     <string name="skill_draft_pending">Một bản nháp với tên này đã đang chờ xem xét. Hãy xử lý bản đó trước.</string>
     <string name="market_title">Chợ kỹ năng</string>
-    <string name="market_sub">Duyệt các kỹ năng được chia sẻ trên GitHub</string>
     <string name="market_source">Nguồn kỹ năng</string>
     <string name="market_add">Thêm vào mục xem xét</string>
     <string name="market_network_error">Không tải xuống được. Kiểm tra kho lưu trữ và mạng, rồi thử lại.</string>

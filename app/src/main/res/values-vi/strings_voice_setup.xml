@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d khả dụng</string>
     <string name="voice_hub_footer">Chọn ai làm từng việc. Dịch vụ giọng nói là các tài khoản mà những lựa chọn này lấy từ đó.</string>
     <string name="voice_hub_setup">Thiết lập</string>
-    <string name="voice_hub_ready">Sẵn sàng</string>
     <string name="voice_hub_off">Tắt</string>
     <string name="voice_hub_none">Chưa chọn</string>
     <string name="voice_source_device">Điện thoại này · miễn phí</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">Việc xóa một tài khoản trò chuyện sẽ cho bạn biết trước nó ảnh hưởng tới giọng nói nào đang dùng tài khoản đó.</string>
     <string name="voice_add_advanced">Nâng cao</string>
     <string name="voice_add_custom">Tùy chỉnh</string>
-    <string name="voice_add_custom_sub">Tự nhập ID mô hình, giao thức và điểm cuối</string>
     <string name="voice_preset_compat">Dịch vụ tương thích OpenAI</string>
     <string name="voice_preset_compat_sub">Nhập bằng lời nói · đọc to · thời gian thực · địa chỉ + khóa</string>
     <string name="voice_preset_selfhosted">Nhận dạng tự lưu trữ</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">Dùng cho cuộc gọi thoại</string>
     <string name="voice_result_in_use">Đang dùng</string>
     <string name="voice_result_done">Xong</string>
-    <string name="calls_who_speaks">Ai là người nói</string>
-    <string name="calls_what_to_say">Nói gì qua điện thoại</string>
-    <string name="calls_profile_summary">Lời chào, hướng dẫn và độ dài cuộc gọi</string>
     <string name="calls_voice_title">Giọng cuộc gọi</string>
     <string name="calls_voice_shared_note">Giọng này được dùng chung với cuộc gọi thoại trong trò chuyện.</string>
     <string name="calls_audio_title">Âm thanh cuộc gọi điện thoại</string>

@@ -62,7 +62,6 @@
         <item quantity="other">%1$d langkah</item>
     </plurals>
     <string name="timeline_criteria">Tanda selesai</string>
-    <string name="timeline_outcome">Hasil</string>
     <string name="timeline_check">Pemeriksaan</string>
     <string name="timeline_duration">Waktu yang dibutuhkan</string>
     <string name="timeline_more">Detail lainnya</string>
@@ -81,8 +80,6 @@
         <item quantity="other">Dilihat %1$d kali</item>
     </plurals>
     <string name="effect_small_change">Berubah sedikit</string>
-    <string name="timeline_hide_screen">Sembunyikan layar</string>
-    <string name="timeline_show_screen">Lihat layar saat itu</string>
     <string name="timeline_step_screen">Layar pada langkah %1$d</string>
     <string name="timeline_export">Ekspor catatan penggunaan</string>
     <string name="timeline_export_hint">Simpan penggunaan token tiap balasan model dan peristiwa pemadatan konteks sebagai JSONL.</string>

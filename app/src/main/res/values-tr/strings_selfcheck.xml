@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">Uyumluluk öz denetimi</string>
-    <string name="selfcheck_row_sub">Bu telefonda neyin çalıştığını görün ve bildirin</string>
     <string name="selfcheck_intro">Yaklaşık 1 dakika sürer. Diğer uygulamalarınıza dokunmaz, ayar değiştirmez ve ağı kullanmaz. Çalışırken lütfen bu sayfada kalın.</string>
     <string name="selfcheck_start">Başlat</string>
     <string name="selfcheck_again">Tekrar çalıştır</string>

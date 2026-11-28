@@ -32,7 +32,6 @@
     <string name="memory_tasks">Geçmiş görevleri hatırla</string>
     <string name="memory_tasks_sub">Bir dahaki sefere hatırlamak için her biten görevin kısa bir özetini tut</string>
     <string name="memory_tasks_title">Geçmiş görevler</string>
-    <string name="memory_clear_sub">Tüm belleği ve öğrenilen becerileri sil</string>
     <string name="edit_it">Düzenle</string>
     <string name="unpin">Sabitlemeyi kaldır</string>
     <string name="pin">Sabitle</string>
@@ -87,7 +86,6 @@
     <string name="skills_get">Beceri edin</string>
     <string name="skills_share">Beceriyi paylaş</string>
     <string name="skills_import">Bir beceri içe aktar</string>
-    <string name="skills_import_sub">Birinin sizinle paylaştığı bir beceriyi yapıştırın</string>
     <string name="skills_import_hint">Önce \“İncelenecek\”e gider ve siz okuyup kabul edene kadar kullanılmaz.</string>
     <string name="skills_import_confirm">İçe aktar</string>
     <string name="skill_imported">İçe aktarıldı. \“İncelenecek\” altında inceleyin.</string>
@@ -95,7 +93,6 @@
     <string name="skill_builtin_name">Yerleşik bir beceri zaten bu ada sahip. Yeniden adlandırıp tekrar deneyin.</string>
     <string name="skill_draft_pending">Bu ada sahip bir taslak zaten incelemeyi bekliyor. Önce onu ele alın.</string>
     <string name="market_title">Beceri pazarı</string>
-    <string name="market_sub">GitHub\'da paylaşılan becerilere göz atın</string>
     <string name="market_source">Beceri kaynağı</string>
     <string name="market_add">İncelemeye ekle</string>
     <string name="market_network_error">İndirilemedi. Depoyu ve ağı kontrol edip tekrar deneyin.</string>

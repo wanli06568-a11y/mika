@@ -1,7 +1,6 @@
 <resources>
     <string name="device_browser_title">Tệp trên thiết bị</string>
     <string name="device_browser_roots">Thư mục đã cấp phép</string>
-    <string name="device_browser_back">Quay lại</string>
     <string name="device_browser_retry">Không thể tải tệp. Nhấn để thử lại.</string>
     <string name="device_browser_empty">Không có tệp hoặc thư mục đã cấp phép</string>
     <string name="device_browser_more">Tải thêm</string>

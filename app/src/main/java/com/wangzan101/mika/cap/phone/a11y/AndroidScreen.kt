@@ -1,25 +1,13 @@
 package com.wangzan101.mika.cap.phone.a11y
 
-import android.accounts.AccountManager
-import android.app.AlarmManager
-import android.app.PendingIntent
-import android.content.ComponentName
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.content.res.Resources
-import android.graphics.Path
 import android.graphics.Rect
-import android.os.Bundle
 import android.os.SystemClock
-import android.util.Log
-import android.view.Display
 import android.view.KeyEvent
-import android.view.ViewConfiguration
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.view.accessibility.AccessibilityWindowInfo
 import com.wangzan101.mika.core.cap.phone.GesturePacing
 import com.wangzan101.mika.core.cap.phone.TypingPacing
 import com.wangzan101.mika.core.screen.uistate.ActionResult
@@ -31,12 +19,7 @@ import com.wangzan101.mika.core.screen.uistate.AppProfiles
 import com.wangzan101.mika.core.screen.uistate.LaunchChoice
 import com.wangzan101.mika.core.screen.uistate.LaunchChooser
 import com.wangzan101.mika.core.screen.uistate.OpenedElsewhere
-import com.wangzan101.mika.core.screen.uistate.UnseenField
-import com.wangzan101.mika.core.screen.uistate.normalize
-import com.wangzan101.mika.core.screen.uistate.Relocation
 import com.wangzan101.mika.core.screen.uistate.ScreenCheck
-import com.wangzan101.mika.core.screen.uistate.ScreenDiagnosis
-import com.wangzan101.mika.core.screen.uistate.ScreenFacts
 import com.wangzan101.mika.core.screen.uistate.ScreenPort
 import com.wangzan101.mika.core.screen.uistate.ScreenEvent
 import com.wangzan101.mika.core.screen.uistate.ScreenSnapshot
@@ -45,51 +28,29 @@ import com.wangzan101.mika.core.screen.uistate.SystemCommandResult
 import com.wangzan101.mika.core.screen.uistate.SystemAction
 import com.wangzan101.mika.core.screen.uistate.SystemActionResult
 import com.wangzan101.mika.core.screen.uistate.WheelOutcome
-import com.wangzan101.mika.cap.phone.shell.AsciiTextKeys
-import com.wangzan101.mika.cap.phone.shell.SystemIntents
 import com.wangzan101.mika.core.screen.visual.FrameGrid
 import com.wangzan101.mika.core.screen.uistate.Verification
-import com.wangzan101.mika.core.screen.uistate.TextField
-import com.wangzan101.mika.core.screen.uistate.typeAndVerify
-import com.wangzan101.mika.core.screen.uistate.relocate
-import com.wangzan101.mika.core.screen.uistate.RELOCATE_MAX_SHIFT
-import com.wangzan101.mika.core.screen.uistate.BackAffordance
 import com.wangzan101.mika.cap.phone.display.FrameMath
 import com.wangzan101.mika.cap.phone.display.LazyAgentDisplay
 import com.wangzan101.mika.shell.IMikaShell
-import com.wangzan101.mika.cap.phone.shell.MainScreenWatch
-import com.wangzan101.mika.cap.phone.shell.ShellService
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 /**
  * [ScreenPort] 的安卓实现:读 Agent 虚拟屏的无障碍窗口,在这块屏上操作。
@@ -265,87 +226,10 @@ class AndroidScreen(
     override val canShareVideo: Boolean get() = opening.canShareVideo
     suspend fun openOwnPage(intent: Intent): ActionResult = opening.openOwnPage(intent)
 
-    /**
-     * 打开链接或设置页。和 [openApp] 一样第一次用时才建屏;用户在主屏用着那个 App 时不打开。
-     * 设置页预期落在系统设置所在的包,指定了 App 的落在那个 App;落到别处(系统选择器、跳转页)照样成功,带提示。
-     */
-    override suspend fun openLink(action: String?, uri: String?, packageName: String?): ActionResult = withContext(Dispatchers.IO) {
-        // 指定了 App 的由应用访问边界看过;没指定的,名单非空时在这里挑一个没被禁用的接手
-        val pinned = packageName ?: allowedLinkHandler(action, uri)
-        val id = display.get().displayId
-        val expected = pinned ?: settingsPackage.takeIf { action != null }
-        if (checkOtherTasks && expected != null && !reserve(expected)) return@withContext IN_USE_BY_OTHER
-        val before = ScreenReader.topPackage(windows())
-        val beforeTree = treeHash()
-        val startedAt = System.nanoTime()
-        // 事先知道由谁打开的(指定了 App、设置页、只有一个 App 接的链接):启动前先静上
-        val early = expected ?: linkHandler(action, uri)
-        early?.let { beforeOpen(it, null) }
-        val code = shell.startView(id, action, uri, pinned)
-        if (code != ShellService.START_OK) early?.let { notOpened(it, null) }
-        when (code) {
-            ShellService.START_OK -> Unit
-            ShellService.START_IN_USE_ON_MAIN -> return@withContext ActionResult.Failed("app_in_use_by_user")
-            ShellService.START_IN_USE_BY_OTHER -> return@withContext IN_USE_BY_OTHER
-            ShellService.START_UNRESOLVED -> return@withContext ActionResult.Failed("link_unresolved")
-            ShellService.START_INVALID_LINK -> return@withContext ActionResult.Failed("invalid_link")
-            else -> return@withContext ActionResult.Failed("launch_failed")
-        }
-        // 链接可能落到另一个 App、系统选择器或同 App 的新页面,同样不能把启动前的帧交出去。
-        frameGuardSince = startedAt
-        fun landed(): Boolean {
-            val top = ScreenReader.topPackage(windows())
-            return if (expected != null) top == expected else top != null && (top != before || treeHash() != beforeTree)
-        }
-        val deadline = SystemClock.uptimeMillis() + LAUNCH_WAIT_MS
-        while (!landed() && SystemClock.uptimeMillis() < deadline) delay(POLL_MS)
-        waitStable(SETTLE_CAP_MS)
-        val top = ScreenReader.topPackage(windows())
-        val changed = top != before || treeHash() != beforeTree
-        if (changed) awaitFrameAfter(startedAt) else frameGuardSince = null
-        // 只认真正打开链接的 App:落在系统选择器或别处时不把它当成目标
-        val opened = top?.takeIf { if (expected != null) it == expected else it !in systemPickers }
-        if (opened != null) {
-            // 事先不知道由谁打开的链接,落地后再占;占不到也不撤回(外壳那边已查过别的屏)
-            if (checkOtherTasks) reserve(opened)
-            targetPackage = opened
-            requestedUser = null
-            val task = shell.topTaskId(displayId)
-            _target.value = TargetApp(opened, task, userOf(task))
-        }
-        ok(hint = if (expected != null && top != expected) hintLinkElsewhere(top, expected) else null)
-    }
+    /** 打开链接 / 系统动作的子对象,见 [LinkAndSystemActions]。 */
+    internal val links = LinkAndSystemActions(this)
 
-    /**
-     * 禁用名单非空、链接没指定 App 时由谁打开:系统默认的那个没被禁用就用它,不然用第一个没被禁用的;能接的全被禁用就拒绝。
-     * 名单为空、或没有 App 能接时为 null(照常交给系统,不多查一次)。
-     */
-    internal fun allowedLinkHandler(action: String?, uri: String?): String? {
-        val access = appAccess.current()
-        if (access.blocked.isEmpty()) return null
-        val intent = Intent(action ?: Intent.ACTION_VIEW).apply {
-            uri?.let { data = android.net.Uri.parse(it) }
-            addCategory(Intent.CATEGORY_DEFAULT)
-        }
-        val pm = a11y.packageManager
-        val candidates = runCatching { pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY).map { it.activityInfo.packageName }.distinct() }
-            .getOrDefault(emptyList())
-        if (candidates.isEmpty()) return null
-        val allowed = candidates.filter { access.denial(it) == null }
-        if (allowed.isEmpty()) access.denial(candidates.first())?.let { throw it }
-        val default = runCatching { pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName }.getOrNull()
-        return default?.takeIf { it in allowed } ?: allowed.first()
-    }
-
-    /** 没指定 App 的链接由谁打开:系统直接定下的那一个;要问用户选(落在系统选择器)或读不到为 null。 */
-    internal fun linkHandler(action: String?, uri: String?): String? = runCatching {
-        if (action != null || uri == null) return null
-        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(uri)).addCategory(Intent.CATEGORY_BROWSABLE)
-        a11y.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
-    }.getOrNull()?.takeIf { it !in systemPickers }
-
-    internal fun hintLinkElsewhere(top: String?, expected: String) =
-        "The link opened, but the screen shows ${top ?: "no app yet"} instead of $expected: a system chooser or a redirect page may have taken it. Observe before acting."
+    override suspend fun openLink(action: String?, uri: String?, packageName: String?): ActionResult = links.openLink(action, uri, packageName)
 
     /**
      * 有任务被挪回这块屏后,等它的窗口出现在无障碍窗口列表里再让 Agent 读屏;
@@ -361,92 +245,10 @@ class AndroidScreen(
 
     override suspend fun listApps(): List<Pair<String, String>> = withContext(Dispatchers.IO) { launchableApps(a11y.packageManager, a11y.packageName) }
 
-    // ---------- 系统动作 ----------
-
-    /**
-     * 经安卓标准 intent 做系统动作(见 [SystemIntents])。先在 Mika 这边查谁接(能力检测,不用建屏):没有就 not_supported;
-     * 有几个时按 [SystemIntents.choose] 直接指定一个。再交给内置助手启动到 Mika 的屏(第一次用时建屏),动作前后照常盯着主屏。
-     * 闹钟、计时器本该悄悄设好:之后读系统的下一个闹钟核对;App 却开了界面时照实报。闹钟列表、新日程要等那个 App 到最上面。
-     */
-    override suspend fun systemAction(action: SystemAction): SystemActionResult = withContext(Dispatchers.IO) {
-        val intent = SystemIntents.toIntent(SystemIntents.spec(action))
-        val pm = a11y.packageManager
-        val handlers = runCatching {
-            pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY).map {
-                SystemIntents.Handler(it.activityInfo.packageName, it.activityInfo.name, (it.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0)
-            }
-        }.getOrDefault(emptyList())
-        val default = runCatching { pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName }.getOrNull()
-        // 由谁接只有这里知道:跳过被禁用的;能接的全被禁用就拒绝
-        val access = appAccess.current()
-        val allowedHandlers = if (access.blocked.isEmpty()) handlers else handlers.filter { access.denial(it.packageName) == null }
-        if (handlers.isNotEmpty() && allowedHandlers.isEmpty()) access.denial(handlers.first().packageName)?.let { throw it }
-        val handler = SystemIntents.choose(allowedHandlers, default)
-            ?: return@withContext SystemActionResult(ActionResult.Failed(SystemActionResult.NOT_SUPPORTED))
-        val pkg = handler.packageName
-        intent.component = android.content.ComponentName(pkg, handler.className)
-        if (checkOtherTasks && !action.silent && !reserve(pkg)) return@withContext SystemActionResult(IN_USE_BY_OTHER, pkg)
-        val alarms = a11y.getSystemService(AlarmManager::class.java)
-        val alarmBefore = runCatching { alarms?.nextAlarmClock?.triggerTime }
-        val id = display.get().displayId
-        val topBefore = ScreenReader.topPackage(windows())
-        val beforeTree = treeHash()
-        val startedAt = System.nanoTime()
-        val w = spill.armSpillWatch()
-        // 接手的页面要求的权限(设闹钟)shell 可能没有:备一个以 Mika 身份启动的
-        val asMika = PendingIntent.getActivity(a11y, SYSTEM_ACTION_REQUEST, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        // 悄悄设好的(闹钟、计时器)不开界面,不去静它:时钟到点要响
-        if (!action.silent) beforeOpen(pkg, null)
-        val code = runCatching { shell.startSystemAction(id, intent, asMika) }.getOrDefault(ShellService.START_ERROR)
-        if (code != ShellService.START_OK && !action.silent) notOpened(pkg, null)
-        when (code) {
-            ShellService.START_OK -> Unit
-            ShellService.START_IN_USE_ON_MAIN -> return@withContext SystemActionResult(ActionResult.Failed("app_in_use_by_user"), pkg)
-            ShellService.START_IN_USE_BY_OTHER -> return@withContext SystemActionResult(IN_USE_BY_OTHER, pkg)
-            ShellService.START_UNRESOLVED -> return@withContext SystemActionResult(ActionResult.Failed(SystemActionResult.NOT_SUPPORTED))
-            else -> return@withContext SystemActionResult(ActionResult.Failed("launch_failed"), pkg)
-        }
-        if (!action.silent) frameGuardSince = startedAt
-        fun top() = ScreenReader.topPackage(windows())
-        var alarmAfter = alarmBefore.getOrNull()
-        if (action is SystemAction.SetAlarm && alarmBefore.isSuccess) {
-            // 时钟 App 多半在后台写好再登记:等系统的下一个闹钟变了,最多等一会儿
-            val deadline = SystemClock.uptimeMillis() + ALARM_WAIT_MS
-            while (SystemClock.uptimeMillis() < deadline) {
-                alarmAfter = runCatching { alarms?.nextAlarmClock?.triggerTime }.getOrNull()
-                if (alarmAfter != alarmBefore.getOrNull()) break
-                delay(ALARM_POLL_MS)
-            }
-        } else if (!action.silent) {
-            val deadline = SystemClock.uptimeMillis() + LAUNCH_WAIT_MS
-            while (top() != pkg && SystemClock.uptimeMillis() < deadline) delay(POLL_MS)
-        }
-        waitStable(SETTLE_CAP_MS)
-        val landed = top() == pkg
-        // 本该悄悄设好的,屏上却多了那个 App 的界面
-        val showing = action.silent && landed && topBefore != pkg
-        if (!action.silent || showing) {
-            val changed = top() != topBefore || treeHash() != beforeTree
-            if (changed) awaitFrameAfter(startedAt) else frameGuardSince = null
-        }
-        if (landed && (!action.silent || showing)) {
-            targetPackage = pkg
-            requestedUser = null
-            val task = runCatching { shell.topTaskId(displayId) }.getOrDefault(-1)
-            _target.value = TargetApp(pkg, task, userOf(task))
-        }
-        val hint = if (!action.silent && !landed) hintNotInFront(top(), pkg) else null
-        SystemActionResult(
-            ok(hint = hint, spill = spill.takeSpill(w)), handledBy = pkg,
-            nextAlarmBefore = alarmBefore.getOrNull(), nextAlarmAfter = alarmAfter, alarmReadable = alarmBefore.isSuccess, showing = showing,
-        )
-    }
+    override suspend fun systemAction(action: SystemAction): SystemActionResult = links.systemAction(action)
 
     override suspend fun bulkCalendarInsert(events: List<SystemAction.AddCalendarEvent>): SystemActionResult =
         withContext(Dispatchers.IO) { CalendarBulkWriter.insert(a11y, events) }
-
-    internal fun hintNotInFront(top: String?, expected: String) =
-        "$expected took the action, but the screen shows ${top ?: "no app yet"}. Observe before acting."
 
     // ---------- 滚轮 ----------
 
@@ -694,71 +496,13 @@ class AndroidScreen(
         return (if (user == myUser) OpenedElsewhere.MAIN_PROFILE else OpenedElsewhere.OTHER_PROFILE) to user
     }
 
-    // ---------- 编号解析 ----------
-
-    /**
-     * 把编号解析成可操作的节点;经过重定位时第二个值是找回的元素现在的名字,否则为 null。
-     * 最新快照里的节点还在且没变就直接用;快照过期或节点变了,按原元素特征在当前界面里找唯一对应者。
-     */
-    internal fun resolve(ref: String, snapshotId: String): Pair<AccessibilityNodeInfo, String?>? {
-        val (entry, snapshot) = when (val l = ids.lookup(ref, snapshotId)) {
-            is NodeIds.Lookup.Unknown -> return null
-            is NodeIds.Lookup.Current -> {
-                if (unchanged(l.entry)) return l.entry.node to null
-                l.entry to l.snapshot
-            }
-            is NodeIds.Lookup.Old -> l.entry to l.snapshot
-        }
-        val now = read()
-        return when (val r = relocate(entry.locator, snapshot.locators, now.entries.map { it.locator }, min(screenWidth, screenHeight))) {
-            is Relocation.Found -> now.entries[r.index].let { it.node to it.element.name }
-            else -> null
-        }
-    }
-
-    /** 节点还在,且类型、名字、资源 ID、位置都和快照时一样(列表复用后同一个节点可能换了内容)。 */
-    internal fun unchanged(entry: NodeEntry): Boolean {
-        val n = entry.node
-        if (!n.refresh()) return false
-        val now = ScreenReader.locatorOf(n, screenWidth, screenHeight) ?: return false
-        return now == entry.locator.copy(context = null)
-    }
+    // ---------- 输入框 ----------
+    // 编号解析、找输入框见 FieldResolver.kt;写字进框见 ClipboardInput.kt;点击、手势、注入触摸见 TouchInjector.kt
 
     internal sealed interface Field {
         /** [tapped]:给的元素本身不是输入框,点了它之后才出现(或聚焦了)真正的输入框。 */
         class Found(val node: AccessibilityNodeInfo, val tapped: Boolean = false, val relocatedTo: String? = null) : Field
         class Missing(val reason: String) : Field
-    }
-
-    /**
-     * 找要输入的框。给了编号:元素本身或它里面的输入框;都不是、而它看上去是输入入口(首页那条「假搜索框」:
-     * 可点、不是按钮、带提示语或名字像搜索)时先点它,点成功且出现了一个点之前没有的、拿着焦点的输入框,才用那个框。
-     * 没给编号:当前拿着输入焦点的框。
-     */
-    internal suspend fun findField(ref: String?, snapshotId: String?, tapToFocus: Boolean = true): Field {
-        if (ref != null && snapshotId != null) {
-            val (node, relocatedTo) = resolve(ref, snapshotId) ?: return Field.Missing("ref_expired")
-            val editable = if (ScreenReader.canSetText(node)) node
-                else descendant(node) { ScreenReader.canSetText(it) && visibleInputTarget(it) }
-            if (editable != null) {
-                if (!editable.refresh() || !visibleInputTarget(editable)) return Field.Missing(EDITOR_NOT_VISIBLE)
-                return Field.Found(editable, relocatedTo = relocatedTo)
-            }
-            if (!tapToFocus || !looksLikeInputEntry(node)) return Field.Missing("not_editable")
-            val focusedBefore = focusedEditable()
-            val clicked = withEventClock { clock ->
-                clock.mark()
-                click(node).also { if (it) clock.awaitQuiet(QUIET_MS, FOCUS_WAIT_MS) }
-            }
-            val now = focusedField()
-            return when {
-                clicked && now is Field.Found && now.node != focusedBefore ->
-                    Field.Found(now.node, tapped = true, relocatedTo = relocatedTo)
-                clicked && now is Field.Missing && now.reason == EDITOR_NOT_VISIBLE -> now
-                else -> Field.Missing("not_editable")
-            }
-        }
-        return focusedField()
     }
 
     /** 认「同一个输入框」用的特征:类型、资源 ID、位置大小。 */
@@ -772,231 +516,13 @@ class AndroidScreen(
         }
     }
 
-    internal fun sameField(a: FieldShape, n: AccessibilityNodeInfo): Boolean {
-        val b = FieldShape.of(n)
-        if (a.pkg != b.pkg || a.windowId != b.windowId || a.cls != b.cls || a.rid != b.rid) return false
-        // 大小要几乎一样;位置允许整页挪动一点(输入时页面常会上移),和编号找回用同一个上限
-        val short = min(screenWidth, screenHeight)
-        val sizeTol = short * SAME_FIELD_SIZE
-        val moveTol = short * RELOCATE_MAX_SHIFT
-        return kotlin.math.abs(a.rect.width() - b.rect.width()) <= sizeTol && kotlin.math.abs(a.rect.height() - b.rect.height()) <= sizeTol &&
-            kotlin.math.hypot((a.rect.centerX() - b.rect.centerX()).toDouble(), (a.rect.centerY() - b.rect.centerY()).toDouble()) <= moveTol
-    }
+    /** [node] 自己或往上 [MAX_ANCESTORS] 层里第一个满足 [test] 的。 */
+    internal fun ancestorOrSelf(node: AccessibilityNodeInfo, test: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? =
+        node.selfAndAncestors(MAX_ANCESTORS).firstOrNull(test)
 
-    /** 像输入入口:可点,不是按钮类,且带提示语或名字像搜索。 */
-    internal fun looksLikeInputEntry(n: AccessibilityNodeInfo): Boolean {
-        val target = ancestorOrSelf(n) { it.isClickable } ?: return false
-        val cls = target.className?.toString().orEmpty()
-        if (cls.endsWith("Button")) return false
-        if (ScreenReader.placeholderOf(n) != null || !n.hintText.isNullOrBlank()) return true
-        val name = ScreenReader.ownLabel(n) ?: ScreenReader.ownLabel(target) ?: return false
-        return SEARCH_WORDS.any { name.contains(it, ignoreCase = true) }
-    }
-
-    /**
-     * 这块屏上有东西拿着输入焦点(哪怕不是树里的输入框,比如 App 自己画的界面整块拿着焦点),或弹着输入法。
-     * 都没有时按键没有框可去:树里看不到的输入框也只有拿着焦点才收得到粘贴。
-     */
-    internal fun somethingHoldsInputFocus(): Boolean =
-        textInput.imeBounds() != null || focusedInput() != null
-
-    internal fun focusedInput(): AccessibilityNodeInfo? {
-        val content = ScreenReader.contentWindows(windows())
-        val focusedWindow = content.firstOrNull { it.isFocused }
-        if (focusedWindow != null) return focusedWindow.root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        return content.firstNotNullOfOrNull { it.root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) }
-    }
-
-    internal fun visibleInputTarget(node: AccessibilityNodeInfo): Boolean =
-        node.isEnabled && ScreenReader.locatorOf(node, screenWidth, screenHeight) != null
-
-    /** Keep a known hidden native editor distinct from a custom editor absent from the tree. */
-    internal fun focusedField(): Field {
-        val focus = focusedInput() ?: return Field.Missing(NO_FOCUS)
-        val editor = if (ScreenReader.canSetText(focus)) focus
-            else descendant(focus) { it.isFocused && ScreenReader.canSetText(it) } ?: return Field.Missing(NO_FOCUS)
-        return if (editor.refresh() && visibleInputTarget(editor)) Field.Found(editor) else Field.Missing(EDITOR_NOT_VISIBLE)
-    }
-
-    internal fun focusedEditable(): AccessibilityNodeInfo? = (focusedField() as? Field.Found)?.node
-
-    internal fun blockedFocusedEditor(): Boolean = (focusedField() as? Field.Missing)?.reason == EDITOR_NOT_VISIBLE
-
-    // ---------- 底层操作 ----------
-
-    internal fun isClickableTarget(node: AccessibilityNodeInfo): Boolean =
-        node.isEnabled && (node.isClickable || node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_CLICK })
-
-    /** 坐标点击无反应时,反查该点处最小的可点控件改走无障碍点击;命中对外/不可逆按钮或大容器时不补点。 */
-    internal fun clickNodeAt(x: Int, y: Int, clock: EventClock): Boolean {
-        if (!hasDisplay || handedOver() || textInput.imeBounds()?.contains(x, y) == true) return false
-        val window = ScreenReader.contentWindows(windows()).firstOrNull {
-            Rect().also(it::getBoundsInScreen).contains(x, y)
-        }?.takeIf { it.type == AccessibilityWindowInfo.TYPE_APPLICATION } ?: return false
-        val entries = ScreenReader.read(listOf(window), screenWidth, screenHeight).entries
-        val rect = Rect()
-        val hitEntries = entries.filter { entry ->
-            entry.node.getBoundsInScreen(rect)
-            rect.intersect(0, 0, screenWidth, screenHeight) && rect.contains(x, y)
-        }
-        if (hitEntries.isEmpty()) return false
-        if (hitEntries.any { ClickFallback.mayBeOutward(it.element.name, it.locator.resourceId, clickable = it.element.clickable) }) return false
-        val seen = HashSet<AccessibilityNodeInfo>()
-        val candidates = mutableListOf<ClickFallback.Candidate<AccessibilityNodeInfo>>()
-        for (entry in hitEntries) {
-            val target = ancestorOrSelf(entry.node) { isClickableTarget(it) } ?: continue
-            if (!seen.add(target) || !target.isVisibleToUser) continue
-            target.getBoundsInScreen(rect)
-            if (!rect.intersect(0, 0, screenWidth, screenHeight) || rect.isEmpty) continue
-            candidates += ClickFallback.Candidate(
-                item = target,
-                left = rect.left, top = rect.top, right = rect.right, bottom = rect.bottom,
-                label = ScreenReader.labelOf(target).ifBlank { entry.element.name.ifBlank { null } },
-                resourceId = target.viewIdResourceName ?: entry.locator.resourceId,
-                scrollable = target.isScrollable,
-                webView = target.className == WEB_VIEW,
-            )
-        }
-        val picked = ClickFallback.pickTarget(x, y, screenWidth, screenHeight, candidates) ?: return false
-        clock.mark()
-        return picked.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-    }
-
-    /** 优先对节点(或最近的可点祖先)发点击;不行再在其中心做手势,最后注入触摸。 */
-    internal suspend fun click(node: AccessibilityNodeInfo): Boolean {
-        val target = ancestorOrSelf(node) { isClickableTarget(it) }
-        if (target != null && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
-        val rect = android.graphics.Rect().also { node.getBoundsInScreen(it) }
-        return touch(pacing.within(rect.left, rect.top, rect.right, rect.bottom))
-    }
-
-    internal suspend fun tapAt(x: Int, y: Int): Boolean = touch(pacing.near(x, y))
-
-    /** 在这一点上点一下:先停一会儿再落指,按住随机的一小会儿。无障碍手势不行时由内置助手注入触摸。 */
-    internal suspend fun touch(at: Pair<Int, Int>): Boolean {
-        val (x, y) = at
-        delay(pacing.approach())
-        val press = pacing.press()
-        if (a11y.gesture(displayId, Path().apply { moveTo(x.toFloat(), y.toFloat()) }, press)) return true
-        if (pacing.paced && injectStroke(listOf(GesturePacing.Point(x.toDouble(), y.toDouble(), 0), GesturePacing.Point(x.toDouble(), y.toDouble(), press)))) return true
-        return shell.injectTap(displayId, x, y)
-    }
-
-    /**
-     * 一根手指沿 [points] 滑动。有节奏时按 [GesturePacing.stroke] 排好每个点的时刻,由内置助手逐点注入(App 看到先快后慢的真实速度);
-     * 助手注不了时退回无障碍手势沿同一条弧线走(系统按路径匀速走,只少了快慢)。不加节奏时和以前一样:无障碍手势按给定时长匀速走折线。
-     */
-    internal suspend fun drag(points: List<Pair<Int, Int>>, durationMs: Long, bow: Boolean): Boolean {
-        if (!pacing.paced) return a11y.gesture(displayId, pathOf(points), durationMs)
-        delay(pacing.approach())
-        val stroke = pacing.stroke(points.map { it.first.toDouble() to it.second.toDouble() }, durationMs, bow, screenWidth to screenHeight)
-        if (injectStroke(stroke.points)) return true
-        return a11y.gesture(displayId, pathOf(stroke.points.map { it.x.roundToInt() to it.y.roundToInt() }), stroke.durationMs)
-    }
-
-    internal fun injectStroke(points: List<GesturePacing.Point>): Boolean = runCatching {
-        shell.injectStroke(
-            displayId,
-            IntArray(points.size) { points[it].x.roundToInt() },
-            IntArray(points.size) { points[it].y.roundToInt() },
-            LongArray(points.size) { points[it].t },
-        )
-    }.getOrDefault(false)
-
-    internal fun pathOf(points: List<Pair<Int, Int>>) = Path().apply {
-        moveTo(points.first().first.toFloat(), points.first().second.toFloat())
-        points.drop(1).forEach { lineTo(it.first.toFloat(), it.second.toFloat()) }
-    }
-
-    /**
-     * 网页里的编辑区(contenteditable)只认真实输入:SET_TEXT 只改了网页上的字,编辑器收不到 input 事件,
-     * App 会当作没输入(「完成」不亮、退出不保存)。这类输入框改用选中原内容再粘贴或按删除键。
-     */
-    internal fun inWebView(node: AccessibilityNodeInfo) = ancestorOrSelf(node) { it.className == WEB_VIEW } != null
-
-    /**
-     * 选中原内容后粘贴(或按删除键清空)。返回 null 表示剪贴板不能安全使用,没有改动任何文字;
-     * 其余结果用 [AsciiTextKeys] 三态表示。选择失败时不发删除或粘贴,避免只删一个字符或在光标处插入。
-     */
-    internal fun inputText(node: AccessibilityNodeInfo, text: String): Int? {
-        if (!node.refresh() || !visibleInputTarget(node)) return AsciiTextKeys.NOT_SENT
-        val before = node.text?.toString().orEmpty()
-        fun selectAll(): Boolean {
-            if (!node.refresh() || !visibleInputTarget(node) || node.text?.toString().orEmpty() != before) return false
-            if (before.isEmpty()) return true
-            val range = Bundle().apply {
-                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
-                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, before.length)
-            }
-            return node.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, range)
-        }
-        if (text.isEmpty()) {
-            if (before.isEmpty()) return AsciiTextKeys.DISPATCHED
-            if (!selectAll()) return AsciiTextKeys.NOT_SENT
-            if (!node.refresh() || !visibleInputTarget(node)) return AsciiTextKeys.NOT_SENT
-            return if (shell.injectKey(displayId, KeyEvent.KEYCODE_DEL)) AsciiTextKeys.DISPATCHED else AsciiTextKeys.UNCONFIRMED
-        }
-        return withClipboardText(text) {
-            if (!selectAll()) return@withClipboardText AsciiTextKeys.NOT_SENT
-            if (!node.refresh() || !visibleInputTarget(node)) return@withClipboardText AsciiTextKeys.NOT_SENT
-            // 标准动作返回 false 时也可能已经产生效果;按不确定处理,不补发快捷键。
-            if (!node.performAction(AccessibilityNodeInfo.ACTION_PASTE)) return@withClipboardText AsciiTextKeys.UNCONFIRMED
-            // App 是异步去读剪贴板的:等字变了再还原,最多等一会儿
-            val deadline = SystemClock.uptimeMillis() + PASTE_WAIT_MS
-            while (SystemClock.uptimeMillis() < deadline) {
-                if (node.refresh() && node.text?.toString().orEmpty() != before) break
-                Thread.sleep(POLL_MS)
-            }
-            AsciiTextKeys.DISPATCHED
-        }
-    }
-
-    /** 持有全局剪贴板锁同步执行;设置后不论结果都尽量留底,只有确认恢复完成才清除持有标记和加密留底。 */
-    internal fun withClipboardText(text: String, action: () -> Int): Int? {
-        clipLock.lock()
-        try {
-            clipHeld(true)
-            val set = runCatching { shell.setClipText(text) }.getOrDefault(ShellService.CLIP_FAILED)
-            runCatching { shell.savedClipText() }.getOrNull()?.let { clipSaved(it, text) }
-            if (set != ShellService.CLIP_SET) return null
-            return action()
-        } finally {
-            val restored = runCatching { shell.restoreClip() }.getOrDefault(false)
-            try {
-                if (restored) clipHeld(false)
-            } finally {
-                clipLock.unlock()
-            }
-        }
-    }
-
-    internal fun setText(node: AccessibilityNodeInfo, text: String): Boolean {
-        if (!node.refresh() || !visibleInputTarget(node)) return false
-        val args = Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text) }
-        return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-    }
-
-    internal inline fun ancestorOrSelf(node: AccessibilityNodeInfo, test: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {
-        var n: AccessibilityNodeInfo? = node
-        var depth = 0
-        while (n != null && depth <= MAX_ANCESTORS) {
-            if (test(n)) return n
-            n = n.parent
-            depth++
-        }
-        return null
-    }
-
-    internal fun descendant(node: AccessibilityNodeInfo, test: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {
-        val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(node) }
-        var visited = 0
-        while (queue.isNotEmpty() && visited++ < 500) {
-            val n = queue.removeFirst()
-            if (test(n)) return n
-            for (i in 0 until n.childCount) n.getChild(i)?.let(queue::add)
-        }
-        return null
-    }
+    /** [node] 自己或下面(广度优先,最多 [MAX_DESCENDANTS] 个)第一个满足 [test] 的。 */
+    internal fun descendant(node: AccessibilityNodeInfo, test: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? =
+        node.breadthFirst(MAX_DESCENDANTS).firstOrNull(test)
 
     // ---------- 画面 ----------
 
@@ -1127,6 +653,7 @@ class AndroidScreen(
             "Tap the one the task needs (for a message, the one that sends to a contact or chat); do not share again."
         const val HINT_COLD_IGNORED = "coldIgnored: app has a task outside Mika's screen, so it was not restarted (that would wipe the user's state there). It was opened as-is; navigate back to its start screen yourself if needed."
         const val MAX_ANCESTORS = 8
+        const val MAX_DESCENDANTS = 500
 
         // 悬停、触摸探索、手势识别、无障碍焦点这些不是界面内容的变化
         const val IGNORED_EVENTS = AccessibilityEvent.TYPE_VIEW_HOVER_ENTER or AccessibilityEvent.TYPE_VIEW_HOVER_EXIT or

@@ -193,9 +193,6 @@ class TaskCenter<R : Any>(
 
     @Synchronized fun cancelFollowUp(id: String): Boolean = followUps.cancel(id) != null
 
-    @Synchronized fun dropFollowUps(conversationId: String) = followUps.dropConversation(conversationId)
-
-    @Synchronized fun hasFollowUps(conversationId: String): Boolean = followUps.contains(conversationId)
 }
 
 /** 迁移期旧名称，现有调用方和测试仍可逐步转到 TaskCenter。 */

@@ -3,6 +3,7 @@ package com.wangzan101.mika.memory
 import android.security.keystore.UserNotAuthenticatedException
 import com.wangzan101.mika.core.learn.memory.MemoryItem
 import com.wangzan101.mika.core.learn.memory.MemoryPersistence
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.settings.KeyCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,13 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.security.KeyStoreException
 import java.security.ProviderException
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 /**
  * 整份记忆加密成 `memory/memory.bin`(AES-GCM,密钥由调用方给,正式用 `KeystoreKeyCipher("mika-memory")`)。
@@ -58,8 +54,7 @@ class EncryptedMemoryFile(
         memDir.mkdirs()
         val bytes = cipher.encrypt(json.encodeToString(serializer, items).toByteArray(Charsets.UTF_8))
         // 先落到磁盘再改名:断电时不会留下改了名却是空的文件
-        FileOutputStream(tmp).use { it.write(bytes); it.fd.sync() }
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        AtomicFiles.write(file, bytes, durable = true, temp = tmp)
     }
 
     /** 「全部清除」:删记忆文件(含另存的坏文件)。密钥重建由调用方删别名后做。 */
@@ -70,12 +65,7 @@ class EncryptedMemoryFile(
     }
 
     private fun moveAside() {
-        val stamp = SimpleDateFormat("yyyyMMddHHmmss", Locale.US).format(clock())
-        var target = File(memDir, "$FILE.broken-$stamp")
-        var n = 1
-        while (target.exists()) target = File(memDir, "$FILE.broken-$stamp-${n++}")
-        Files.move(file.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE)
-        _brokenNotice.value = target.name
+        _brokenNotice.value = AtomicFiles.quarantine(file, AtomicFiles.Quarantine.MoveBroken, now = clock())!!.name
     }
 
     private companion object {

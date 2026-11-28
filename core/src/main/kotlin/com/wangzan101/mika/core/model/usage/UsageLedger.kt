@@ -1,6 +1,7 @@
 package com.wangzan101.mika.core.model.usage
 
 import com.wangzan101.mika.core.model.Usage
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -237,12 +238,9 @@ class UsageLedger(
 
     private fun writeAtomically(text: String) {
         file.parentFile?.mkdirs()
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeText(text)
-        if (!tmp.renameTo(file)) {
-            file.delete()
-            check(tmp.renameTo(file)) { "cannot write ${file.name}" }
-        }
+        val ok = AtomicFiles.write(file, text, durable = false,
+            move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.DeleteAndRetry)
+        check(ok) { "cannot write ${file.name}" }
     }
 
     companion object {

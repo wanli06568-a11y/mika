@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">Thay đổi</string>
     <string name="calls_disable_sub">Cuộc gọi đến và quay số đều quay về ứng dụng điện thoại hệ thống</string>
     <string name="calls_how_to_talk">Khi AI trả lời</string>
-    <string name="calls_greeting_empty">Trống · đợi người gọi nói trước</string>
-    <string name="calls_talk_settings_sub">Hướng dẫn và thời lượng AI nói tối đa</string>
     <string name="calls_stage_listen">Nghe</string>
     <string name="calls_stage_think">Suy nghĩ</string>
     <string name="calls_stage_speak">Nói</string>

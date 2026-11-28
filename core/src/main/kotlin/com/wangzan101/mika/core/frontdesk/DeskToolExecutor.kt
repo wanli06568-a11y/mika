@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.frontdesk
 
+import com.wangzan101.mika.core.net.scalar
 import com.wangzan101.mika.core.agent.TaskState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -39,10 +40,10 @@ class DeskToolExecutor(
     }
 
     private suspend fun dispatch(args: JsonObject): JsonObject {
-        val fragment = args.string("words").orEmpty()
+        val fragment = args.scalar("words").orEmpty()
         val words = verifiedWords(args) ?: return wordsRejected()
-        val note = args.string("note").orEmpty()
-        val title = args.string("title")?.ifBlank { null } ?: fragment.take(DESK_LINE_MAX_CHARS)
+        val note = args.scalar("note").orEmpty()
+        val title = args.scalar("title")?.ifBlank { null } ?: fragment.take(DESK_LINE_MAX_CHARS)
         // 查重看前台要的是哪件(摘的那段、备注、标题):一句话可以派几件,各件带的整句相同
         val asked = listOf(fragment.trim(), note.trim(), title.trim()).joinToString("\n")
         return dispatching.withLock {
@@ -116,20 +117,18 @@ class DeskToolExecutor(
     /** 停一件任务:编号得是派过的,原话得是用户这一轮说的(汇报、任务板上的话都不能让它停)。 */
     private fun cancel(args: JsonObject): JsonObject {
         val id = knownTask(args) ?: return status("unknown_task")
-        args.string("words")?.takeIf { it.isNotBlank() }?.let(words::saidNow) ?: return wordsRejected()
+        args.scalar("words")?.takeIf { it.isNotBlank() }?.let(words::saidNow) ?: return wordsRejected()
         return accepted(tasks.cancel(id))
     }
 
-    private fun knownTask(args: JsonObject): String? = args.string("task_id")?.takeIf { ledger.get(it) != null }
+    private fun knownTask(args: JsonObject): String? = args.scalar("task_id")?.takeIf { ledger.get(it) != null }
 
     /** 核对过的整句:前台给的那段落在用户说过的哪一句里,就交那一句。 */
-    private fun verifiedWords(args: JsonObject): String? = args.string("words")?.takeIf { it.isNotBlank() }?.let(words::said)
+    private fun verifiedWords(args: JsonObject): String? = args.scalar("words")?.takeIf { it.isNotBlank() }?.let(words::said)
 
     private fun accepted(ok: Boolean) = status(if (ok) "ok" else "not_accepted")
 
     private fun wordsRejected() = buildJsonObject { put("status", "rejected"); put("reason", "words_not_verified") }
 
     private fun status(value: String) = buildJsonObject { put("status", value) }
-
-    private fun JsonObject.string(key: String): String? = (get(key) as? JsonPrimitive)?.contentOrNull
 }

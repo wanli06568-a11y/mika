@@ -2,7 +2,6 @@
 <resources>
     <string name="device_browser_title">Cihaz dosyaları</string>
     <string name="device_browser_roots">Yetkili klasörler</string>
-    <string name="device_browser_back">Geri</string>
     <string name="device_browser_retry">Dosyalar yüklenemedi. Yeniden denemek için dokunun.</string>
     <string name="device_browser_empty">Dosya veya yetkili klasör yok</string>
     <string name="device_browser_more">Daha fazla yükle</string>

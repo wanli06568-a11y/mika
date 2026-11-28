@@ -85,14 +85,7 @@
     <string name="trigger_failed_streak">Zamanlanmış görev art arda %1$d kez başarısız oldu</string>
     <string name="trigger_failed_streak_hint">Bu planı Zamanlanmış görevler sayfasından duraklatabilir veya değiştirebilirsiniz.</string>
     <string name="chip_thinking">Düşünüyor</string>
-    <string name="chip_read_screen">Okunuyor</string>
-    <string name="chip_browse">Göz atılıyor</string>
-    <string name="chip_use_phone">Telefonda</string>
-    <string name="chip_wait_app">Uygulama bekleniyor</string>
     <string name="chip_take_over">Devral</string>
-    <string name="chip_done">Bitti: %1$d</string>
-    <string name="chip_route_step">Adım %1$d/%2$d</string>
-    <string name="chip_count">%1$d/%2$d</string>
     <string name="task_no_phone_helper_shizuku">Telefon kontrolü hazır değil. Shizuku\'yu başlatın ve Mika\'ya izin verin (veya Ayarlar\'daki Telefon kontrolünü kontrol edin). Web ve dosya görevleri etkilenmez.</string>
     <string name="task_video_submitted">Video işi gönderildi</string>
     <string name="task_video_queued">Video işi sırada</string>

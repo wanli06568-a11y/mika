@@ -21,7 +21,6 @@
     <string name="plans_run_now">تشغيل الآن</string>
     <string name="plans_edit_time">تعديل</string>
     <string name="plans_edit_title">تعديل المهمة المجدولة</string>
-    <string name="plans_edit_label">التشغيل الأول: yyyy-MM-dd HH:mm</string>
     <string name="plans_preview">مواعيد التشغيل التالية:</string>
     <string name="plans_need_future">أدخل وقتًا مستقبليًا صالحًا</string>
     <string name="plans_create_title">مهمة مجدولة جديدة</string>
@@ -33,7 +32,6 @@
     <string name="plans_repeat_interval">فترة</string>
     <string name="plans_repeat_weekly">أسبوعيًا</string>
     <string name="plans_interval_minutes">التكرار كل (بالدقائق)</string>
-    <string name="plans_clock">الأوقات المحلية (مفصولة بفواصل)</string>
     <string name="plans_pick_time">اختيار وقت</string>
     <string name="plans_add_time">إضافة وقت</string>
     <string name="plans_remove_time">إزالة هذا الوقت</string>
@@ -66,7 +64,6 @@
     <string name="plans_delete_title">هل تريد حذف هذه المهمة المجدولة؟</string>
     <string name="plans_done">مكتملة</string>
     <string name="plans_checked">تم التحقق</string>
-    <string name="plans_check_failed">تعذر التحقق</string>
     <string name="plans_result_pending">يجب التحقق من النتيجة</string>
     <string name="plans_every_day">كل يوم</string>
     <plurals name="plans_every_minutes">

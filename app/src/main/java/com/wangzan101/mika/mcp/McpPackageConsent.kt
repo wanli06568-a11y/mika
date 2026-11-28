@@ -1,11 +1,10 @@
 package com.wangzan101.mika.mcp
 
 import com.wangzan101.mika.core.cap.mcp.McpPackageSpec
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /**
  * stdio 包下载确认:同意绑定「包名 + 精确版本 + 来源」(数据类相等,含生态),任何一项变了都要重新确认。
@@ -39,8 +38,6 @@ class McpPackageConsent(private val file: File? = null) {
 
     private fun save(f: File) {
         f.parentFile?.mkdirs()
-        val tmp = File(f.path + ".tmp")
-        tmp.writeText(json.encodeToString(accepted.toList()))
-        Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        AtomicFiles.write(f, json.encodeToString(accepted.toList()), durable = false)
     }
 }

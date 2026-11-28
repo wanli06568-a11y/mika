@@ -1,6 +1,7 @@
 package com.wangzan101.mika.cap.web
 
 import com.wangzan101.mika.core.cap.web.WebUrlPolicy
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -143,7 +144,7 @@ class SiteRegistry(private val dir: File, private val clock: () -> Long = System
         dir.mkdirs()
         if (corrupt) {
             // 损坏的文件挪到一边留着,不拿新内容覆盖掉
-            file.renameTo(File(dir, "$FILE.corrupt-${clock()}"))
+            AtomicFiles.quarantine(file, AtomicFiles.Quarantine.RenameCorrupt, now = clock(), dedupe = false)
             corrupt = false
         }
         val json = JsonArray(sites.values.map {
@@ -154,12 +155,7 @@ class SiteRegistry(private val dir: File, private val clock: () -> Long = System
             }
         }).toString()
         // 先写临时文件再改名,写到一半被杀不会留下半个文件
-        val tmp = File(dir, "$FILE.tmp")
-        tmp.writeText(json)
-        if (!tmp.renameTo(file)) {
-            file.writeText(json)
-            tmp.delete()
-        }
+        AtomicFiles.write(file, json, durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.WriteDirect)
         publish()
     }
 

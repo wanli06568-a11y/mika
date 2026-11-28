@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.agent
 
+import com.wangzan101.mika.core.model.TokenEstimate
 import com.wangzan101.mika.core.learn.knowledge.KnowledgeStore
 import com.wangzan101.mika.core.learn.knowledge.GuideCatalog
 import com.wangzan101.mika.core.model.Part

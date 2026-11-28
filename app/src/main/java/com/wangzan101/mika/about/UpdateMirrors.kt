@@ -1,5 +1,6 @@
 package com.wangzan101.mika.about
 
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -186,12 +187,7 @@ class UpdateMirrorStore(
         return try {
             val json = storageJson.encodeToString(MirrorSettings(enabled, mirrors))
             // 先写临时文件再改名,写到一半被杀不会留下半个文件。目标已存在时改名会失败,这时再覆盖写。
-            val tmp = File(parent, "${file.name}.tmp")
-            tmp.writeText(json)
-            if (!tmp.renameTo(file)) {
-                file.writeText(json)
-                tmp.delete()
-            }
+            AtomicFiles.write(file, json, durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.WriteDirect)
             file.isFile
         } catch (_: IOException) {
             false

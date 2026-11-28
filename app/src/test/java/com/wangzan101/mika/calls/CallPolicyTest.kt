@@ -186,4 +186,45 @@ class CallPolicyTest {
         assertNull(CallPolicy.closingDelayMs(10_000))
         assertEquals(5_000L, CallPolicy.closingDelayMs(CallPolicy.CLOSING_LEAD_MS + 5_000L))
     }
+
+    @Test fun promptUsesUserLanguageWhenNonChinese() {
+        val enPrompt = CallPolicy.prompt("", CallDirection.OUTGOING, languageTag = "en")
+        assertTrue(enPrompt.contains("Default spoken language for this call is English"))
+        assertFalse(enPrompt.contains("使用简短、自然的中文"))
+
+        val zhPrompt = CallPolicy.prompt("", CallDirection.OUTGOING, languageTag = "zh-CN")
+        assertTrue(zhPrompt.contains("使用简短、自然的中文"))
+    }
+
+    @Test fun spokenGreetingUsesEnglishFallbackForNonChineseLocale() {
+        val enGreeting = CallPolicy.spokenGreeting(CallPolicy.DEFAULT_GREETING, hasTask = true, languageTag = "en")
+        assertTrue(enGreeting.contains("Hello, I'm Mika"))
+        val zhGreeting = CallPolicy.spokenGreeting(CallPolicy.DEFAULT_GREETING, hasTask = true, languageTag = "zh-CN")
+        assertEquals(CallPolicy.TASK_GREETING, zhGreeting)
+    }
+
+    @Test fun nonChinesePromptHasNoChineseOutsideUserText() {
+        val cjk = Regex("[\\u3000-\\u30ff\\u3400-\\u9fff\\uff00-\\uffef]")
+        val task = CallTaskBrief(goal = "预约周五晚上七点", questions = listOf("有没有包间"), context = "两位", constraints = "不付定金")
+        val userText = listOf(task.goal, task.questions.single(), task.context, task.constraints, "确认对方称呼。", "保存的规则")
+        listOf("en", "ja", "ko", "es", "pt", "ru", "ar", "fa", "id", "tr", "vi").forEach { tag ->
+            CallDirection.entries.forEach { direction ->
+                listOf(null, task).forEach { brief ->
+                    var prompt = CallPolicy.prompt("确认对方称呼。", direction, "保存的规则", brief, languageTag = tag) +
+                        CallRuntime.phoneDtmfPrompt(tag)
+                    userText.forEach { prompt = prompt.replace(it, "") }
+                    assertNull("$tag $direction ${brief != null}: $prompt", cjk.find(prompt))
+                }
+            }
+            assertNull(tag, cjk.find(VolcRealtimeProtocol.phoneTools(tag).toString()))
+        }
+    }
+
+    @Test fun chineseCallsKeepChineseDtmfInstructions() {
+        assertTrue(CallRuntime.phoneDtmfPrompt(null).contains("遇到电话语音菜单时"))
+        assertTrue(CallRuntime.phoneDtmfPrompt("zh-Hans").contains("遇到电话语音菜单时"))
+        assertTrue(VolcRealtimeProtocol.phoneTools("zh-Hant").toString().contains("发送真正的电话DTMF按键"))
+        assertTrue(VolcRealtimeProtocol.phoneTools().toString().contains("按顺序发送的电话按键"))
+        assertFalse(CallPolicy.prompt("", CallDirection.OUTGOING, languageTag = "zh-Hans").contains("CRITICAL LANGUAGE RULE"))
+    }
 }

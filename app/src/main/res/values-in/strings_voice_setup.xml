@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d tersedia</string>
     <string name="voice_hub_footer">Pilih siapa yang mengerjakan tiap tugas. Layanan suara adalah akun sumber pilihan-pilihan ini.</string>
     <string name="voice_hub_setup">Atur</string>
-    <string name="voice_hub_ready">Siap</string>
     <string name="voice_hub_off">Nonaktif</string>
     <string name="voice_hub_none">Belum dipilih</string>
     <string name="voice_source_device">Ponsel ini · gratis</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">Sebelum menghapus akun chat, Anda akan diberi tahu penggunaan suara mana yang terdampak.</string>
     <string name="voice_add_advanced">Lanjutan</string>
     <string name="voice_add_custom">Kustom</string>
-    <string name="voice_add_custom_sub">Masukkan sendiri ID model, protokol, dan endpoint</string>
     <string name="voice_preset_compat">Layanan kompatibel OpenAI</string>
     <string name="voice_preset_compat_sub">Input suara · bacakan · real-time · alamat + kunci</string>
     <string name="voice_preset_selfhosted">Pengenalan dihosting sendiri</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">Pakai untuk panggilan suara</string>
     <string name="voice_result_in_use">Dipakai</string>
     <string name="voice_result_done">Selesai</string>
-    <string name="calls_who_speaks">Siapa yang bicara</string>
-    <string name="calls_what_to_say">Apa yang dikatakan di telepon</string>
-    <string name="calls_profile_summary">Salam, instruksi, dan durasi panggilan</string>
     <string name="calls_voice_title">Suara panggilan</string>
     <string name="calls_voice_shared_note">Suara ini dipakai bersama dengan panggilan suara di chat.</string>
     <string name="calls_audio_title">Audio panggilan telepon</string>

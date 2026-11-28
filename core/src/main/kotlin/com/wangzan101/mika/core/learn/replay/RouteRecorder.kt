@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.learn.replay
 
+import com.wangzan101.mika.core.net.jsonObjectOrNull
 import com.wangzan101.mika.core.run.record.Redactor
 import com.wangzan101.mika.core.run.record.RunEvent
 import com.wangzan101.mika.core.tool.ToolIndex
@@ -113,5 +114,5 @@ object RouteRecorder {
         return t.capability != null && t.capability !in routed
     }
 
-    private fun parse(s: String): JsonObject? = try { Json.parseToJsonElement(s) as? JsonObject } catch (e: Exception) { null }
+    private fun parse(s: String): JsonObject? = Json.jsonObjectOrNull(s)
 }

@@ -62,7 +62,6 @@
         <item quantity="other">共 %1$d 步</item>
     </plurals>
     <string name="timeline_criteria">做成的標準</string>
-    <string name="timeline_outcome">結局</string>
     <string name="timeline_check">核查</string>
     <string name="timeline_duration">用時</string>
     <string name="timeline_more">更多詳情</string>
@@ -81,8 +80,6 @@
         <item quantity="other">查看了 %1$d 次</item>
     </plurals>
     <string name="effect_small_change">有變化</string>
-    <string name="timeline_hide_screen">收起畫面</string>
-    <string name="timeline_show_screen">看當時的畫面</string>
     <string name="timeline_step_screen">第 %1$d 步的畫面</string>
     <string name="timeline_export">匯出用量記錄</string>
     <string name="timeline_export_hint">將每次模型回覆的 Token 用量、快取命中和上下文壓縮事件儲存為 JSONL。</string>

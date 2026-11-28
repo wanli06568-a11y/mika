@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">حالة المكالمة</string>
-    <string name="calls_dtmf_open">لوحة المفاتيح</string>
     <string name="calls_dtmf_title">لوحة مفاتيح المكالمة</string>
     <string name="calls_dtmf_close">إغلاق</string>
     <string name="calls_dtmf_batch">إدخال تسلسل</string>

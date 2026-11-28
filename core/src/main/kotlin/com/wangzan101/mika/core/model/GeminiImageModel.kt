@@ -65,7 +65,7 @@ class GeminiImageModel(
         }
         val req = Request.Builder().url(endpoint)
             .withHeaders(headers)
-            .header("x-goog-api-key", apiKey)
+            .headerOrReject("x-goog-api-key", apiKey)
             .postInference(InferenceProtocol.Gemini, payload)
             .build()
         val response = HttpSupport.execute(http, req)

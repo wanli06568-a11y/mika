@@ -34,7 +34,6 @@
     <string name="ok_got_it">Entendido</string>
     <string name="cancel">Cancelar</string>
     <string name="model_reasoning_title">Nivel de razonamiento · %1$s</string>
-    <string name="model_reasoning_value">Nivel de razonamiento: %1$s</string>
     <string name="model_reasoning_note">Un nivel más alto puede ayudar con tareas difíciles, pero tarda más y usa más tokens. Con “Predeterminado” decide el proveedor.</string>
     <string name="model_reasoning_unknown">Este proveedor no ha indicado los niveles disponibles. Una opción no compatible puede hacer que las tareas fallen; si pasa, elige Predeterminado.</string>
     <string name="model_reasoning_unavailable">El proveedor ya no ofrece el nivel guardado. Elige Predeterminado u otro nivel.</string>

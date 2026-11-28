@@ -83,7 +83,7 @@ class FileTriggerStoreTest {
         assertEquals(listOf("08:00", "20:00"), FileTriggerStore(file).get("multi")!!.calendarClocks())
         sidecar.writeText("""{"states":{"multi":{"calendarTimes":["08:00","bad"]}}}""")
         assertEquals(listOf("08:00"), FileTriggerStore(file).get("multi")!!.calendarClocks())
-        assertEquals(false, File(file.parentFile, file.name + ".corrupt").exists())
+        assertEquals(emptyList<File>(), file.corruptCopies())
         sidecar.writeText("""{"states":{"multi":{"calendarTimes":["09:00","20:00"]}}}""")
         assertEquals(listOf("08:00"), FileTriggerStore(file).get("multi")!!.calendarClocks())
     }
@@ -148,7 +148,7 @@ class FileTriggerStoreTest {
         assertEquals(true, restored.lastConditionMet)
         assertEquals(ConditionNotify.BecomesMet, restored.notifyWhen)
         assertEquals(null, restored.baselineValue)
-        assertEquals(false, File(file.parentFile, file.name + ".corrupt").exists())
+        assertEquals(emptyList<File>(), file.corruptCopies())
     }
 
     @Test fun oldReaderCanStillReadEveryPlanAfterConditionStateIsSaved() {
@@ -192,7 +192,7 @@ class FileTriggerStoreTest {
         val restored = FileTriggerStore(file).get("windowed")!!
         assertEquals("windowed", restored.id)
         assertTrue(restored.executionWindows.isEmpty())
-        assertEquals(false, File(file.parentFile, file.name + ".corrupt").exists())
+        assertEquals(emptyList<File>(), file.corruptCopies())
     }
 
     @Test fun damagedConditionSidecarDoesNotDamageMainPlans() {
@@ -203,7 +203,7 @@ class FileTriggerStoreTest {
 
         val restored = FileTriggerStore(file)
         assertEquals("fixed", restored.all().single().id)
-        assertEquals(true, File(file.parentFile, sidecar.name + ".corrupt").isFile)
-        assertEquals(false, File(file.parentFile, file.name + ".corrupt").exists())
+        assertEquals(1, sidecar.corruptCopies().size)
+        assertEquals(emptyList<File>(), file.corruptCopies())
     }
 }

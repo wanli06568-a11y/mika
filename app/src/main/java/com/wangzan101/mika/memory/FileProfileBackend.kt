@@ -2,12 +2,11 @@ package com.wangzan101.mika.memory
 
 import com.wangzan101.mika.core.learn.memory.ProfileBackend
 import com.wangzan101.mika.core.learn.memory.ProfileEntry
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.settings.KeyCipher
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /** 与普通记忆分开的用户画像文件；全量原子替换，保留被替代条目。 */
 class FileProfileBackend(private val file: File, private val cipher: KeyCipher) : ProfileBackend {
@@ -18,8 +17,6 @@ class FileProfileBackend(private val file: File, private val cipher: KeyCipher) 
 
     @Synchronized override fun write(entries: List<ProfileEntry>) {
         file.parentFile.mkdirs()
-        val tmp = File(file.parentFile, "${file.name}.tmp")
-        tmp.writeBytes(cipher.encrypt(Json.encodeToString(codec, entries).toByteArray(Charsets.UTF_8)))
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        AtomicFiles.write(file, cipher.encrypt(Json.encodeToString(codec, entries).toByteArray(Charsets.UTF_8)), durable = false)
     }
 }

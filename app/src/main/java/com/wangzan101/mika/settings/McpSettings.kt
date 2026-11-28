@@ -1,5 +1,6 @@
 package com.wangzan101.mika.settings
 
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,8 +12,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.security.SecureRandom
 import java.util.Base64
 
@@ -74,20 +73,16 @@ class McpSettings(private val dir: File, private val cipher: KeyCipher, private 
         val bytes = ByteArray(32).also(random::nextBytes)
         val token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
         dir.mkdirs()
-        val tmp = File(dir, tokenFile.name + ".tmp")
-        tmp.writeBytes(cipher.encrypt(token.toByteArray(Charsets.UTF_8)))
-        Files.move(tmp.toPath(), tokenFile.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        AtomicFiles.write(tokenFile, cipher.encrypt(token.toByteArray(Charsets.UTF_8)), durable = false)
         cachedToken = token
         return token
     }
 
     @Synchronized private fun save() {
         dir.mkdirs()
-        val tmp = File(dir, file.name + ".tmp")
-        tmp.writeText(buildJsonObject {
+        AtomicFiles.write(file, buildJsonObject {
             put("enabled", _enabled.value); put("port", port); put("historyEnabled", _historyEnabled.value)
-        }.toString())
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        }.toString(), durable = false)
     }
 
     companion object {

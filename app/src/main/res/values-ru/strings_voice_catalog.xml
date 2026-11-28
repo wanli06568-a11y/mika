@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">Голосовые модели</string>
-    <string name="models_voice_catalog_sub">Управление моделями речи в текст, текста в речь и живых звонков в одном месте</string>
     <string name="voice_catalog_title">Голосовые модели</string>
     <string name="voice_catalog_sub">Управление моделями речи в текст, текста в речь и живых звонков в одном месте. Возможности и протоколы задаются здесь; страницы голосового ввода, чтения и звонков только выбирают и используют предпочтения.</string>
     <string name="voice_catalog_add">Добавить модель</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">Не проверено</string>
     <string name="voice_catalog_testing">Проверка…</string>
     <string name="voice_catalog_listening">Слушаю, скажите что-нибудь…</string>
+    <string name="voice_catalog_no_speech">Речь не обнаружена</string>
     <string name="voice_catalog_incomplete">Сначала заполните данные аккаунта.</string>
     <string name="voice_catalog_protocol_stt_android_system">Система Android</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">Расшифровка аудио</string>

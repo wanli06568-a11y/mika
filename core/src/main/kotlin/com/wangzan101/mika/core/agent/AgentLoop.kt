@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.agent
 
+import com.wangzan101.mika.core.tool.fail
 import com.wangzan101.mika.core.run.trace.RunTrace
 import com.wangzan101.mika.core.safety.guard.OperationGuards
 import com.wangzan101.mika.core.safety.guard.GuardVerdict
@@ -697,9 +698,7 @@ class AgentLoop(
 
             // 用户刚同意的那一步要单独做:批里的步不带同意,混进去会被关卡拦下,同意也可能被别的步用掉或作废
             if (((flags.batchSteps && first.name == DO_STEPS_TOOL) || tools.composite(first.name)) && confirmations?.hasGrant == true) {
-                val content = buildJsonObject {
-                    put("ok", false); put("error", "approved_step_first"); put("message", APPROVED_STEP_FIRST); put("recoverable", true)
-                }
+                val content = fail("approved_step_first", APPROVED_STEP_FIRST).content
                 history += calls.results(Part.ToolResult(first.id, content.toString(), isError = true))
                 recordReply(if (first.name == DO_STEPS_TOOL) BatchRunner.redactArgs(first.argsJson) else Redactor.args(tools.verb(first.name), first.argsJson, secretField = true))
                 recorder.result(step, first.name, tools.verb(first.name), content, JsonObject(emptyMap()), null, null, 0, "model", first.id)

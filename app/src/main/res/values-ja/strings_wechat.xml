@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">個別チャットのメッセージで Mika にタスクを実行できます</string>
     <string name="wechat_turn_off">オフにする</string>
     <string name="wechat_title">WeChat</string>
-    <string name="wechat_settings_sub">WeChat から Mika にタスクを依頼</string>
     <string name="wechat_status_disconnected">未接続</string>
     <string name="wechat_status_connecting">接続中</string>
     <string name="wechat_status_connected">接続済み</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">WeChat でスキャンして認証を確認し、Bot の個別チャットを開いてテキストや画像を送信してください。この QR コードは今回の連携専用です。転送しないでください。</string>
     <string name="wechat_connection">接続</string>
     <string name="wechat_receive">WeChat のタスクを受信</string>
-    <string name="wechat_receive_sub">オフにすると新着メッセージを読み取らなくなります</string>
     <string name="wechat_allow_unlock">WeChat のタスクによるスリープ解除とロック解除を許可</string>
     <string name="wechat_allow_unlock_sub">連携した本人の WeChat アカウントからの個別チャットのタスクに限り、このスマートフォンのスリープ解除とロック解除を試みます。</string>
     <string name="wechat_allow_unlock_foot">初期状態はオフで、再連携するとオフに戻ります。先に「%1$s › %2$s」で「%3$s」をオンにし、画面ロックに PIN またはパスワードを使っている場合は、この端末に保存してください。このスイッチはその権限を変更せず、WeChat で送られた認証情報をロック解除に使用しません。</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">個別チャットのテキスト・画像と実際のタスク</string>
     <string name="wechat_capability_replies">Mika からの質問、結果、通知</string>
     <string name="wechat_capability_phone">支払い確認とスマホへの切り替え</string>
-    <string name="wechat_capability_phone_sub">このスマホで完了する必要があります</string>
     <string name="wechat_capability_later">音声、ファイル、グループ、複数アカウント</string>
     <string name="wechat_supported">対応</string>
     <string name="wechat_phone_only">スマホ</string>

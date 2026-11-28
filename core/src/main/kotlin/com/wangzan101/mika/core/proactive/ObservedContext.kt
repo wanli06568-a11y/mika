@@ -1,6 +1,6 @@
 package com.wangzan101.mika.core.proactive
 
-import com.wangzan101.mika.core.agent.TokenEstimate
+import com.wangzan101.mika.core.model.TokenEstimate
 import com.wangzan101.mika.core.screen.observation.Untrusted
 import java.time.LocalDate
 

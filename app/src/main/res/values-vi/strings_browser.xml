@@ -31,7 +31,6 @@
     <string name="browser_download_running">Đang tải xuống…</string>
     <string name="browser_download_done">Đã tải xuống</string>
     <string name="browser_download_failed">Tải xuống thất bại</string>
-    <string name="browser_download_open">Mở</string>
     <string name="browser_download_cancel">Hủy tải xuống</string>
     <string name="browser_download_delete">Xóa</string>
     <string name="browser_download_delete_q">Xóa lượt tải xuống này?</string>
@@ -43,7 +42,6 @@
     <string name="browser_permission_location">Vị trí</string>
     <string name="browser_permission_allow">Cho phép</string>
     <string name="browser_permission_block">Chặn</string>
-    <string name="browser_no_download">Trình duyệt chưa tải được tệp.</string>
     <string name="browser_crashed">Trang gặp sự cố và đã bị đóng. Bạn có thể mở lại.</string>
     <string name="browser_logged_in">Đã đăng nhập — Mika cũng có thể dùng nó cho các tác vụ.</string>
     <string name="browser_desktop">Máy tính</string>

@@ -31,7 +31,6 @@
     <string name="mcp_last_request">Yêu cầu gần nhất %1$s</string>
     <string name="mcp_advanced">Cài đặt nâng cao</string>
     <string name="mcp_advanced_hide">Ẩn cài đặt nâng cao</string>
-    <string name="mcp_advanced_sub">Công tắc truy cập, token và đánh thức từ xa</string>
     <string name="mcp_port_detail">Cổng %1$d. Truy cập USB tắt sau khi điện thoại khởi động lại.</string>
     <string name="mcp_port_title">Cổng lắng nghe</string>
     <string name="mcp_port_dialog_sub">Thay đổi khi cổng mặc định đã bị dịch vụ khác trên điện thoại này chiếm. Áp dụng ngay; máy tính kết nối lại trên cổng mới.</string>

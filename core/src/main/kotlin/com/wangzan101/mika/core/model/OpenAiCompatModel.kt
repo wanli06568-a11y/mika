@@ -257,20 +257,9 @@ class OpenAiCompatModel(
     /** 把整份 SSE 回复拆成一件件事件;内容已经收完,缺结束标记时补一个,当作正常说完。 */
     private fun eventsOf(body: String): List<String> {
         val out = mutableListOf<String>()
-        val data = mutableListOf<String>()
-        fun dispatch() {
-            if (data.isNotEmpty()) {
-                out += data.joinToString("\n")
-                data.clear()
-            }
-        }
-        body.lineSequence().forEach { line ->
-            when {
-                line.isEmpty() -> dispatch()
-                line.startsWith("data:") -> data += line.removePrefix("data:").removePrefix(" ")
-            }
-        }
-        dispatch()
+        val framer = SseFramer()
+        body.lineSequence().forEach { line -> framer.feed(line)?.let { out += it } }
+        framer.flush()?.let { out += it }
         if (out.lastOrNull() != STREAM_DONE) out += STREAM_DONE
         return out
     }

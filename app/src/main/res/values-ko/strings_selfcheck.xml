@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">호환성 자가 점검</string>
-    <string name="selfcheck_row_sub">이 휴대전화에서 되는 기능을 확인하고 알려 주세요</string>
     <string name="selfcheck_intro">1분 정도 걸려요. 다른 앱을 건드리지 않고, 설정을 바꾸지 않으며, 네트워크도 쓰지 않아요. 점검하는 동안 이 페이지에 머물러 주세요.</string>
     <string name="selfcheck_start">시작</string>
     <string name="selfcheck_again">다시 실행</string>

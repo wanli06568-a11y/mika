@@ -5,10 +5,6 @@
     <string name="personal_system_reply_failed">تعذر الرد، يرجى المحاولة مرة أخرى لاحقًا.</string>
     <string name="personal_system_task_start_failed">تعذر بدء المهمة</string>
     <string name="personal_system_task_cancelled">تم إلغاء المهمة</string>
-    <string name="personal_system_task_completed">اكتملت المهمة</string>
-    <string name="personal_system_task_failed">فشلت المهمة</string>
-    <string name="personal_system_task_running">المهمة قيد التنفيذ</string>
-    <string name="personal_system_task_queued">المهمة في قائمة الانتظار</string>
     <string name="personal_system_no_model">يرجى اختيار النموذج الأساسي في الإعدادات أولاً، ثم العودة لمتابعة المحادثة.</string>
     <string name="personal_system_context_long">تتجاوز هذه الرسالة حد سياق النموذج الحالي. يرجى إرسالها على عدة أجزاء.</string>
     <string name="personal_system_empty_reply">لم يُرجع النموذج رداً يمكن عرضه. يرجى المحاولة مرة أخرى.</string>

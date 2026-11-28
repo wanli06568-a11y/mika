@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="jev_title">مدل تصمیم · Jev</string>
-    <string name="jev_row_sub">انتخاب اختیاری قصد و مسیر</string>
     <string name="jev_enabled">استفاده از مدل تصمیم</string>
     <string name="jev_privacy">هنگام فعال‌سازی، درخواست شما، بافت گفتگوی اخیر و مسیرهای نامزد به ارائه‌دهندهٔ پیکربندی‌شده ارسال می‌شود تا قصد را تشخیص دهد و مسیرها را برگزیند. در صورت خطا، Mika از مدل قبلی استفاده می‌کند. تنظیمات مدل اصلی، تصویری و سبک جداگانه می‌مانند.</string>
     <string name="jev_provider">ارائه‌دهنده</string>

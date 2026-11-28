@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d disponíveis</string>
     <string name="voice_hub_footer">Escolha quem faz cada tarefa. Os serviços de voz são as contas de onde vêm essas opções.</string>
     <string name="voice_hub_setup">Configurar</string>
-    <string name="voice_hub_ready">Pronto</string>
     <string name="voice_hub_off">Desligado</string>
     <string name="voice_hub_none">Não escolhido</string>
     <string name="voice_source_device">Este telefone · grátis</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">Antes de excluir uma conta de chat, avisamos quais usos de voz serão afetados.</string>
     <string name="voice_add_advanced">Avançado</string>
     <string name="voice_add_custom">Personalizado</string>
-    <string name="voice_add_custom_sub">Informe você mesmo IDs de modelo, protocolos e endereços</string>
     <string name="voice_preset_compat">Serviço compatível com OpenAI</string>
     <string name="voice_preset_compat_sub">Entrada por voz · leitura · tempo real · endereço + chave</string>
     <string name="voice_preset_selfhosted">Reconhecimento auto-hospedado</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">Usar em chamadas de voz</string>
     <string name="voice_result_in_use">Em uso</string>
     <string name="voice_result_done">Concluído</string>
-    <string name="calls_who_speaks">Quem fala</string>
-    <string name="calls_what_to_say">O que dizer ao telefone</string>
-    <string name="calls_profile_summary">Saudação, instruções e duração da ligação</string>
     <string name="calls_voice_title">Voz da ligação</string>
     <string name="calls_voice_shared_note">Esta voz é compartilhada com as chamadas de voz do chat.</string>
     <string name="calls_audio_title">Áudio da ligação</string>

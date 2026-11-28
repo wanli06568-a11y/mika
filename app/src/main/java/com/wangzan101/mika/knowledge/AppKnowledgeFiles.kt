@@ -6,10 +6,9 @@ import com.wangzan101.mika.core.learn.knowledge.AppKnowledgeStage
 import com.wangzan101.mika.core.learn.knowledge.AppKnowledgeTrial
 import com.wangzan101.mika.core.learn.knowledge.LearnedNote
 import com.wangzan101.mika.core.learn.knowledge.FrontMatter
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 /**
@@ -108,8 +107,6 @@ class AppKnowledgeFiles(dir: File) : AppKnowledgeDraftStore {
     }
 
     private fun atomic(file: File, content: String) {
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeText(content)
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        AtomicFiles.write(file, content, durable = false)
     }
 }

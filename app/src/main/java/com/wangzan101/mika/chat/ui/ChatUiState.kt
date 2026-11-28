@@ -115,11 +115,11 @@ data class Exchange(
     /** 这一轮导出到「下载/Mika」的文件,显示成文件卡片。 */
     val files: List<SharedFile> = emptyList(),
     /** 这一轮 Mika 生成并留在工作区里的音频,显示成音频卡片。 */
-    val audios: List<com.wangzan101.mika.core.chat.GeneratedAudio> = emptyList(),
+    val audios: List<com.wangzan101.mika.core.agent.GeneratedAudio> = emptyList(),
     /** 这一轮 Mika 生成并留在工作区里的图,显示成照片格子。 */
-    val photos: List<com.wangzan101.mika.core.chat.GeneratedPhoto> = emptyList(),
+    val photos: List<com.wangzan101.mika.core.agent.GeneratedPhoto> = emptyList(),
     /** 这一轮 Mika 生成并留在工作区里的视频,显示成视频卡片。 */
-    val videos: List<com.wangzan101.mika.core.chat.GeneratedVideo> = emptyList(),
+    val videos: List<com.wangzan101.mika.core.agent.GeneratedVideo> = emptyList(),
     /** 这次打开 App 后开始跟的时刻(毫秒);不知道时为 0。 */
     val startedAt: Long = 0L,
     /** 结束时算出的用时;没结束或不知道开始时刻时为 null。 */

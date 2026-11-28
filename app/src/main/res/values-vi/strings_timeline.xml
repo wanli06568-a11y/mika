@@ -62,7 +62,6 @@
         <item quantity="other">%1$d bước</item>
     </plurals>
     <string name="timeline_criteria">Thế nào là hoàn thành</string>
-    <string name="timeline_outcome">Kết quả</string>
     <string name="timeline_check">Kiểm tra</string>
     <string name="timeline_duration">Thời gian thực hiện</string>
     <string name="timeline_more">Thêm chi tiết</string>
@@ -81,8 +80,6 @@
         <item quantity="other">Đã xem %1$d lần</item>
     </plurals>
     <string name="effect_small_change">Thay đổi một chút</string>
-    <string name="timeline_hide_screen">Ẩn màn hình</string>
-    <string name="timeline_show_screen">Xem màn hình tại thời điểm đó</string>
     <string name="timeline_step_screen">Màn hình ở bước %1$d</string>
     <string name="timeline_export">Xuất bản ghi sử dụng</string>
     <string name="timeline_export_hint">Lưu mức sử dụng token của mỗi câu trả lời của mô hình và các sự kiện nén ngữ cảnh dưới dạng JSONL.</string>

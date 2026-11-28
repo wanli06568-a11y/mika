@@ -27,7 +27,6 @@
     <string name="export_done">Exported</string>
     <string name="export_failed">Export failed: %1$s</string>
     <string name="export_no_messages">Nothing to export</string>
-    <string name="export_current_turn">The running turn is not included.</string>
     <string name="export_warnings">%1$d items could not be included.</string>
     <string name="export_filename_fallback">Mika conversation</string>
 

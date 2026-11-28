@@ -11,10 +11,8 @@ import com.wangzan101.mika.core.trigger.TriggerWindow
 import com.wangzan101.mika.core.trigger.TriggerWindowState
 import com.wangzan101.mika.core.trigger.normalizedCalendarTimes
 import com.wangzan101.mika.core.trigger.isValidExecutionWindow
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -141,7 +139,7 @@ class FileTriggerStore(
             bytes = file.readBytes()
             snapshot = Json.decodeFromString<TriggerSnapshot>(bytes.toString(Charsets.UTF_8))
         } catch (_: Exception) {
-            file.copyTo(File(file.parentFile, file.name + ".corrupt"), overwrite = true)
+            AtomicFiles.quarantine(file, AtomicFiles.Quarantine.CopyCorrupt)
             return empty
         }
         val hash = bytes.sha256()
@@ -156,7 +154,7 @@ class FileTriggerStore(
         return runCatching {
             CONDITION_JSON.decodeFromString<ConditionPlanSnapshot>(conditionFile.readText())
         }.getOrElse {
-            conditionFile.copyTo(File(conditionFile.parentFile, conditionFile.name + ".corrupt"), overwrite = true)
+            AtomicFiles.quarantine(conditionFile, AtomicFiles.Quarantine.CopyCorrupt)
             ConditionPlanSnapshot()
         }
     }
@@ -183,8 +181,6 @@ class FileTriggerStore(
 
     private fun writeAtomic(target: File, bytes: ByteArray) {
         target.parentFile?.mkdirs()
-        val temp = File(target.parentFile, target.name + ".tmp")
-        FileOutputStream(temp).use { out -> out.write(bytes); out.fd.sync() }
-        Files.move(temp.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        AtomicFiles.write(target, bytes, durable = true, move = AtomicFiles.Move.Atomic)
     }
 }

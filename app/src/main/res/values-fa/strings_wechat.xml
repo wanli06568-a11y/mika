@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">پیام‌های خصوصی می‌توانند کارهای میکا را شروع کنند</string>
     <string name="wechat_turn_off">خاموش کردن</string>
     <string name="wechat_title">وی‌چت</string>
-    <string name="wechat_settings_sub">سپردن کار به میکا در وی‌چت</string>
     <string name="wechat_status_disconnected">متصل نیست</string>
     <string name="wechat_status_connecting">در حال اتصال</string>
     <string name="wechat_status_connected">متصل</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">کد را در وی‌چت اسکن و مجوز را تأیید کنید. سپس گفتگوی خصوصی ربات را باز کنید و متن یا تصویر بفرستید. این کد QR فقط برای همین اتصال است؛ آن را برای دیگران نفرستید.</string>
     <string name="wechat_connection">اتصال</string>
     <string name="wechat_receive">دریافت کارهای وی‌چت</string>
-    <string name="wechat_receive_sub">در حالت خاموش، میکا خواندن پیام‌های جدید را متوقف می‌کند</string>
     <string name="wechat_bound_account">حساب متصل</string>
     <string name="wechat_current_account">کاربر فعلی وی‌چت</string>
     <string name="wechat_message_scope">دامنهٔ پیام‌ها</string>
@@ -45,7 +43,6 @@
     <string name="wechat_capability_text">متن و تصویر خصوصی و کارهای واقعی</string>
     <string name="wechat_capability_replies">پرسش‌ها، نتایج و اعلان‌های میکا</string>
     <string name="wechat_capability_phone">تأیید پرداخت و به دست گرفتن گوشی</string>
-    <string name="wechat_capability_phone_sub">همچنان در همین گوشی انجام می‌شوند</string>
     <string name="wechat_capability_later">صدا، فایل، گروه و چند حساب</string>
     <string name="wechat_supported">پشتیبانی می‌شود</string>
     <string name="wechat_phone_only">گوشی</string>

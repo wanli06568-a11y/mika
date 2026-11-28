@@ -5,6 +5,7 @@ import com.wangzan101.mika.core.run.ChannelPeer
 import com.wangzan101.mika.core.run.RunPhase
 import com.wangzan101.mika.core.run.RunStore
 import com.wangzan101.mika.core.run.StoredRun
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -15,7 +16,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.File
-import java.io.FileOutputStream
 import android.util.Log
 
 /** App 私有目录里的运行账本；每次转阶段后原子替换，异常重启不会把半份 JSON 当成记录。 */
@@ -43,15 +43,16 @@ class FileRunStateStore(private val file: File) : RunStore {
             }
         }.onFailure {
             Log.e("MikaRunStore", "run store could not be read; preserving damaged file", it)
-            file.copyTo(File(file.parentFile, file.name + ".corrupt"), overwrite = true)
+            AtomicFiles.quarantine(file, AtomicFiles.Quarantine.CopyCorrupt)
             records.clear()
         }
     }
 
     @Synchronized override fun save(record: StoredRun) {
-        records[record.id] = record
+        // 先写盘再改内存(和送达账本一样):写失败时内存仍和盘上一致
+        val next = LinkedHashMap(records).apply { put(record.id, record) }
         file.parentFile?.mkdirs()
-        val json = JsonArray(records.values.map { r -> buildJsonObject {
+        val json = JsonArray(next.values.map { r -> buildJsonObject {
             put("id", r.id.value); put("threadId", r.threadId); put("goal", r.goal)
             put("phase", code(r.phase)); put("reply", r.reply)
             put("deliveryId", r.deliveryId)
@@ -66,9 +67,8 @@ class FileRunStateStore(private val file: File) : RunStore {
             put("followUpId", r.followUpId)
             put("recordId", r.recordId)
         } }).toString()
-        val temp = File(file.parentFile, file.name + ".tmp")
-        FileOutputStream(temp).use { out -> out.write(json.toByteArray(Charsets.UTF_8)); out.fd.sync() }
-        check(temp.renameTo(file)) { "run store rename failed" }
+        check(AtomicFiles.write(file, json, durable = true, move = AtomicFiles.Move.Rename)) { "run store rename failed" }
+        records[record.id] = record
     }
 
     @Synchronized override fun get(id: RunId): StoredRun? = records[id]

@@ -22,10 +22,4 @@
     <string name="calls_voice_default_name">Voz en tiempo real predeterminada</string>
     <string name="calls_voice_protocol">Voz integrada en tiempo real: reconocimiento, diálogo y habla en un mismo servicio.</string>
     <string name="calls_voice_credentials_keep">Deja el campo vacío para conservar las credenciales. Las nuevas credenciales sustituirán las anteriores y requerirán otra prueba.</string>
-    <string name="calls_back_settings">Volver a ajustes</string>
-    <string name="calls_enabled_summary">Puedes responder y llamar con IA; la respuesta automática tiene su propio interruptor.</string>
-    <string name="calls_settings_device_group">Dispositivo y ejecución</string>
-    <string name="calls_settings_data_group">Datos</string>
-    <string name="calls_history_entry_summary">Resúmenes, pendientes y transcripciones</string>
-    <string name="calls_voice_setup">Configurar y probar el servicio de voz</string>
 </resources>

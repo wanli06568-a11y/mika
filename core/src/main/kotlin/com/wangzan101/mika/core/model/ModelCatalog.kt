@@ -1,5 +1,7 @@
 package com.wangzan101.mika.core.model
 
+import com.wangzan101.mika.core.net.jsonObjectOrNull
+import com.wangzan101.mika.core.net.str
 import com.wangzan101.mika.core.net.ProxyFailure
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
@@ -382,7 +384,7 @@ class ModelCatalog(private val http: OkHttpClient) {
             return Result.failure(Failure(ModelListResult.Failed(ListFailure.of(e))))
         }
         if (raw.status !in 200..299) return Result.failure(Failure(failureFor(raw.status, raw.body)))
-        val root = try { json.parseToJsonElement(raw.body).jsonObject } catch (e: Exception) { null }
+        val root = json.jsonObjectOrNull(raw.body)
             ?: return Result.failure(Failure(ModelListResult.Failed(ListFailure.BadResponse)))
         return Result.success(root)
     }
@@ -418,7 +420,6 @@ class ModelCatalog(private val http: OkHttpClient) {
 
     private fun endpoint(baseUrl: String, path: String) = (baseUrl.trim().trimEnd('/') + path).toHttpUrlOrNull()
 
-    private fun JsonObject.str(k: String): String? = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
     private fun JsonObject.obj(k: String): JsonObject? = this[k] as? JsonObject
     private fun JsonObject.bool(k: String): Boolean? = (this[k] as? JsonPrimitive)?.booleanOrNull
     private fun JsonObject.int(k: String): Int? = (this[k] as? JsonPrimitive)?.intOrNull?.takeIf { it > 0 }

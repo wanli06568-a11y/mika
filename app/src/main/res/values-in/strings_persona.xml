@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="persona_title">Persona</string>
-    <string name="persona_sub">Pilih cara Mika berbicara dengan Anda</string>
     <string name="persona_default">Default</string>
     <string name="persona_default_sub">Suara biasa Mika</string>
     <string name="persona_empty">Belum ada persona</string>

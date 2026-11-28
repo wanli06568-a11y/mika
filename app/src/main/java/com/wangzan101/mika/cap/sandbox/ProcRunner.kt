@@ -1,5 +1,6 @@
 package com.wangzan101.mika.cap.sandbox
 
+import com.wangzan101.mika.cap.OutputCollector
 import com.wangzan101.mika.core.net.LocalHosts
 import com.wangzan101.mika.core.workspace.SandboxPaths
 import java.io.File
@@ -15,7 +16,6 @@ internal class ProcOutcome(val exitCode: Int, val output: ByteArray, val dropped
 /** 拼启动器 + PRoot 的命令行与环境变量。 */
 object ProcRunner {
     const val OUTPUT_LIMIT = 1 shl 20
-    const val READ_CHUNK = 64 * 1024
     const val PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     /** 走代理时本机、局域网地址照旧直连(和 Mika 自己的连接同一套,见 [LocalHosts])。 */
     const val NO_PROXY = LocalHosts.NO_PROXY
@@ -125,25 +125,4 @@ object ProcRunner {
     /** 读到流结束,结果见 [OutputCollector]。 */
     internal fun collect(input: InputStream, limit: Int = OUTPUT_LIMIT): Pair<ByteArray, Long> =
         OutputCollector(limit).apply { drain(input) }.snapshot()
-}
-
-/** 读到流结束;最多留 [limit] 字节,多的读掉丢弃并计数(不读完命令会卡在写输出上)。读的途中也能取快照。 */
-internal class OutputCollector(private val limit: Int = ProcRunner.OUTPUT_LIMIT) {
-    private val kept = java.io.ByteArrayOutputStream(minOf(limit, ProcRunner.READ_CHUNK))
-    private var dropped = 0L
-
-    fun drain(input: InputStream) {
-        val buf = ByteArray(ProcRunner.READ_CHUNK)
-        while (true) {
-            val n = input.read(buf)
-            if (n < 0) break
-            synchronized(this) {
-                val room = limit - kept.size()
-                if (room > 0) kept.write(buf, 0, minOf(n, room))
-                if (n > room) dropped += n - maxOf(room, 0)
-            }
-        }
-    }
-
-    @Synchronized fun snapshot(): Pair<ByteArray, Long> = kept.toByteArray() to dropped
 }

@@ -4,10 +4,8 @@ import com.wangzan101.mika.BuildConfig
 import com.wangzan101.mika.core.tool.PluginToolSpec
 import com.wangzan101.mika.core.learn.skills.PluginSkills
 import com.wangzan101.mika.core.tool.Risk
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -113,8 +111,6 @@ class PluginRegistry(
         if (next != stored) writeRegistry(next)
     }
 
-    fun reloadAsync(): Job = scope.launch(Dispatchers.IO) { reload() }
-
     /** 安装器成功把目录换入后登记;同 id 升级保留原来的启用状态和安装时间。 */
     fun install(record: PluginRecord) = synchronized(lock) {
         val old = _plugins.value.firstOrNull { it.id == record.id }
@@ -156,12 +152,8 @@ class PluginRegistry(
 
     private fun writeRegistry(records: List<PluginRecord>) {
         root.mkdirs()
-        val tmp = File(root, "$REGISTRY.tmp")
-        tmp.writeText(json.encodeToString(RegistryFile(plugins = records)))
-        if (!tmp.renameTo(file)) {
-            file.delete()
-            check(tmp.renameTo(file)) { "cannot write $REGISTRY" }
-        }
+        val ok = AtomicFiles.write(file, json.encodeToString(RegistryFile(plugins = records)), durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.DeleteAndRetry)
+        check(ok) { "cannot write $REGISTRY" }
     }
 
     @Serializable

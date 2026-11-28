@@ -5,10 +5,6 @@
     <string name="personal_system_reply_failed">No se pudo responder. Inténtalo de nuevo más tarde.</string>
     <string name="personal_system_task_start_failed">No se pudo iniciar la tarea</string>
     <string name="personal_system_task_cancelled">Tarea cancelada</string>
-    <string name="personal_system_task_completed">Tarea completada</string>
-    <string name="personal_system_task_failed">La tarea falló</string>
-    <string name="personal_system_task_running">Tarea en curso</string>
-    <string name="personal_system_task_queued">Tarea en cola</string>
     <string name="personal_system_no_model">Selecciona primero un modelo principal en Ajustes y vuelve para continuar la conversación.</string>
     <string name="personal_system_context_long">Este mensaje supera el límite de contexto del modelo actual. Envíalo en varias partes.</string>
     <string name="personal_system_empty_reply">El modelo no devolvió una respuesta que se pueda mostrar. Inténtalo de nuevo.</string>

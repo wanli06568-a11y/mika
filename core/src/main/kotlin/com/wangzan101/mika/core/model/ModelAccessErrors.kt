@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.model
 
+import com.wangzan101.mika.core.net.str
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -113,7 +114,6 @@ object ModelAccessErrors {
             ?: root?.str("message") ?: root?.str("msg") ?: root?.str("detail")
     }
 
-    private fun JsonObject.str(k: String): String? = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
 
     private const val DETAIL_MAX = 160
 }

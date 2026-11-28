@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">Autoverificação de compatibilidade</string>
-    <string name="selfcheck_row_sub">Veja o que funciona neste celular e relate</string>
     <string name="selfcheck_intro">Leva cerca de 1 minuto. Não mexe nos seus outros apps, não altera configurações e não usa a rede. Fique nesta página enquanto ela roda.</string>
     <string name="selfcheck_start">Iniciar</string>
     <string name="selfcheck_again">Executar de novo</string>

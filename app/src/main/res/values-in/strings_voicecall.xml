@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="voicecall_see_task_page">Perlu tindakanmu — buka halaman tugas</string>
-    <string name="voicecall_task_paused">Tugas dijeda</string>
     <string name="voicecall_task_running">Sedang diproses</string>
     <string name="voicecall_task_done">Selesai</string>
     <string name="voicecall_task_open">Lihat prosesnya</string>
@@ -63,7 +62,6 @@
     <string name="voicecall_log_end_idle">Panggilan berakhir · %1$s · lama tidak ada suara</string>
     <string name="voicecall_log_silent">Panggilan suara · %1$s · tidak bicara</string>
     <string name="voicecall_log_live">Sedang menelepon</string>
-    <string name="voicecall_more">Lainnya</string>
     <string name="voicecall_records">Riwayat panggilan</string>
     <string name="voicecall_records_hint">Ketuk salah satu untuk melihatnya di chat</string>
     <string name="voicecall_records_empty">Belum ada panggilan di percakapan ini</string>

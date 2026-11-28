@@ -261,24 +261,11 @@ internal class WheelDriver(
      */
     private fun scrollableWheel(start: AccessibilityNodeInfo, startBox: Rect): AccessibilityNodeInfo? {
         if (scrollable(start)) return start
-        val r = Rect()
-        var p = start.parent
-        var depth = 0
-        while (p != null && depth++ < MAX_UP) {
-            if (scrollable(p)) {
-                p.getBoundsInScreen(r)
-                return p.takeIf { r.centerX() in startBox.left..startBox.right }
-            }
-            p = p.parent
+        start.ancestors(MAX_UP).firstOrNull(::scrollable)?.let { p ->
+            val r = Rect().also(p::getBoundsInScreen)
+            return p.takeIf { r.centerX() in startBox.left..startBox.right }
         }
-        val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(start) }
-        var visited = 0
-        while (queue.isNotEmpty() && visited++ < 60) {
-            val c = queue.removeFirst()
-            if (scrollable(c)) return c
-            for (i in 0 until c.childCount) c.getChild(i)?.let(queue::add)
-        }
-        return null
+        return start.breadthFirst(MAX_WHEEL_SEARCH).firstOrNull(::scrollable)
     }
 
     /**
@@ -297,15 +284,12 @@ internal class WheelDriver(
             if (treeItems(own).size >= 2) return own
         }
         var best: Column? = null
-        var p = start.parent
-        var depth = 0
-        while (p != null && depth++ < MAX_UP) {
+        for (p in start.ancestors(MAX_UP)) {
             val box = Rect().also(p::getBoundsInScreen)
             val c = Column(p, box, startBox.left, startBox.right, startBox.centerY(), ownHeight)
             val n = treeItems(c).size
             if (n >= 3) return c
             if (n >= 2 && best == null) best = c
-            p = p.parent
         }
         return best ?: Column(start, Rect(startBox), startBox.left, startBox.right, startBox.centerY(), ownHeight)
     }
@@ -334,6 +318,8 @@ internal class WheelDriver(
     private companion object {
         const val MAX_STEPS = 80
         const val MAX_UP = 5
+        /** 往下找能滚的滚轮最多看这么多个节点。 */
+        const val MAX_WHEEL_SEARCH = 60
         const val MAX_DOWN = 4
         /** 一项的名字常带着状态词(「已选中，21」「Selected, 21」),放宽一些。 */
         const val MAX_ITEM_CHARS = 24

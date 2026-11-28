@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">بررسی سازگاری</string>
-    <string name="selfcheck_row_sub">ببینید چه قابلیت‌هایی در این گوشی کار می‌کنند و نتیجه را گزارش کنید</string>
     <string name="selfcheck_intro">حدود یک دقیقه طول می‌کشد. به برنامه‌های دیگر شما دست نمی‌زند، تنظیمات را تغییر نمی‌دهد و از شبکه استفاده نمی‌کند. لطفاً هنگام اجرا در همین صفحه بمانید.</string>
     <string name="selfcheck_start">شروع</string>
     <string name="selfcheck_again">اجرای دوباره</string>

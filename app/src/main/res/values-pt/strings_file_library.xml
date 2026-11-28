@@ -9,8 +9,6 @@
     <string name="file_library_loading">Carregando arquivos…</string>
     <string name="file_library_empty">Nenhum arquivo encontrado</string>
     <string name="file_library_missing">Indisponível</string>
-    <string name="file_library_available">Disponível</string>
-    <string name="file_library_open">Abrir</string>
     <string name="file_library_share">Compartilhar</string>
     <string name="file_library_add">Adicionar ao rascunho</string>
     <string name="file_library_choose">Escolha uma conversa</string>

@@ -3,6 +3,7 @@ package com.wangzan101.mika.cap.sandbox
 import android.content.Context
 import android.net.ConnectivityManager
 import android.util.Log
+import com.wangzan101.mika.cap.OutputCollector
 import com.wangzan101.mika.chat.SharedFile
 import com.wangzan101.mika.core.cap.sandbox.CommandResult
 import com.wangzan101.mika.core.workspace.GatedFile
@@ -238,10 +239,7 @@ class AndroidSandbox internal constructor(
                 val cmd = ProcRunner.argv(dirs, ws, rel, 3600, network, standIns(), argv)
                 val env = ProcRunner.env(dirs, null, null, workspace, if (network) proxy() else "", extra = environment)
                 val p = withContext(launcherThread + NonCancellable) {
-                    ProcessBuilder(cmd).redirectErrorStream(false).apply {
-                        environment().clear()
-                        environment().putAll(env)
-                    }.start()
+                    sandboxProcess(cmd, env, mergeStderr = false).start()
                 }
                 started.set(p)
                 // 收回落在拿到租约和登记进程之间时 onRevoke 没看见它:这里补停
@@ -300,10 +298,7 @@ class AndroidSandbox internal constructor(
                 )
                 val env = ProcRunner.env(dirs, null, null, workspace, if (network) proxy() else "", pty = true)
                 val p = withContext(launcherThread + NonCancellable) {
-                    ProcessBuilder(cmd).redirectErrorStream(true).apply {
-                        environment().clear()
-                        environment().putAll(env)
-                    }.start().also(started::set)
+                    sandboxProcess(cmd, env, mergeStderr = true).start().also(started::set)
                 }
                 if (lease.revoked) {
                     stopNow(p)
@@ -533,10 +528,7 @@ class AndroidSandbox internal constructor(
             var started: Process? = null
             try {
                 withContext(launcherThread + NonCancellable) {
-                    started = start(ProcessBuilder(cmd).redirectErrorStream(true).apply {
-                        environment().clear()
-                        environment().putAll(env)
-                    })
+                    started = start(sandboxProcess(cmd, env, mergeStderr = true))
                 }
             } catch (e: CancellationException) {
                 started?.let(::abandon)
@@ -544,7 +536,7 @@ class AndroidSandbox internal constructor(
             }
             val p = started!!
             // 读输出用普通线程:阻塞的 read 取消不了,放在协程里会让取消一直等下去
-            val collector = OutputCollector()
+            val collector = OutputCollector(ProcRunner.OUTPUT_LIMIT)
             val reader = thread(isDaemon = true, name = "mika-sandbox-output") { runCatching { p.inputStream.use(collector::drain) } }
             try {
                 // 启动期间已被取消:在这里抛出,由下面的 catch 杀掉刚起的进程
@@ -568,7 +560,28 @@ class AndroidSandbox internal constructor(
         /** 先 SIGTERM(启动器收到后清掉整个进程树),[DESTROY_GRACE_MS] 后还在就 SIGKILL。 */
         private fun abandon(p: Process) {
             p.destroy()
-            thread(isDaemon = true, name = "mika-sandbox-reaper") { if (!p.waitFor(DESTROY_GRACE_MS, TimeUnit.MILLISECONDS)) p.destroyForcibly() }
+            reapAsync(p, "mika-sandbox-reaper")
+        }
+    }
+}
+
+/** 沙箱进程的 ProcessBuilder:环境变量只用 [env](不继承 Mika 的);[mergeStderr] 为真时标准错误并进标准输出。 */
+private fun sandboxProcess(cmd: List<String>, env: Map<String, String>, mergeStderr: Boolean): ProcessBuilder =
+    ProcessBuilder(cmd).redirectErrorStream(mergeStderr).apply {
+        environment().clear()
+        environment().putAll(env)
+    }
+
+/**
+ * 另起守护线程 [name] 兜底:[DESTROY_GRACE_MS] 内 [p] 还没退就 SIGKILL,之后(无论成败)调 [after]。
+ * 不发 SIGTERM:调用方自己决定先后(终端要先布好兜底再 destroy)。
+ */
+private fun reapAsync(p: Process, name: String, after: () -> Unit = {}) {
+    thread(isDaemon = true, name = name) {
+        try {
+            if (!p.waitFor(DESTROY_GRACE_MS, TimeUnit.MILLISECONDS)) p.destroyForcibly()
+        } finally {
+            after()
         }
     }
 }
@@ -596,13 +609,7 @@ private class SandboxProcessHandle(
         runCatching { process.outputStream.close() }
         runCatching { process.destroy() }
         // 进程树退干净了才交还租约:还在写工作区的进程不该和重置撞上(重置会先收回、自己停进程,不等这里)
-        thread(isDaemon = true, name = "mika-sandbox-stdio-reaper") {
-            try {
-                if (!process.waitFor(DESTROY_GRACE_MS, TimeUnit.MILLISECONDS)) process.destroyForcibly()
-            } finally {
-                lease.close()
-            }
-        }
+        reapAsync(process, "mika-sandbox-stdio-reaper") { lease.close() }
         runCatching { process.inputStream.close() }
         runCatching { process.errorStream.close() }
     }
@@ -628,9 +635,7 @@ private class SandboxShellHandle(
     override fun close() {
         // Android's destroy() signals the process before closing its pipes, but it can
         // still wait on a writer during stream cleanup. Arm the watchdog before calling it.
-        thread(isDaemon = true, name = "mika-terminal-reaper") {
-            if (!process.waitFor(DESTROY_GRACE_MS, TimeUnit.MILLISECONDS)) process.destroyForcibly()
-        }
+        reapAsync(process, "mika-terminal-reaper")
         runCatching { process.destroy() }
         runCatching { process.outputStream.close() }
         runCatching { process.inputStream.close() }

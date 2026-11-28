@@ -21,7 +21,6 @@
     <string name="plans_run_now">Ejecutar ahora</string>
     <string name="plans_edit_time">Editar</string>
     <string name="plans_edit_title">Editar tarea programada</string>
-    <string name="plans_edit_label">Primera ejecución: aaaa-MM-dd HH:mm</string>
     <string name="plans_preview">Próximas ejecuciones:</string>
     <string name="plans_need_future">Introduce una hora válida en el futuro</string>
     <string name="plans_create_title">Nueva tarea programada</string>
@@ -33,7 +32,6 @@
     <string name="plans_repeat_interval">Intervalo</string>
     <string name="plans_repeat_weekly">Semanal</string>
     <string name="plans_interval_minutes">Repetir cada (minutos)</string>
-    <string name="plans_clock">Horas locales (separadas por comas)</string>
     <string name="plans_pick_time">Elegir una hora</string>
     <string name="plans_add_time">Añadir una hora</string>
     <string name="plans_remove_time">Quitar esta hora</string>
@@ -66,7 +64,6 @@
     <string name="plans_delete_title">¿Eliminar esta tarea programada?</string>
     <string name="plans_done">Hecha</string>
     <string name="plans_checked">Comprobada</string>
-    <string name="plans_check_failed">Falló la comprobación</string>
     <string name="plans_result_pending">Hay que revisar el resultado</string>
     <string name="plans_every_day">Todos los días</string>
     <plurals name="plans_every_minutes">

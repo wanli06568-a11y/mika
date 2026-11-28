@@ -1,12 +1,10 @@
 package com.wangzan101.mika.proactive
 
 import com.wangzan101.mika.core.proactive.DigestData
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.settings.KeyCipher
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /**
  * 当日消息归纳攒下的句子(见 [com.wangzan101.mika.core.proactive.DigestPool])整份加密成 `proactive/digest.bin`
@@ -33,8 +31,7 @@ class DigestFile(dir: File, private val cipher: KeyCipher) : DigestStore {
     override fun save(data: DigestData) {
         poolDir.mkdirs()
         val bytes = cipher.encrypt(StoreCodec.write(DigestData.serializer(), data, VERSION))
-        FileOutputStream(tmp).use { it.write(bytes); it.fd.sync() }
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        AtomicFiles.write(file, bytes, durable = true, temp = tmp)
     }
 
     @Synchronized

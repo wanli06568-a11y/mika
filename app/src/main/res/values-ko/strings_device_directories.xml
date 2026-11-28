@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">접근 거부됨</string>
     <string name="device_dirs_unknown">상태를 확인할 수 없음</string>
     <string name="device_dirs_entry">폴더 힌트</string>
-    <string name="device_dirs_entry_sub">Mika가 다운로드한 파일을 찾도록 도와줘요</string>
     <string name="device_dirs_source_preset">기본 설정</string>
     <string name="device_dirs_source_user">내가 수정함</string>
     <string name="device_dirs_source_mika">Mika가 수정함</string>

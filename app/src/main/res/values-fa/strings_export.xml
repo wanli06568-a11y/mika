@@ -28,7 +28,6 @@
     <string name="export_done">خروجی گرفته شد</string>
     <string name="export_failed">خروجی‌گیری ناموفق بود: %1$s</string>
     <string name="export_no_messages">چیزی برای خروجی‌گیری نیست</string>
-    <string name="export_current_turn">نوبت در حال اجرا گنجانده نشده است.</string>
     <string name="export_warnings">%1$d مورد قابل گنجاندن نبود.</string>
     <string name="export_filename_fallback">گفتگوی Mika</string>
     <string name="export_label_user">کاربر</string>

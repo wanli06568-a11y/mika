@@ -1,6 +1,6 @@
 package com.wangzan101.mika.core.learn.knowledge
 
-import com.wangzan101.mika.core.script.JsSource
+import com.wangzan101.mika.core.safety.guard.JsSource
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject

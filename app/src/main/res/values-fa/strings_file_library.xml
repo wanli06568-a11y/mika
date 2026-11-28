@@ -10,8 +10,6 @@
     <string name="file_library_loading">در حال بارگذاری فایل‌ها…</string>
     <string name="file_library_empty">فایلی یافت نشد</string>
     <string name="file_library_missing">در دسترس نیست</string>
-    <string name="file_library_available">در دسترس</string>
-    <string name="file_library_open">باز کردن</string>
     <string name="file_library_share">اشتراک‌گذاری</string>
     <string name="file_library_add">افزودن به پیش‌نویس</string>
     <string name="file_library_choose">یک گفتگو انتخاب کنید</string>

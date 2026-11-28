@@ -31,7 +31,6 @@
     <string name="mcp_last_request">Последний запрос: %1$s</string>
     <string name="mcp_advanced">Расширенные настройки</string>
     <string name="mcp_advanced_hide">Скрыть расширенные настройки</string>
-    <string name="mcp_advanced_sub">Переключатели доступа, токены и удалённое пробуждение</string>
     <string name="mcp_port_detail">Порт %1$d. Доступ по USB выключается после перезагрузки телефона.</string>
     <string name="mcp_port_title">Порт прослушивания</string>
     <string name="mcp_port_dialog_sub">Смените, если порт по умолчанию занят другим сервисом на этом телефоне. Применяется сразу; компьютер переподключается по новому порту.</string>

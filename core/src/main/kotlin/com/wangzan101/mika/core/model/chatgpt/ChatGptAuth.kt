@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.model.chatgpt
 
+import com.wangzan101.mika.core.net.str
 import com.wangzan101.mika.core.model.HttpSupport
 import com.wangzan101.mika.core.model.ModelError
 import com.wangzan101.mika.core.model.oauth.Pkce
@@ -285,4 +286,3 @@ class ChatGptAuth(
     }
 }
 
-private fun JsonObject.str(k: String): String? = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull

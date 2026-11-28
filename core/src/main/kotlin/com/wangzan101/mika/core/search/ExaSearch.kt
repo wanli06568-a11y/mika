@@ -25,6 +25,7 @@ class ExaSearch(
     private val key = apiKey.trim()
 
     override suspend fun search(query: String, count: Int): WebSearchResult {
+        SearchHttp.unusableKey(key)?.let { return it }
         val n = count.coerceIn(1, WebSearch.MAX_COUNT)
         val body = buildJsonObject {
             put("query", query)

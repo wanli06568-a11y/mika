@@ -34,7 +34,6 @@
     <string name="ok_got_it">확인</string>
     <string name="cancel">취소</string>
     <string name="model_reasoning_title">추론 강도 · %1$s</string>
-    <string name="model_reasoning_value">추론 강도: %1$s</string>
     <string name="model_reasoning_note">강도를 높이면 어려운 작업에 도움이 되지만 시간이 더 걸리고 토큰도 더 쓸 수 있어요. 기본값은 제공업체가 정해요.</string>
     <string name="model_reasoning_unknown">이 제공업체가 사용 가능한 단계를 알려 주지 않았어요. 지원하지 않는 단계를 고르면 작업이 실패할 수 있어요. 그럴 땐 기본값을 선택하세요.</string>
     <string name="model_reasoning_unavailable">제공업체가 저장된 단계를 더 이상 지원하지 않아요. 기본값이나 다른 단계를 선택하세요.</string>

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">Arama durumu</string>
-    <string name="calls_dtmf_open">Tuş takımı</string>
     <string name="calls_dtmf_title">Arama tuş takımı</string>
     <string name="calls_dtmf_close">Kapat</string>
     <string name="calls_dtmf_batch">Bir dizi girin</string>

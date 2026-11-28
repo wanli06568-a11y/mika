@@ -1,7 +1,6 @@
 package com.wangzan101.mika.cap.phone.shell
 
 import android.annotation.SuppressLint
-import android.app.ActivityOptions
 import android.app.AppOpsManager
 import android.content.ClipData
 import android.content.ComponentName
@@ -10,7 +9,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
-import android.net.Uri
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.os.Binder
@@ -20,18 +18,13 @@ import android.os.IBinder
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.os.Process
-import android.os.SystemClock
 import android.os.UserHandle
 import android.util.Log
 import android.view.Display
-import android.view.InputDevice
 import android.view.KeyCharacterMap
-import android.view.KeyEvent
-import android.view.MotionEvent
 import android.view.Surface
 import com.wangzan101.mika.core.device.shell.DevtoolsSocket
 import com.wangzan101.mika.core.screen.uistate.AppCopies
-import com.wangzan101.mika.core.screen.uistate.PressKeys
 import java.io.File
 import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
@@ -87,6 +80,11 @@ class ShellService(
 
     internal val taskManager: Any by lazy {
         Class.forName("android.app.ActivityTaskManager").getMethod("getService").invoke(null)!!
+    }
+
+    /** IActivityTaskManager.startActivityAsUser 的 12 参数版本;查一次留着(Binder 类的方法有上百个)。查不到时每次用都抛,调用方退回别的路。 */
+    internal val startActivityAsUser: Method by lazy {
+        taskManager.javaClass.methods.first { it.name == "startActivityAsUser" && it.parameterTypes.size == 12 }
     }
 
     override fun createDisplay(surface: Surface, width: Int, height: Int, dpi: Int): Int = try {
@@ -214,159 +212,29 @@ class ShellService(
      * 能打开它的 App 在主屏有任务就不启动:带 NEW_TASK 的链接可能落进那个任务,出现在用户眼前。
      * 只有一个 App 能打开时直接指定到那个页面,免得系统另选。
      */
-    override fun startView(displayId: Int, action: String?, uri: String?, packageName: String?): Int = synchronized(launchLock) {
-        if (!ownDisplay(displayId)) return START_ERROR
-        ShellLinks.refuse(action, uri, packageName)?.let { return it }
-        val intent = Intent(action ?: Intent.ACTION_VIEW).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        uri?.let { intent.data = Uri.parse(it) }
-        packageName?.let { intent.setPackage(it) }
-        // 网页式链接只交给声明了可从链接打开的页面,不碰 App 的内部页面
-        if (action == null) intent.addCategory(Intent.CATEGORY_BROWSABLE)
-        val candidates = activitiesFor(intent, null) ?: return START_ERROR
-        if (candidates.isEmpty()) return START_UNRESOLVED
-        try {
-            val onMain = tasksOn(Display.DEFAULT_DISPLAY).flatMap(::packagesOf).toSet()
-            if (ShellLinks.inUse(candidates.map { it.first }.distinct(), onMain)) return START_IN_USE_ON_MAIN
-            if (onOtherOwnDisplay(candidates.map { it.first }.distinct(), displayId)) return START_IN_USE_BY_OTHER
-        } catch (t: Throwable) {
-            Log.e(TAG, "cannot inspect main-screen tasks", t)
-            return START_ERROR
-        }
-        candidates.singleOrNull()?.let { (pkg, cls) -> intent.component = ComponentName(pkg, cls) }
-        val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
-        val ok = try {
-            val start = taskManager.javaClass.methods.first { it.name == "startActivityAsUser" && it.parameterTypes.size == 12 }
-            val result = start.invoke(
-                taskManager, null, ShellContext.SHELL_PACKAGE, null, intent, null, null, null,
-                0, 0, null, options, USER_CURRENT,
-            ) as Int
-            if (result < 0) Log.w(TAG, "startActivityAsUser(link) -> $result")
-            result >= 0
-        } catch (t: Throwable) {
-            Log.w(TAG, "startActivityAsUser unavailable, falling back to am start", t)
-            val target = intent.component?.let { listOf("-n", it.flattenToShortString()) }
-                ?: (listOf("-a", intent.action!!) + listOfNotNull(uri?.let { "-d" }, uri) + listOfNotNull(packageName?.let { "-p" }, packageName) +
-                    (if (action == null) listOf("-c", Intent.CATEGORY_BROWSABLE) else emptyList()))
-            exec("am", "start", "--display", "$displayId", *target.toTypedArray()) == 0
-        }
-        if (ok) START_OK else START_ERROR
-    }
+    override fun startView(displayId: Int, action: String?, uri: String?, packageName: String?): Int =
+        launchView(displayId, action, uri, packageName)
 
     /**
      * 把文字分享给 [packageName]:ACTION_SEND text/plain 带 EXTRA_TEXT,只交给这个包。它没有收文字分享的页面返回 [START_UNRESOLVED];
      * 和 [startApp] 一样,用户在主屏用着它时不启动。只有一个收分享的页面时直接指定,有几个时由系统问用哪一个。
      */
-    override fun startShare(displayId: Int, packageName: String, text: String): Int = synchronized(launchLock) {
-        if (!ownDisplay(displayId)) return START_ERROR
-        val intent = ShareIntent.of(packageName, text)
-        val candidates = activitiesFor(intent, ShareIntent.TYPE) ?: return START_ERROR
-        if (candidates.isEmpty()) return START_UNRESOLVED
-        try {
-            if (inUseOnMainScreen(packageName)) return START_IN_USE_ON_MAIN
-            if (onOtherOwnDisplay(listOf(packageName), displayId)) return START_IN_USE_BY_OTHER
-        } catch (t: Throwable) {
-            Log.e(TAG, "cannot inspect main-screen tasks", t)
-            return START_ERROR
-        }
-        candidates.singleOrNull()?.let { (pkg, cls) -> intent.component = ComponentName(pkg, cls) }
-        val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
-        val ok = try {
-            val start = taskManager.javaClass.methods.first { it.name == "startActivityAsUser" && it.parameterTypes.size == 12 }
-            val result = start.invoke(
-                taskManager, null, ShellContext.SHELL_PACKAGE, null, intent, ShareIntent.TYPE, null, null,
-                0, 0, null, options, USER_CURRENT,
-            ) as Int
-            if (result < 0) Log.w(TAG, "startActivityAsUser(share) -> $result")
-            result >= 0
-        } catch (t: Throwable) {
-            Log.w(TAG, "startActivityAsUser unavailable, falling back to am start", t)
-            exec(*ShareIntent.amArgs(displayId, packageName, text, intent.component?.flattenToShortString()).toTypedArray()) == 0
-        }
-        if (ok) START_OK else START_ERROR
-    }
+    override fun startShare(displayId: Int, packageName: String, text: String): Int = launchShare(displayId, packageName, text)
 
     /**
      * 把一个工作区文件分享给 [packageName]:ACTION_SEND + EXTRA_STREAM,content URI 允许对方读,只交给这个包。
      * 它没有收这类分享的页面返回 [START_UNRESOLVED];用户在主屏用着它时不启动。只打开分享页,发不发由模型在那一页上点。
      */
-    override fun startShareFile(displayId: Int, packageName: String, uri: String, mime: String, text: String): Int = synchronized(launchLock) {
-        if (!ownDisplay(displayId)) return START_ERROR
-        val target = Uri.parse(uri)
-        val intent = ShareIntent.ofFile(packageName, target, mime, text)
-        val candidates = activitiesFor(intent, mime) ?: return START_ERROR
-        if (candidates.isEmpty()) return START_UNRESOLVED
-        try {
-            if (inUseOnMainScreen(packageName)) return START_IN_USE_ON_MAIN
-            if (onOtherOwnDisplay(listOf(packageName), displayId)) return START_IN_USE_BY_OTHER
-        } catch (t: Throwable) {
-            Log.e(TAG, "cannot inspect main-screen tasks", t)
-            return START_ERROR
-        }
-        candidates.singleOrNull()?.let { (pkg, cls) -> intent.component = ComponentName(pkg, cls) }
-        val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
-        val ok = try {
-            val start = taskManager.javaClass.methods.first { it.name == "startActivityAsUser" && it.parameterTypes.size == 12 }
-            val result = start.invoke(
-                taskManager, null, ShellContext.SHELL_PACKAGE, null, intent, mime, null, null,
-                0, 0, null, options, USER_CURRENT,
-            ) as Int
-            if (result < 0) Log.w(TAG, "startActivityAsUser(share file) -> $result")
-            result >= 0
-        } catch (t: Throwable) {
-            Log.w(TAG, "startActivityAsUser unavailable, falling back to am start", t)
-            exec(*ShareIntent.amArgsFile(displayId, packageName, target, mime, text, intent.component?.flattenToShortString()).toTypedArray()) == 0
-        }
-        if (ok) START_OK else START_ERROR
-    }
+    override fun startShareFile(displayId: Int, packageName: String, uri: String, mime: String, text: String): Int =
+        launchShareFile(displayId, packageName, uri, mime, text)
 
     /**
      * 系统动作(见 [SystemIntents]):只放行那几种 intent。没有页面接返回 [START_UNRESOLVED];和 [startView] 一样,
      * 接手的 App 在主屏有任务就不启动。先以 shell 身份启动;不成(接手的页面要求 shell 没有的权限,如设闹钟)时发出 Mika 做好的
      * [asMika]:以 Mika 的身份启动(权限按 Mika 查),屏和后台启动按发出的这一方(shell)查,仍落在这块屏上。
      */
-    override fun startSystemAction(displayId: Int, intent: Intent, asMika: android.app.PendingIntent?): Int = synchronized(launchLock) {
-        if (!ownDisplay(displayId)) return START_ERROR
-        // Mika 自己的兼容性自检页:以 shell 身份直接开到这块屏
-        if (intent.component?.className == SystemIntents.OWN_PAGE_CLASS) return startOwnPage(displayId, intent)
-        if (!SystemIntents.allowed(intent.action, intent.dataString)) return START_INVALID_LINK
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        val candidates = activitiesFor(intent, intent.type) ?: return START_ERROR
-        if (candidates.isEmpty()) return START_UNRESOLVED
-        try {
-            val onMain = tasksOn(Display.DEFAULT_DISPLAY).flatMap(::packagesOf).toSet()
-            if (ShellLinks.inUse(candidates.map { it.first }.distinct(), onMain)) return START_IN_USE_ON_MAIN
-            if (onOtherOwnDisplay(candidates.map { it.first }.distinct(), displayId)) return START_IN_USE_BY_OTHER
-        } catch (t: Throwable) {
-            Log.e(TAG, "cannot inspect main-screen tasks", t)
-            return START_ERROR
-        }
-        val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
-        val asShell = try {
-            val start = taskManager.javaClass.methods.first { it.name == "startActivityAsUser" && it.parameterTypes.size == 12 }
-            val result = start.invoke(
-                taskManager, null, ShellContext.SHELL_PACKAGE, null, intent, intent.type, null, null,
-                0, 0, null, options.toBundle(), USER_CURRENT,
-            ) as Int
-            if (result < 0) Log.w(TAG, "startActivityAsUser(${intent.action}) -> $result")
-            result >= 0
-        } catch (t: Throwable) {
-            Log.w(TAG, "startActivityAsUser(${intent.action}) refused as shell", t)
-            false
-        }
-        if (asShell) return START_OK
-        if (asMika == null) return START_ERROR
-        // 安卓 14 起 PendingIntent 的发出方要明说允许它从后台启动页面
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            options.setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
-        }
-        return try {
-            asMika.send(context, 0, null, null, null, null, options.toBundle())
-            START_OK
-        } catch (t: Throwable) {
-            Log.w(TAG, "sending ${intent.action} as Mika failed", t)
-            START_ERROR
-        }
-    }
+    override fun startSystemAction(displayId: Int, intent: Intent, asMika: android.app.PendingIntent?): Int =
+        launchSystemAction(displayId, intent, asMika)
 
     override fun displayOfTask(taskId: Int): Int = try {
         task(taskId)?.let { TASK_INFO.getField("displayId").getInt(it) } ?: -1
@@ -517,104 +385,22 @@ class ShellService(
         -1
     }
 
-    override fun injectKey(displayId: Int, keyCode: Int): Boolean {
-        // 与 press_key 同一张白名单:即便调用方出错,也不从这里发出音量、电源、Home 之类的整机按键
-        if (!PressKeys.isAllowed(keyCode)) {
-            Log.w(TAG, "refused key $keyCode")
-            return false
-        }
-        val now = SystemClock.uptimeMillis()
-        val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, 0, VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD)
-        val up = KeyEvent.changeAction(down, KeyEvent.ACTION_UP)
-        // 按键由系统按输入焦点路由,不认 event 上的 displayId:不定向的话会投到主屏焦点,虚拟屏上的 App 收不到返回键。
-        // 解析到虚拟屏顶部任务的 uid 时定向投给它;定向没投出去再退回非定向注入(和旧路径一致),最后才走 shell 命令。
-        // 逐级实际走的通道记进日志,方便在真机上定位 back 注入失效(#622)。
-        val uid = topTaskUid(displayId)
-        var channel = if (uid != null) "targeted" else "nontargeted"
-        val ok = if (uid != null) {
-            injectPairTo(down, up, displayId, uid) {
-                channel = "nontargeted"
-                injectPair(down, up, displayId) {
-                    channel = "shell"
-                    exec("input", "-d", "$displayId", "keyevent", "$keyCode") == 0
-                }
-            }
-        } else {
-            injectPair(down, up, displayId) {
-                channel = "shell"
-                exec("input", "-d", "$displayId", "keyevent", "$keyCode") == 0
-            }
-        }
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            Log.i(TAG, "injectKey BACK display=$displayId uid=$uid channel=$channel ok=$ok")
-        }
-        return ok
-    }
+    // 按键、文字、触摸的注入见 ShellInputOps.kt
+    override fun injectKey(displayId: Int, keyCode: Int): Boolean = sendKey(displayId, keyCode)
 
     /** 自有虚拟屏上的 Ctrl+A / Ctrl+V,同时发送修饰键按下和抬起;松开修饰键失败不会把已经发出的正文判成未发送。 */
-    override fun injectCtrlKey(displayId: Int, keyCode: Int): Int {
-        if (!ownDisplay(displayId)) return AsciiTextKeys.NOT_SENT
-        if (keyCode != KeyEvent.KEYCODE_A && keyCode != KeyEvent.KEYCODE_V) {
-            Log.w(TAG, "refused ctrl key $keyCode")
-            return AsciiTextKeys.NOT_SENT
-        }
-        val now = SystemClock.uptimeMillis()
-        val meta = KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON
-        fun event(code: Int, action: Int, modifiers: Int) = KeyEvent(
-            now, SystemClock.uptimeMillis(), action, code, 0, modifiers,
-            VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD,
-        )
-        var modifierDown = false
-        try {
-            if (!inject(event(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.ACTION_DOWN, 0), displayId)) return AsciiTextKeys.NOT_SENT
-            modifierDown = true
-            if (!inject(event(keyCode, KeyEvent.ACTION_DOWN, meta), displayId)) return AsciiTextKeys.NOT_SENT
-            val up = event(keyCode, KeyEvent.ACTION_UP, meta)
-            return if (inject(up, displayId) || inject(up, displayId)) AsciiTextKeys.DISPATCHED else AsciiTextKeys.UNCONFIRMED
-        } finally {
-            if (modifierDown) {
-                val up = event(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.ACTION_UP, 0)
-                if (ownDisplay(displayId) && !inject(up, displayId) && !inject(up, displayId)) {
-                    Log.w(TAG, "could not release Ctrl on display $displayId")
-                }
-            }
-        }
-    }
+    override fun injectCtrlKey(displayId: Int, keyCode: Int): Int = sendCtrlKey(displayId, keyCode)
 
-    @SuppressLint("DiscouragedPrivateApi")
-    override fun injectAsciiText(displayId: Int, taskId: Int, packageName: String, text: String): Int {
-        if (displayId <= Display.DEFAULT_DISPLAY || !ownDisplay(displayId) || taskId < 0 || !AsciiTextKeys.supports(text)) {
-            return AsciiTextKeys.NOT_SENT
-        }
-        val (events, targetUid) = runCatching {
-            val task = tasksOn(displayId).firstOrNull() ?: return AsciiTextKeys.NOT_SENT
-            val top = TASK_INFO.getField("topActivity").get(task) as? ComponentName
-            if (TASK_INFO.getField("taskId").getInt(task) != taskId || top?.packageName != packageName) {
-                return AsciiTextKeys.NOT_SENT
-            }
-            val uid = if (Build.VERSION.SDK_INT >= 33) {
-                val user = TASK_INFO.getField("userId").getInt(task)
-                val pm = context.packageManager
-                (pm.javaClass.getMethod("getPackageUidAsUser", String::class.java, Int::class.java, Int::class.java)
-                    .invoke(pm, packageName, 0, user) as Int).takeIf { it >= 0 } ?: return AsciiTextKeys.NOT_SENT
-            } else null
-            val keys = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD).getEvents(text.toCharArray())
-                ?.takeIf { it.isNotEmpty() } ?: return AsciiTextKeys.NOT_SENT
-            keys to uid
-        }.getOrElse { return AsciiTextKeys.NOT_SENT }
+    override fun injectAsciiText(displayId: Int, taskId: Int, packageName: String, text: String): Int = sendAsciiText(displayId, taskId, packageName, text)
 
-        for (event in events) {
-            if (!ownDisplay(displayId) || (targetUid == null && topTaskId(displayId) != taskId)) {
-                return AsciiTextKeys.UNCONFIRMED
-            }
-            event.source = InputDevice.SOURCE_KEYBOARD
-            val sent = if (targetUid != null) injectTo(event, displayId, targetUid)
-                else inject(event, displayId, waitForFinish = true)
-            // A failed dispatch can leave a prefix. Never replay it through another input route.
-            if (!sent) return AsciiTextKeys.UNCONFIRMED
-        }
-        return AsciiTextKeys.DISPATCHED
-    }
+    override fun injectTap(displayId: Int, x: Int, y: Int): Boolean = sendTap(displayId, x, y)
+
+    /**
+     * 一根手指的一笔:按下、按 [times] 逐点移动、在最后一点抬起;每个事件到了它的时刻才注入(事件时间就是那一刻),
+     * App 看到的速度就是 Mika 排好的快慢。只发到 Mika 自己的屏。按下没注入成功返回 false(调用方改走别的路);
+     * 按下之后中途哪个点没注入成功也照样往下走,最后一定补发抬起,不让手指一直按着。
+     */
+    override fun injectStroke(displayId: Int, xs: IntArray, ys: IntArray, times: LongArray): Boolean = sendStroke(displayId, xs, ys, times)
 
     override fun listUsers(): String? = sh("pm", "list", "users").takeIf { it.first == 0 }?.second
 
@@ -626,48 +412,6 @@ class ShellService(
         flags and (android.content.pm.ApplicationInfo.FLAG_SYSTEM or android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
     } catch (_: PackageManager.NameNotFoundException) {
         false
-    }
-
-    override fun injectTap(displayId: Int, x: Int, y: Int): Boolean {
-        val now = SystemClock.uptimeMillis()
-        val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x.toFloat(), y.toFloat(), 0)
-        val up = MotionEvent.obtain(now, now + TAP_MS, MotionEvent.ACTION_UP, x.toFloat(), y.toFloat(), 0)
-        return try {
-            down.source = InputDevice.SOURCE_TOUCHSCREEN
-            up.source = InputDevice.SOURCE_TOUCHSCREEN
-            injectPair(down, up, displayId) { exec("input", "-d", "$displayId", "tap", "$x", "$y") == 0 }
-        } finally {
-            down.recycle()
-            up.recycle()
-        }
-    }
-
-    /**
-     * 一根手指的一笔:按下、按 [times] 逐点移动、在最后一点抬起;每个事件到了它的时刻才注入(事件时间就是那一刻),
-     * App 看到的速度就是 Mika 排好的快慢。只发到 Mika 自己的屏。按下没注入成功返回 false(调用方改走别的路);
-     * 按下之后中途哪个点没注入成功也照样往下走,最后一定补发抬起,不让手指一直按着。
-     */
-    override fun injectStroke(displayId: Int, xs: IntArray, ys: IntArray, times: LongArray): Boolean {
-        if (!ownDisplay(displayId)) return false
-        val n = times.size
-        if (n < 2 || n > STROKE_MAX_POINTS || xs.size != n || ys.size != n || times[0] != 0L ||
-            times.last() > STROKE_MAX_MS || (1 until n).any { times[it] < times[it - 1] }
-        ) return false
-        val down = SystemClock.uptimeMillis()
-        fun event(i: Int, action: Int): MotionEvent {
-            val props = MotionEvent.PointerProperties().apply { id = 0; toolType = MotionEvent.TOOL_TYPE_FINGER }
-            val coords = MotionEvent.PointerCoords().apply { x = xs[i].toFloat(); y = ys[i].toFloat(); pressure = 1f; size = 1f }
-            return MotionEvent.obtain(down, down + times[i], action, 1, arrayOf(props), arrayOf(coords), 0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0)
-        }
-        fun send(i: Int, action: Int): Boolean {
-            val wait = down + times[i] - SystemClock.uptimeMillis()
-            if (wait > 0) SystemClock.sleep(wait)
-            val e = event(i, action)
-            return try { inject(e, displayId) } finally { e.recycle() }
-        }
-        if (!send(0, MotionEvent.ACTION_DOWN)) return false
-        for (i in 1 until n) send(i, MotionEvent.ACTION_MOVE)
-        return send(n - 1, MotionEvent.ACTION_UP) || send(n - 1, MotionEvent.ACTION_UP)
     }
 
     /**
@@ -720,82 +464,13 @@ class ShellService(
      * 只有读得到用户原来的剪贴板才动它:读不到就分不清「原来是空的」和「有内容但看不到」,
      * 覆盖了就还原不回去,这时返回 [CLIP_UNREADABLE],剪贴板保持原样。
      */
-    override fun setClipText(text: String): Int = synchronized(clipLock) {
-        try {
-            // 上次还原因读不到而没完成时,先再还原一次;仍读不到就不能覆盖此刻可能属于用户的新内容。
-            if (clipSaved && !restoreClip()) return CLIP_UNREADABLE
-            if (!clipSaved) {
-                if (!canReadClipboard()) return CLIP_UNREADABLE
-                val prior = clipboard.primaryClip
-                // 读到空不一定是空:系统可能悄悄拦下了读取,这时有无、描述还会说有内容
-                when (ShellClip.read(prior != null, clipboard.hasPrimaryClip(), clipboard.primaryClipDescription != null)) {
-                    ShellClip.Read.Unreadable -> {
-                        Log.i(TAG, "setClipText: clip present but unreadable, not replacing")
-                        return CLIP_UNREADABLE
-                    }
-                    ShellClip.Read.Empty -> Log.i(TAG, "setClipText: user clipboard was empty")
-                    ShellClip.Read.Has -> Log.i(TAG, "setClipText: user clipboard saved")
-                }
-                savedClip = prior
-                clipSaved = true
-            }
-            val clip = ClipData.newPlainText(CLIP_LABEL, text)
-            suppressOverlay(clip)
-            markSensitive(clip)
-            clipboard.setPrimaryClip(clip)
-            ourText = text
-            // Android can silently decline the write. Never paste a clipboard we didn't set.
-            if (nowState(text) == ShellClip.Now.Ours) CLIP_SET else CLIP_FAILED
-        } catch (t: Throwable) {
-            Log.w(TAG, "setClipText failed", t)
-            CLIP_FAILED
-        }
-    }
+    override fun setClipText(text: String): Int = putClipText(text)
 
-    override fun restoreClip(): Boolean = synchronized(clipLock) {
-        if (!clipSaved) return true
-        val finished = runCatching {
-            val prior = savedClip
-            val now = nowState(ourText)
-            val action = ShellClip.restore(prior == null, now)
-            Log.i(TAG, "restoreClip: now=$now action=$action")
-            when (action) {
-                ShellClip.Restore.PutBack -> clipboard.setPrimaryClip(suppressOverlay(prior!!))
-                ShellClip.Restore.Clear -> clipboard.clearPrimaryClip()
-                ShellClip.Restore.Leave -> Unit
-            }
-            // 写入也可能被系统悄悄拒绝:再读一次,仍是 Mika 的或此刻读不到都保留记录,下次继续尝试。
-            // 用户已经复制了别的内容时保留用户的新内容,留底可以清掉。
-            val after = nowState(ourText)
-            after != ShellClip.Now.Ours && after != ShellClip.Now.Unreadable
-        }.onFailure { Log.w(TAG, "restoreClip failed", it) }.getOrDefault(false)
-        if (finished) {
-            savedClip = null
-            clipSaved = false
-            ourText = null
-        }
-        finished
-    }
+    override fun restoreClip(): Boolean = restoreSavedClip()
 
-    override fun savedClipText(): String? = synchronized(clipLock) {
-        if (!clipSaved) return null
-        runCatching { savedClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString() }.getOrNull().orEmpty()
-    }
+    override fun savedClipText(): String? = savedClipTextNow()
 
-    override fun restoreClipText(original: String, ours: String): Boolean = synchronized(clipLock) {
-        runCatching {
-            val now = nowState(ours)
-            val action = ShellClip.restore(original.isEmpty(), now)
-            Log.i(TAG, "restoreClipText: now=$now action=$action")
-            when (action) {
-                ShellClip.Restore.PutBack -> clipboard.setPrimaryClip(suppressOverlay(ClipData.newPlainText("", original)))
-                ShellClip.Restore.Clear -> clipboard.clearPrimaryClip()
-                ShellClip.Restore.Leave -> Unit
-            }
-            val after = nowState(ours)
-            after != ShellClip.Now.Ours && after != ShellClip.Now.Unreadable
-        }.onFailure { Log.w(TAG, "restoreClipText failed", it) }.getOrDefault(false)
-    }
+    override fun restoreClipText(original: String, ours: String): Boolean = restoreClipTextTo(original, ours)
 
     public override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
         // 内置助手的进程不跟着 Mika 结束,Binder 也可能被别人拿到:只有 Mika 能调用接口方法

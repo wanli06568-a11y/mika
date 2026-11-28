@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">Modelos de voz</string>
-    <string name="models_voice_catalog_sub">Gerencie modelos de fala para texto, texto para fala e chamadas ao vivo em um só lugar</string>
     <string name="voice_catalog_title">Modelos de voz</string>
     <string name="voice_catalog_sub">Gerencie modelos de fala para texto, texto para fala e chamadas ao vivo em um só lugar. Capacidades e protocolos são declarados aqui; as páginas de entrada de voz, leitura e chamadas apenas escolhem e usam preferências.</string>
     <string name="voice_catalog_add">Adicionar modelo</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">Não verificado</string>
     <string name="voice_catalog_testing">Testando…</string>
     <string name="voice_catalog_listening">Ouvindo, diga algo…</string>
+    <string name="voice_catalog_no_speech">Nenhuma fala detectada</string>
     <string name="voice_catalog_incomplete">Preencha primeiro os dados da conta.</string>
     <string name="voice_catalog_protocol_stt_android_system">Sistema Android</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">Transcrição de áudio</string>

@@ -2,6 +2,7 @@ package com.wangzan101.mika.settings
 
 import com.wangzan101.mika.core.remote.RelayGateway
 import com.wangzan101.mika.core.remote.RelayPairing
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
@@ -11,8 +12,6 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /** [deviceAccess]:经网关来的请求能否唤醒、解锁手机、读锁屏状态。默认关,配对或重新配对都回到关。 */
 data class RelayConfig(val enabled: Boolean = false, val gateway: String? = null, val deviceAccess: Boolean = false) {
@@ -82,8 +81,7 @@ class RelaySettings(private val dir: File, private val cipher: KeyCipher) {
         val bytes = o.toString().toByteArray(Charsets.UTF_8)
         dir.mkdirs(); val tmp = File(dir, file.name + ".tmp")
         try {
-            tmp.writeBytes(cipher.encrypt(bytes))
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            AtomicFiles.write(file, cipher.encrypt(bytes), durable = false, temp = tmp)
             mutable.value = next
         } finally { bytes.fill(0); tmp.delete() }
     }

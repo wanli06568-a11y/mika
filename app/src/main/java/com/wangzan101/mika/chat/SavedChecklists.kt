@@ -1,5 +1,6 @@
 package com.wangzan101.mika.chat
 
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.settings.KeyCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -7,9 +8,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 @Serializable
 data class ChecklistSource(val conversationId: String, val messageKey: String, val text: String)
@@ -91,8 +89,7 @@ class SavedChecklistStore(
         return try {
             require(file.parentFile?.let { it.isDirectory || it.mkdirs() } == true)
             val bytes = cipher.encrypt(json.encodeToString(items).toByteArray(Charsets.UTF_8))
-            FileOutputStream(tmp).use { it.write(bytes); it.fd.sync() }
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            AtomicFiles.write(file, bytes, durable = true, temp = tmp)
             _items.value = items
             null
         } catch (_: Exception) {

@@ -5,7 +5,6 @@
     <string name="model_context_window">Cửa sổ ngữ cảnh (token)</string>
     <string name="model_context_trigger">Ngưỡng kích hoạt nén (token)</string>
     <string name="model_context_read_timeout">Thời gian chờ đọc (giây)</string>
-    <string name="model_context_auto">Tự động · %1$d</string>
     <string name="model_context_integer">Hãy nhập một số nguyên dương.</string>
     <string name="model_context_range">Phạm vi cho phép (token) · %1$d–%2$d</string>
     <string name="model_context_effective">Ngân sách hiệu dụng (token) · Cửa sổ %1$d · Ngưỡng %2$d</string>
@@ -62,16 +61,6 @@
     <string name="role_main">Mô hình chính</string>
     <string name="role_vision">Mô hình thị giác</string>
     <string name="role_light">Mô hình nhẹ</string>
-    <string name="model_legacy_role_overlap">Cài đặt trước đây của bạn dùng mô hình này cho cả trò chuyện và giọng nói. Hãy nhấn vào một vai trò trò chuyện ở trên để giữ vai trò đó và xóa dấu chỉ dùng cho giọng nói, hoặc bật “Chỉ dùng cho giọng nói” bên dưới để giữ giọng nói và xóa các vai trò trò chuyện của nó.</string>
-    <string name="role_tts">Chỉ TTS</string>
-    <string name="model_tts_switch">Chỉ dùng cho giọng nói (TTS)</string>
-    <string name="model_tts_switch_off">Sau khi đánh dấu, bạn có thể chọn nó trong Mô hình giọng nói; nó không còn được dùng cho trò chuyện nữa</string>
-    <string name="model_tts_switch_in_voice">Đang dùng làm mô hình giọng nói</string>
-    <string name="model_tts_switch_marked">Đã đánh dấu; hãy chọn nó trong Mô hình giọng nói</string>
-    <string name="model_tts_confirm_title">Chỉ dùng cho giọng nói?</string>
-    <string name="model_tts_confirm_body">%1$s sẽ không còn được dùng cho trò chuyện nữa. Các vai trò này sẽ bị xóa: %2$s.</string>
-    <string name="model_tts_confirm_ok">Chỉ dùng cho giọng nói</string>
-    <string name="model_role_tts_conflict">“%1$s” cũng được đánh dấu chỉ dùng cho giọng nói. Hãy nhấn vào nó trong Nhà cung cấp và chọn giữ nó cho trò chuyện hay chỉ cho giọng nói.</string>
     <string name="role_main_what">Suy nghĩ và thực hiện</string>
     <string name="role_vision_what">Nhìn ảnh chụp màn hình</string>
     <string name="role_light_what">Các việc nhỏ như kiểm tra và ghi chú</string>
@@ -212,8 +201,6 @@
     <string name="speech_tag_speech">Giọng nói</string>
     <string name="speech_off_note">Hộp văn bản và viên nang không thể giữ để nói</string>
     <string name="speech_footer">Chỉ các mô hình trông giống mô hình giọng nói mới được liệt kê. Nếu mô hình của bạn bị thiếu, hãy nhập tên của nó; một đoạn âm thanh ngắn sẽ được chuyển thành văn bản để kiểm tra khi bạn chọn nó.</string>
-    <string name="speech_pick_failed">Mô hình đó không thể chuyển thành văn bản: %1$s</string>
-    <string name="speech_pick_timeout">%1$s không trả lời một đoạn kiểm tra trong vòng %2$d giây</string>
     <string name="models_daily_token_budget">Ngân sách token hằng ngày</string>
     <string name="models_daily_token_budget_sub">Tính mọi mô hình và mục đích của nhà cung cấp này trong ngày theo lịch địa phương. Chỉ token đầu vào và đầu ra đã báo cáo mới được tính. Khi đạt giới hạn, yêu cầu tiếp theo sẽ bị chặn; các yêu cầu đang thực hiện có thể vượt quá giới hạn. Đặt lại khi ngày địa phương thay đổi.</string>
     <string name="models_daily_token_budget_save_failed">Không thể lưu ngân sách. Cài đặt trước đó vẫn đang hoạt động.</string>
@@ -221,11 +208,8 @@
     <string name="role_voice_what">Cho phép Mika nói và đọc to câu trả lời</string>
     <string name="voice_enable">Cho phép Mika nói</string>
     <string name="voice_enable_note">Giọng nói chỉ được tạo khi bạn nhấn Đọc to, trừ khi tính năng tự đọc đang bật</string>
-    <string name="voice_provider">Nhà cung cấp</string>
     <string name="voice_no_providers">Hãy thêm một nhà cung cấp trong “Mô hình” trước.</string>
     <string name="voice_no_tts_models">Trong “Mô hình → Nhà cung cấp”, hãy nhấn vào một mô hình và bật “Chỉ dùng cho giọng nói (TTS)”.</string>
-    <string name="voice_choice_cleared">“%1$s” không còn được đánh dấu chỉ dùng cho giọng nói nữa, vì vậy mô hình giọng nói đã bị xóa. Hãy chọn một mô hình khác trong Mô hình giọng nói nếu cần.</string>
-    <string name="voice_model_name">Mô hình</string>
     <string name="voice_protocol">API</string>
     <string name="voice_protocol_openai">OpenAI Speech</string>
     <string name="voice_protocol_gemini">Gemini TTS</string>

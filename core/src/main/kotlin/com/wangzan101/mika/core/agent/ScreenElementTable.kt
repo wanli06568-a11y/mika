@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.agent
 
+import com.wangzan101.mika.core.model.TokenEstimate
 import kotlinx.serialization.json.*
 
 /** A model-facing view only; evidence, recordings and the diff source keep the tool's original result. */

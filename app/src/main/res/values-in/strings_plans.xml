@@ -21,7 +21,6 @@
     <string name="plans_run_now">Jalankan sekarang</string>
     <string name="plans_edit_time">Edit</string>
     <string name="plans_edit_title">Edit tugas terjadwal</string>
-    <string name="plans_edit_label">Eksekusi pertama: yyyy-MM-dd HH:mm</string>
     <string name="plans_preview">Jadwal berikutnya:</string>
     <string name="plans_need_future">Masukkan waktu yang valid di masa depan</string>
     <string name="plans_create_title">Tugas terjadwal baru</string>
@@ -33,7 +32,6 @@
     <string name="plans_repeat_interval">Interval</string>
     <string name="plans_repeat_weekly">Mingguan</string>
     <string name="plans_interval_minutes">Ulangi setiap (menit)</string>
-    <string name="plans_clock">Waktu setempat (pisahkan dengan koma)</string>
     <string name="plans_pick_time">Pilih waktu</string>
     <string name="plans_add_time">Tambah waktu</string>
     <string name="plans_remove_time">Hapus waktu ini</string>
@@ -66,7 +64,6 @@
     <string name="plans_delete_title">Hapus tugas terjadwal ini?</string>
     <string name="plans_done">Selesai</string>
     <string name="plans_checked">Sudah diperiksa</string>
-    <string name="plans_check_failed">Pemeriksaan gagal</string>
     <string name="plans_result_pending">Hasil perlu diperiksa</string>
     <string name="plans_every_day">Setiap hari</string>
     <plurals name="plans_every_minutes">

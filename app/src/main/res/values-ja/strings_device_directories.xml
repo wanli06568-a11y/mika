@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">アクセスが拒否されました</string>
     <string name="device_dirs_unknown">状態を確認できません</string>
     <string name="device_dirs_entry">フォルダの手がかり</string>
-    <string name="device_dirs_entry_sub">Mika がダウンロードしたファイルを見つけるのを助けます</string>
     <string name="device_dirs_source_preset">プリセット</string>
     <string name="device_dirs_source_user">あなたが編集</string>
     <string name="device_dirs_source_mika">Mika が編集</string>

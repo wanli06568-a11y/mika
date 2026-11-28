@@ -27,7 +27,6 @@
     <string name="export_done">エクスポートしました</string>
     <string name="export_failed">エクスポートに失敗しました：%1$s</string>
     <string name="export_no_messages">エクスポートするメッセージがありません</string>
-    <string name="export_current_turn">実行中のターンは含まれません。</string>
     <string name="export_warnings">%1$d 件を含められませんでした。</string>
     <string name="export_filename_fallback">Mika の会話</string>
     <string name="export_label_user">ユーザー</string>

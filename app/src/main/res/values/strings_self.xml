@@ -3,7 +3,6 @@
     <string name="settings_self_operate">Let Mika operate its own screens</string>
     <string name="settings_self_operate_sub">Still asks before opening links in your browser.</string>
     <string name="settings_pip_operate">Operate the small view directly</string>
-    <string name="settings_pip_operate_sub">Tap and swipe in the small window to control the screen</string>
     <string name="settings_external_schedule">Let scripts create scheduled tasks</string>
     <string name="settings_external_schedule_sub">Other apps can submit tasks over broadcast, rate-limited and marked as script-created.</string>
     <string name="self_notify_channel">Mika actions</string>

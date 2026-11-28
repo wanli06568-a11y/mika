@@ -2,20 +2,7 @@
 <resources>
     <string name="calls_device_allow_notifications">允许通知</string>
     <string name="calls_device_allow_phone">允许电话权限</string>
-    <string name="calls_device_helper">内置助手</string>
-    <string name="calls_device_helper_connected">已连接</string>
-    <string name="calls_device_notifications">电话通知</string>
-    <string name="calls_device_notifications_app_off">应用通知已关闭</string>
-    <string name="calls_device_notifications_calls_off">AI 电话通知频道已关闭</string>
-    <string name="calls_device_notifications_permission_missing">尚未授予通知权限</string>
-    <string name="calls_device_notifications_standby_off">后台待命通知频道已关闭</string>
-    <string name="calls_device_notifications_unknown">无法读取通知状态</string>
     <string name="calls_device_open_app_settings">打开应用权限设置</string>
-    <string name="calls_device_pair_helper">连接内置助手</string>
-    <string name="calls_device_permission_granted">已允许</string>
-    <string name="calls_device_phone_permissions">电话权限</string>
-    <string name="calls_device_phone_permissions_note">需要允许读取通话状态和拨打电话</string>
-    <string name="calls_device_ready_to_test">可手动验证双向音频</string>
     <string name="calls_device_system_settings_failed">无法打开系统设置。请从 Android 设置进入本应用的详情页。</string>
     <string name="calls_background_auto_off">自动接听已关闭</string>
     <string name="calls_background_battery">电池与后台活动</string>

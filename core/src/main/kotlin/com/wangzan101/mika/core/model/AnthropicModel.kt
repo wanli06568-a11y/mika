@@ -152,8 +152,7 @@ class AnthropicModel(
         status == 413 || body.contains("prompt is too long") || ModelHttp.contextTooLong(status, body) -> ModelError.ContextTooLong()
         status == 404 -> ModelError.ModelNotFound(model, ModelAccessErrors.jsonDetail(body))
         status == 529 || body.contains("overloaded_error") -> ModelError.Server(529)
-        status in 500..599 -> ModelError.Server(status)
-        else -> if (status >= 400) ModelError.Server(status, ModelAccessErrors.detail(body)) else ModelError.BadResponse("HTTP $status ${body.take(200)}")
+        else -> ModelHttp.fallback(status, body)
     }
 
     private fun toolJson(t: ToolSpec, last: Boolean): JsonObject = buildJsonObject {

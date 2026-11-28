@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">Call status</string>
-    <string name="calls_dtmf_open">Keypad</string>
     <string name="calls_dtmf_title">Call keypad</string>
     <string name="calls_dtmf_close">Close</string>
     <string name="calls_dtmf_batch">Enter a sequence</string>

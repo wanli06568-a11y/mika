@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">语音模型</string>
-    <string name="models_voice_catalog_sub">统一管理语音转文字、文字转语音和实时通话的模型</string>
     <string name="voice_catalog_title">语音模型</string>
     <string name="voice_catalog_sub">统一管理语音转文字、文字转语音和实时通话的模型。能力与协议在此声明；语音输入、朗读和通话设置页只负责选择与使用偏好。</string>
     <string name="voice_catalog_add">添加模型</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">未验证</string>
     <string name="voice_catalog_testing">测试中…</string>
     <string name="voice_catalog_listening">正在听，请说一句…</string>
+    <string name="voice_catalog_no_speech">未检测到语音</string>
     <string name="voice_catalog_incomplete">请先填写账号信息</string>
     <string name="voice_catalog_protocol_stt_android_system">Android 系统</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">音频转写</string>

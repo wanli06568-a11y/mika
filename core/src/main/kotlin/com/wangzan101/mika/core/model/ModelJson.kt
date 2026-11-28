@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.model
 
+import com.wangzan101.mika.core.net.jsonObjectOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -18,7 +19,7 @@ object ModelJson {
         while (from >= 0) {
             val end = balancedEnd(text, from)
             if (end > from) {
-                val obj = try { lenient.parseToJsonElement(text.substring(from, end + 1)) as? JsonObject } catch (e: Exception) { null }
+                val obj = lenient.jsonObjectOrNull(text.substring(from, end + 1))
                 if (obj != null) return obj
             }
             from = text.indexOf('{', from + 1)

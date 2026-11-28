@@ -38,7 +38,7 @@ class AndroidVideoGenerationPort(
     private val model: VideoModel,
     private val http: OkHttpClient,
     private val onProgress: suspend (VideoJobStage) -> Unit = {},
-    private val onGenerated: (com.wangzan101.mika.core.chat.GeneratedVideo) -> Unit = {},
+    private val onGenerated: (com.wangzan101.mika.core.agent.GeneratedVideo) -> Unit = {},
 ) : VideoGenerationPort {
     override val modelName: String get() = model.name
     override val capabilities: VideoCapabilities get() = model.capabilities
@@ -63,7 +63,7 @@ class AndroidVideoGenerationPort(
             val info = withContext(Dispatchers.IO) { probe(cache) }
             val path = store(cache, baseName(request.prompt))
             onGenerated(
-                com.wangzan101.mika.core.chat.GeneratedVideo(
+                com.wangzan101.mika.core.agent.GeneratedVideo(
                     path, info.durationMs, info.width, info.height, request.prompt, System.currentTimeMillis(),
                 ),
             )

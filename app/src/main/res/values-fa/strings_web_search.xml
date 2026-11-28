@@ -12,7 +12,6 @@
     <string name="web_search_missing_key">%1$s برای کار کردن به کلید API نیاز دارد.</string>
     <string name="web_search_get_key">دریافت کلید API</string>
     <string name="web_search_privacy">کلید به‌صورت رمزگذاری‌شده در این گوشی ذخیره می‌شود. نتایج جست‌وجو غیرقابل اعتماد در نظر گرفته می‌شوند.</string>
-    <string name="web_search_row_sub">سرویس جست‌وجوی اختیاری؛ جست‌وجوی مرورگر همیشه در دسترس است</string>
     <string name="web_search_enabled">فعال کردن جست‌وجوی وب</string>
     <string name="web_search_api_key">کلید API (اختیاری)</string>
     <string name="web_search_invalid_endpoint">یک نشانی HTTP یا HTTPS بدون پارامترهای پرس‌وجو وارد کنید.</string>

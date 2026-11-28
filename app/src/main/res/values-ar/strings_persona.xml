@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="persona_title">الشخصية</string>
-    <string name="persona_sub">اختر طريقة تحدث Mika معك</string>
     <string name="persona_default">الافتراضية</string>
     <string name="persona_default_sub">نبرة Mika المعتادة</string>
     <string name="persona_empty">لا توجد شخصيات بعد</string>

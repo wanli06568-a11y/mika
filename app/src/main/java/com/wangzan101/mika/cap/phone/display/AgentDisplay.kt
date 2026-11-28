@@ -10,11 +10,13 @@ import android.os.HandlerThread
 import android.os.SystemClock
 import android.util.Log
 import android.view.Surface
+import com.wangzan101.mika.media.copyStridedFrame
 import com.wangzan101.mika.shell.IMikaShell
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
 
 /**
  * Agent 专用的虚拟屏。画面输出到本进程的 ImageReader,截图不依赖无障碍截图接口。
@@ -46,6 +48,7 @@ class AgentDisplay(
 
     private val frameLock = Any()
     private var fullFrame: Bitmap? = null // 带行填充的整帧,宽 = rowStride / pixelStride
+    private var scratch: ByteBuffer? = null // 缓冲比整帧短时垫用,只在帧线程上动
     private var hasFrame = false
     private var frameGeometry = DisplayFrameGeometry(bufferWidth, bufferHeight, Surface.ROTATION_0)
     private var lastProcessedAt = 0L
@@ -148,7 +151,8 @@ class AgentDisplay(
                     bmp = Bitmap.createBitmap(strideWidth, bufferHeight, Bitmap.Config.ARGB_8888)
                     fullFrame = bmp
                 }
-                bmp!!.copyPixelsFromBuffer(plane.buffer.rewind())
+                // 最后一行可能不带填充,缓冲比整块位图短:直接拷会抛异常,copyStridedFrame 先垫等长的缓冲
+                scratch = copyStridedFrame(bmp!!, plane.buffer, scratch)
                 hasFrame = true
                 // 限速或线程调度会延后消费，不能把复制位图的时刻记成帧时刻。
                 frameTimestampNanos = image.timestamp

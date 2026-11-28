@@ -5,7 +5,6 @@
     <string name="model_context_window">上下文視窗（token）</string>
     <string name="model_context_trigger">壓縮觸發點（token）</string>
     <string name="model_context_read_timeout">讀超時（秒）</string>
-    <string name="model_context_auto">自動 · %1$d</string>
     <string name="model_context_integer">請輸入正整數。</string>
     <string name="model_context_range">可填 %1$d–%2$d 個 token</string>
     <string name="model_context_effective">生效視窗 %1$d · 觸發點 %2$d 個 token</string>
@@ -62,16 +61,6 @@
     <string name="role_main">主模型</string>
     <string name="role_vision">看圖模型</string>
     <string name="role_light">輕量模型</string>
-    <string name="model_legacy_role_overlap">舊設定把這個模型同時用於對話和朗讀。點上面的對話用途：保留該用途，取消朗讀標記；開啟下面的「僅用於朗讀」：只保留朗讀，清空它的對話用途。</string>
-    <string name="role_tts">僅朗讀</string>
-    <string name="model_tts_switch">僅用於朗讀</string>
-    <string name="model_tts_switch_off">標記後在「聲音模型」中可選，不再用於對話</string>
-    <string name="model_tts_switch_in_voice">聲音模型正在用</string>
-    <string name="model_tts_switch_marked">已標記，可在「聲音模型」中選擇</string>
-    <string name="model_tts_confirm_title">僅用於朗讀？</string>
-    <string name="model_tts_confirm_body">開啟後，%1$s 不再用於對話，這些用途會被清空：%2$s。</string>
-    <string name="model_tts_confirm_ok">僅用於朗讀</string>
-    <string name="model_role_tts_conflict">「%1$s」也標記為僅用於朗讀。請到「服務商」中點這個模型，選擇保留對話用途還是僅用於朗讀。</string>
     <string name="role_main_what">思考和辦事</string>
     <string name="role_vision_what">讀取螢幕時看截圖</string>
     <string name="role_light_what">判斷、記東西這類小事</string>
@@ -212,8 +201,6 @@
     <string name="speech_tag_speech">語音</string>
     <string name="speech_off_note">輸入框和膠囊不能按住說話</string>
     <string name="speech_footer">只列像語音模型的；列表裡沒有的可以手填模型名稱，選的時候先試轉一小段。</string>
-    <string name="speech_pick_failed">這個模型沒能轉寫：%1$s</string>
-    <string name="speech_pick_timeout">%1$s 試轉一小段，%2$d 秒沒有回應</string>
     <string name="models_daily_token_budget">服務商每日 Token 預算</string>
     <string name="models_daily_token_budget_sub">按本地日曆日統計這家所有模型和用途的已回報輸入與輸出 Token。達到預算後不再發起下一次請求；進行中的請求可能超量，未回報用量按 0 計。本地日期變更後自動恢復。</string>
     <string name="models_daily_token_budget_save_failed">預算儲存失敗，原設定未變。</string>
@@ -221,11 +208,8 @@
     <string name="role_voice_what">Lets Mika speak and read answers aloud</string>
     <string name="voice_enable">Allow Mika to speak</string>
     <string name="voice_enable_note">Speech is only made when you tap Read aloud, unless auto-read is on</string>
-    <string name="voice_provider">服務商</string>
     <string name="voice_no_providers">請先在「模型」中新增服務商。</string>
     <string name="voice_no_tts_models">在「模型 → 服務商」中點一個模型，開啟「僅用於朗讀」。</string>
-    <string name="voice_choice_cleared">「%1$s」已取消僅朗讀標記，聲音模型隨之取消。需要時請在「聲音模型」中重新選擇。</string>
-    <string name="voice_model_name">模型</string>
     <string name="voice_protocol">API</string>
     <string name="voice_protocol_openai">OpenAI Speech</string>
     <string name="voice_protocol_gemini">Gemini TTS</string>

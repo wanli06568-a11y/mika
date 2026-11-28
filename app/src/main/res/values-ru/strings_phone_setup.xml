@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">Сменить</string>
     <string name="calls_disable_sub">Входящие и исходящие снова обрабатывает системный телефон</string>
     <string name="calls_how_to_talk">Когда ответит</string>
-    <string name="calls_greeting_empty">Пусто · ждать, пока собеседник заговорит</string>
-    <string name="calls_talk_settings_sub">Указания и сколько ИИ может говорить</string>
     <string name="calls_stage_listen">Слушает</string>
     <string name="calls_stage_think">Думает</string>
     <string name="calls_stage_speak">Говорит</string>

@@ -60,6 +60,15 @@ class VoicePlayer(private val context: Context) {
         prepareFile(ticket, bytes, mime)
     }
 
+    /** 播一段合成好的音频并等到播完或出错;适合试听测试需要知道是否真出声、并支持随时停止的场景。 */
+    suspend fun playAndAwait(bytes: ByteArray, mime: String, onStarted: () -> Unit = {}) = loadAndPlay { ticket ->
+        val completion = CompletableDeferred<VoicePlayback>()
+        prepareFile(ticket, bytes, mime, onStarted, completion)
+        val result = completion.await()
+        if (result is VoicePlayback.Error) error(result.message)
+        if (tickets.owns(ticket)) _state.value = VoicePlayback.Idle
+    }
+
     /** 在服务支持时边合成边播，其他服务或语速继续使用完整音频响应。 */
     suspend fun play(
         model: TtsModel,
@@ -244,24 +253,31 @@ class VoicePlayer(private val context: Context) {
             // 写文件期间来了新请求:本次代次作废,不建播放器、不碰状态(文件由 finally 清掉)
             if (!tickets.owns(ticket)) return
             file = f
-            val mp = MediaPlayer().apply {
-                setAudioAttributes(attributes)
-                setDataSource(f.absolutePath)
-                setOnPreparedListener { prepared ->
-                    if (!tickets.owns(ticket) || player !== prepared) return@setOnPreparedListener
-                    if (requestFocus(ticket, prepared)) {
-                        _state.value = VoicePlayback.Playing
-                        onStarted()
-                        prepared.start()
-                    } else {
-                        finishSegment(VoicePlayback.Error("audio focus is not available"))
+            val mp = MediaPlayer()
+            // 设置数据源等抛异常时 mp 还没交给 player,不在这里释放就漏掉原生播放器
+            try {
+                mp.apply {
+                    setAudioAttributes(attributes)
+                    setDataSource(f.absolutePath)
+                    setOnPreparedListener { prepared ->
+                        if (!tickets.owns(ticket) || player !== prepared) return@setOnPreparedListener
+                        if (requestFocus(ticket, prepared)) {
+                            _state.value = VoicePlayback.Playing
+                            onStarted()
+                            prepared.start()
+                        } else {
+                            finishSegment(VoicePlayback.Error("audio focus is not available"))
+                        }
+                    }
+                    setOnCompletionListener { if (tickets.owns(ticket) && player === it) finishSegment(VoicePlayback.Idle) }
+                    setOnErrorListener { failed, what, extra ->
+                        if (tickets.owns(ticket) && player === failed) finishSegment(VoicePlayback.Error("player error $what/$extra"))
+                        true
                     }
                 }
-                setOnCompletionListener { if (tickets.owns(ticket) && player === it) finishSegment(VoicePlayback.Idle) }
-                setOnErrorListener { failed, what, extra ->
-                    if (tickets.owns(ticket) && player === failed) finishSegment(VoicePlayback.Error("player error $what/$extra"))
-                    true
-                }
+            } catch (e: Throwable) {
+                mp.release()
+                throw e
             }
             player = mp
             mp.prepareAsync()

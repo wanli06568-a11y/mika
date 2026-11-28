@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="jev_title">Mô hình quyết định</string>
-    <string name="jev_row_sub">Lựa chọn ý định và tuyến đường tùy chọn</string>
     <string name="jev_enabled">Dùng mô hình quyết định</string>
     <string name="jev_privacy">Khi bật, yêu cầu của bạn, ngữ cảnh cuộc trò chuyện gần đây và các tuyến đường ứng viên được gửi tới nhà cung cấp đã cấu hình để đánh giá ý định và chọn tuyến đường. Nếu thất bại, Mika dùng mô hình hiện có. Cài đặt mô hình chính, thị giác và nhẹ vẫn riêng biệt.</string>
     <string name="jev_provider">Nhà cung cấp</string>

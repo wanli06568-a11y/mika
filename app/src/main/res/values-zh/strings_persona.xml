@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="persona_title">人格</string>
-    <string name="persona_sub">选择 Mika 和你说话的方式</string>
     <string name="persona_default">默认</string>
     <string name="persona_default_sub">Mika 平常的说话方式</string>
     <string name="persona_empty">还没有人格</string>

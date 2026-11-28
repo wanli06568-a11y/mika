@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d در دسترس</string>
     <string name="voice_hub_footer">برای هر کار انتخاب کنید چه کسی انجامش دهد. سرویس‌های صوتی حساب‌هایی هستند که این گزینه‌ها از آن‌ها می‌آیند.</string>
     <string name="voice_hub_setup">راه‌اندازی</string>
-    <string name="voice_hub_ready">آماده</string>
     <string name="voice_hub_off">خاموش</string>
     <string name="voice_hub_none">انتخاب نشده</string>
     <string name="voice_source_device">این گوشی · رایگان</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">پیش از حذف یک حساب گفتگو، به شما گفته می‌شود کدام کاربردهای صوتی تحت تأثیر قرار می‌گیرند.</string>
     <string name="voice_add_advanced">پیشرفته</string>
     <string name="voice_add_custom">سفارشی</string>
-    <string name="voice_add_custom_sub">شناسه مدل، پروتکل و نشانی را خودتان وارد کنید</string>
     <string name="voice_preset_compat">سرویس سازگار با OpenAI</string>
     <string name="voice_preset_compat_sub">ورودی صوتی · خواندن · بی‌درنگ · نشانی + کلید</string>
     <string name="voice_preset_selfhosted">تشخیص با میزبانی شخصی</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">استفاده برای تماس صوتی</string>
     <string name="voice_result_in_use">در حال استفاده</string>
     <string name="voice_result_done">تمام</string>
-    <string name="calls_who_speaks">چه کسی صحبت کند</string>
-    <string name="calls_what_to_say">در تلفن چه گفته شود</string>
-    <string name="calls_profile_summary">خوشامدگویی، دستورالعمل‌ها و مدت تماس</string>
     <string name="calls_voice_title">صدای تماس</string>
     <string name="calls_voice_shared_note">این صدا با تماس‌های صوتی در گفتگو مشترک است.</string>
     <string name="calls_audio_title">صدای تماس تلفنی</string>

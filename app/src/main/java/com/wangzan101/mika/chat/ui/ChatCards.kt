@@ -204,7 +204,7 @@ internal fun StatusCard(
 
 /** 这一轮生成的音频:名字/稿子开头、时长、播放/停止;点整张卡播放,再点停止。 */
 @Composable
-internal fun GeneratedAudioCards(audios: List<com.wangzan101.mika.core.chat.GeneratedAudio>, vm: ChatViewModel) {
+internal fun GeneratedAudioCards(audios: List<com.wangzan101.mika.core.agent.GeneratedAudio>, vm: ChatViewModel) {
     val playback by vm.voice.collectAsState()
     val playing = playback is VoicePlayback.Playing || playback is VoicePlayback.Loading
     val c = MikaTheme.colors
@@ -239,7 +239,7 @@ internal fun GeneratedAudioCards(audios: List<com.wangzan101.mika.core.chat.Gene
 
 /** 这一轮生成的视频:首帧封面、时长、点开用系统播放器。 */
 @Composable
-internal fun GeneratedVideoCards(videos: List<com.wangzan101.mika.core.chat.GeneratedVideo>, vm: ChatViewModel) {
+internal fun GeneratedVideoCards(videos: List<com.wangzan101.mika.core.agent.GeneratedVideo>, vm: ChatViewModel) {
     val c = MikaTheme.colors
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         videos.forEach { v ->

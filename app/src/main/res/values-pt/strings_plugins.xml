@@ -6,7 +6,6 @@
     <string name="plugins_empty">Ainda não há plugins</string>
     <string name="plugins_empty_sub">Instale um zip de plugin para adicionar habilidades que o Mika possa ler. Um plugin não pode alterar as configurações do app nem ler seus outros dados.</string>
     <string name="plugins_enabled">Ativado</string>
-    <string name="plugins_disabled">Desativado</string>
     <string name="plugins_skills">Habilidades</string>
     <string name="plugins_no_skills">Sem habilidades</string>
     <string name="plugins_permissions">Permissões</string>

@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="backup_title">النسخ الاحتياطي والبيانات</string>
-    <string name="backup_sub">صدّر كل شيء إلى ملف ZIP، أو استعد من ملف</string>
     <string name="backup_warning_title">هذه النسخة الاحتياطية غير مشفّرة</string>
     <string name="backup_warning_body">يحتوي ملف ZIP على كل أسرارك: مفاتيح API ورموز OAuth وبيانات اعتماد الخدمات. أبقِه خاصًا، ولا تشاركه، واحذفه بعد استيراده.</string>
     <string name="backup_included_label">ما الذي يتم تضمينه</string>
     <string name="backup_included_body">المزوّدون والمفاتيح، والمحادثات، والشخصيات، والمهارات، والذاكرة، وسير العمل، وتشغيلات المهام، والإعدادات.</string>
-    <string name="backup_excluded_body">غير مضمّن: إقران التصحيح اللاسلكي (أعد الإقران بعد الاستيراد)، وإعداد خدمة الوصول (أعد تشغيله في إعدادات Android)، ومساحة عمل العزل (sandbox)، ومرفقات مكتبة الملفات.</string>
+    <string name="backup_excluded_body">غير مضمّن: إقران التصحيح اللاسلكي (أعد الإقران بعد الاستيراد)، وإعداد خدمة الوصول (أعد تشغيله في إعدادات Android)، ومساحة عمل العزل (sandbox)، ومرفقات مكتبة الملفات. حزم الصوت دون اتصال كبيرة الحجم ولا تُنسخ احتياطيًا؛ نزّلها مرة أخرى بعد الاستعادة.</string>
     <string name="backup_export">تصدير النسخة الاحتياطية</string>
-    <string name="backup_export_sub">احفظ ملف ZIP بكل بياناتك</string>
     <string name="backup_import">استيراد النسخة الاحتياطية</string>
-    <string name="backup_import_sub">استعد كل شيء من ملف ZIP للنسخة الاحتياطية</string>
     <string name="backup_exported">تم حفظ النسخة الاحتياطية: %1$d ملف.</string>
     <string name="backup_exported_skipped">تم حفظ النسخة الاحتياطية: %1$d ملف. تعذّر فك تشفير %2$d مفتاح وتم استبعادها.</string>
     <string name="backup_export_failed">تعذّر حفظ النسخة الاحتياطية.</string>

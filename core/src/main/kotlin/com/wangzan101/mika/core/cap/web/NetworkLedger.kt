@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.cap.web
 
+import com.wangzan101.mika.core.net.str
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -272,7 +273,6 @@ class NetworkLedger(
             return s.substring(0, i)
         }
 
-        private fun JsonObject.str(k: String) = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
         private fun JsonObject.bool(k: String) = (this[k] as? JsonPrimitive)?.booleanOrNull == true
         private fun JsonObject.long(k: String) = (this[k] as? JsonPrimitive)?.doubleOrNull?.toLong()
     }

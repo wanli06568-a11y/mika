@@ -3,8 +3,8 @@ package com.wangzan101.mika.task
 import com.wangzan101.mika.core.run.ChildPhase
 import com.wangzan101.mika.core.run.ChildRecord
 import com.wangzan101.mika.core.run.ChildRunStore
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import java.io.File
-import java.io.FileOutputStream
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -17,7 +17,7 @@ class FileChildRunStore(private val file: File) : ChildRunStore {
         if (file.isFile) runCatching { Json.decodeFromString<List<ChildRecord>>(file.readText()) }.onSuccess { loaded ->
             loaded.forEach { records[it.id] = if (it.phase == ChildPhase.Running) it.copy(phase = ChildPhase.Unknown) else it }
             if (loaded.any { it.phase == ChildPhase.Running }) persist()
-        }.onFailure { file.copyTo(File(file.parentFile, file.name + ".corrupt"), overwrite = true) }
+        }.onFailure { AtomicFiles.quarantine(file, AtomicFiles.Quarantine.CopyCorrupt) }
     }
 
     @Synchronized override fun save(record: ChildRecord) { records[record.id] = record; persist() }
@@ -26,8 +26,7 @@ class FileChildRunStore(private val file: File) : ChildRunStore {
 
     private fun persist() {
         file.parentFile?.mkdirs()
-        val temp = File(file.parentFile, file.name + ".tmp")
-        FileOutputStream(temp).use { out -> out.write(Json.encodeToString(records.values.toList()).toByteArray()); out.fd.sync() }
-        check(temp.renameTo(file)) { "child run store rename failed" }
+        val ok = AtomicFiles.write(file, Json.encodeToString(records.values.toList()), durable = true, move = AtomicFiles.Move.Rename)
+        check(ok) { "child run store rename failed" }
     }
 }

@@ -1,5 +1,6 @@
 package com.wangzan101.mika.core.run.record
 
+import com.wangzan101.mika.core.net.scalar
 import com.wangzan101.mika.core.screen.observation.ObsKind
 import com.wangzan101.mika.core.screen.observation.PlaceKind
 import kotlinx.serialization.json.JsonArray
@@ -24,8 +25,8 @@ internal object LegacyEvents {
                 o["atMs"]?.let { put("atMs", it) }
                 o["step"]?.let { put("step", it) }
                 put("kind", ObsKind.Read.wire)
-                val site = o.str("site")
-                val app = o.str("app")
+                val site = o.scalar("site")
+                val app = o.scalar("app")
                 // 那时网页上报站点,手机上报 App
                 (site?.let { PlaceKind.Site to it } ?: app?.let { PlaceKind.App to it })?.let { (k, n) ->
                     put("place", buildJsonObject { put("kind", k.wire); put("name", n) })
@@ -45,6 +46,4 @@ internal object LegacyEvents {
             else -> o
         }
     }
-
-    private fun JsonObject.str(k: String) = (this[k] as? JsonPrimitive)?.contentOrNull
 }

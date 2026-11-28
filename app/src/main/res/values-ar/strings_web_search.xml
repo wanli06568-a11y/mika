@@ -12,7 +12,6 @@
     <string name="web_search_missing_key">يحتاج %1$s إلى مفتاح API ليعمل.</string>
     <string name="web_search_get_key">احصل على مفتاح API</string>
     <string name="web_search_privacy">يُخزَّن المفتاح مشفرًا على هذا الهاتف. تُعامل نتائج البحث كمحتوى غير موثوق.</string>
-    <string name="web_search_row_sub">خدمة بحث اختيارية؛ يظل البحث في المتصفح متاحًا دائمًا</string>
     <string name="web_search_enabled">تفعيل بحث الويب</string>
     <string name="web_search_api_key">مفتاح API (اختياري)</string>
     <string name="web_search_invalid_endpoint">أدخل عنوان URL باستخدام HTTP أو HTTPS من دون معاملات استعلام.</string>

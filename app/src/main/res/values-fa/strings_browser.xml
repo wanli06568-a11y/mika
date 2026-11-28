@@ -32,7 +32,6 @@
     <string name="browser_download_running">در حال دانلود…</string>
     <string name="browser_download_done">دانلود شد</string>
     <string name="browser_download_failed">دانلود ناموفق بود</string>
-    <string name="browser_download_open">باز کردن</string>
     <string name="browser_download_cancel">لغو دانلود</string>
     <string name="browser_download_delete">حذف</string>
     <string name="browser_download_delete_q">این دانلود حذف شود؟</string>
@@ -44,7 +43,6 @@
     <string name="browser_permission_location">موقعیت مکانی</string>
     <string name="browser_permission_allow">اجازه</string>
     <string name="browser_permission_block">مسدود کردن</string>
-    <string name="browser_no_download">مرورگر هنوز نمی‌تواند فایل دانلود کند.</string>
     <string name="browser_crashed">صفحه با مشکل مواجه شد و بسته شد. می‌توانید دوباره آن را باز کنید.</string>
     <string name="browser_logged_in">وارد شدید؛ میکا نیز می‌تواند از آن برای کارها استفاده کند.</string>
     <string name="browser_desktop">رایانه</string>

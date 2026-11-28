@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">Trạng thái cuộc gọi</string>
-    <string name="calls_dtmf_open">Bàn phím</string>
     <string name="calls_dtmf_title">Bàn phím cuộc gọi</string>
     <string name="calls_dtmf_close">Đóng</string>
     <string name="calls_dtmf_batch">Nhập một dãy phím</string>

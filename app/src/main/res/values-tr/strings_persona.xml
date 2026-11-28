@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="persona_title">Kişilik</string>
-    <string name="persona_sub">Mika\'nın sizinle nasıl konuşacağını seçin</string>
     <string name="persona_default">Varsayılan</string>
     <string name="persona_default_sub">Mika\'nın her zamanki sesi</string>
     <string name="persona_empty">Henüz kişilik yok</string>

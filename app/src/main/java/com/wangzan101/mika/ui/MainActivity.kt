@@ -130,6 +130,7 @@ import com.wangzan101.mika.settings.ui.Fix
 import com.wangzan101.mika.settings.ui.LanguagePromptDialog
 import com.wangzan101.mika.settings.ui.PersonaScreen
 import com.wangzan101.mika.settings.ui.PhoneSetupScreen
+import com.wangzan101.mika.settings.ui.SettingsModelRoute
 import com.wangzan101.mika.settings.ui.SettingsScreen
 import com.wangzan101.mika.settings.ui.UsageScreen
 import com.wangzan101.mika.settings.ui.models.ImageModelScreen
@@ -600,6 +601,7 @@ private fun MikaRoot(
             liveRun = { id -> app.taskState.runs.value.firstOrNull { it.conversationId == id }?.runId?.value },
             screens = app.taskState.screenConversations(app.appScope),
             frames = { id -> app.taskState.runs.value.firstOrNull { it.conversationId == id }?.frames },
+            meter = { ConversationStore.shared(context).meter(it) },
         )
     }
     val voiceCall = rememberVoiceCallController(voiceCallDeps)
@@ -778,6 +780,7 @@ private fun MikaRoot(
                             memoryRuntime = memoryRuntime,
                             onModels = { nav.push(Route.Models) },
                             onPickSpeech = { nav.push(Route.SpeechModel) },
+                            onOpenVoicePacks = { nav.push(Route.VoicePacks) },
                         ) else ChatScreen(
                             vm = app.chat,
                             check = check,
@@ -797,6 +800,7 @@ private fun MikaRoot(
                             openPhoneSetup = { onFix(Fix.OpenPhoneSetup) },
                             voice = app.voice,
                             openSpeechModel = { nav.push(Route.SpeechModel) },
+                            openVoicePacks = { nav.push(Route.VoicePacks) },
                             onOpenTeach = { hint ->
                                 app.teach.prefill(hint)
                                 nav.push(Route.Teach)
@@ -850,7 +854,18 @@ private fun MikaRoot(
                 onOpenVoiceCatalog = { nav.push(Route.VoiceServices) },
                 mcpServers = app.mcpServers,
                 openPhoneOps = openPhoneOps, onPhoneOpsOpened = { openPhoneOps = false },
-                openPause = openPause, onPauseOpened = { openPause = false }) }
+                openPause = openPause, onPauseOpened = { openPause = false },
+                onOpenModelRoute = { route ->
+                    nav.push(when (route) {
+                        SettingsModelRoute.Usage -> Route.Usage
+                        SettingsModelRoute.Speech -> Route.SpeechModel
+                        SettingsModelRoute.Voice -> Route.VoiceModel
+                        SettingsModelRoute.CallMode -> Route.CallMode
+                        SettingsModelRoute.VoiceServices -> Route.VoiceServices
+                        SettingsModelRoute.Image -> Route.ImageModel
+                        SettingsModelRoute.Video -> Route.VideoModel
+                    })
+                }) }
         }
         // 设置里点进去的独立页面同样用简约列表样式
         Route.Models -> com.wangzan101.mika.ui.components.PlainListTheme { ModelsScreen(store, onBack = back, onOpenSpeech = { nav.push(Route.SpeechModel) }, onOpenVoice = { nav.push(Route.VoiceModel) }, onOpenImage = { nav.push(Route.ImageModel) }, onOpenVideo = { nav.push(Route.VideoModel) }, onOpenUsage = { nav.push(Route.Usage) }, onOpenVoiceCatalog = { nav.push(Route.VoiceServices) }, onOpenCallMode = { nav.push(Route.CallMode) }) }
@@ -864,7 +879,8 @@ private fun MikaRoot(
         Route.VideoModel -> com.wangzan101.mika.ui.components.PlainListTheme { VideoModelScreen(store, onBack = back) }
         Route.Persona -> com.wangzan101.mika.ui.components.PlainListTheme { if (personasOn) PersonaScreen(app.personas, onBack = back) else LaunchedEffect(Unit) { nav.back() } }
         Route.Usage -> com.wangzan101.mika.ui.components.PlainListTheme { UsageScreen(app.usage, store, onBack = back) }
-        Route.SpeechModel -> com.wangzan101.mika.ui.components.PlainListTheme { SpeechModelScreen(store, onBack = back, onOpenServices = { nav.push(Route.VoiceServices) }) }
+        Route.SpeechModel -> com.wangzan101.mika.ui.components.PlainListTheme { SpeechModelScreen(store, onBack = back, onOpenServices = { nav.push(Route.VoiceServices) }, onOpenVoicePacks = { nav.push(Route.VoicePacks) }) }
+        Route.VoicePacks -> com.wangzan101.mika.ui.components.PlainListTheme { com.wangzan101.mika.voice.ui.VoicePacksScreen(onBack = back) }
         Route.About -> com.wangzan101.mika.ui.components.PlainListTheme { AboutScreen(
             versionName = BuildConfig.VERSION_NAME, build = BuildConfig.GIT_HASH, beta = BuildConfig.BETA,
             update = updateState,

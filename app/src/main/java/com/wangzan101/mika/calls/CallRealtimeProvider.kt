@@ -41,13 +41,15 @@ interface CallRealtimeProvider {
         credentials: VolcRealtimeCredentials,
         systemPrompt: String,
         enablePhoneDtmf: Boolean = false,
+        /** 电话工具说明用的语言,跟 [systemPrompt] 同一种;null 按中文。 */
+        languageTag: String? = null,
     ): CallRealtimeSession
 }
 
 class ProfileRealtimeProvider : CallRealtimeProvider {
-    private fun config(profile: CallVoiceProfile, systemPrompt: String, enablePhoneDtmf: Boolean): VolcRealtimeConfig {
+    private fun config(profile: CallVoiceProfile, systemPrompt: String, enablePhoneDtmf: Boolean, languageTag: String? = null): VolcRealtimeConfig {
         if (profile.protocol == CallVoiceProtocol.OPENAI_REALTIME) require(profile.endpoint == OpenAiCallProtocol.ENDPOINT)
-        return VolcRealtimeConfig(systemPrompt = systemPrompt, speaker = profile.speaker, model = profile.model, enablePhoneDtmf = enablePhoneDtmf, protocol = profile.protocol)
+        return VolcRealtimeConfig(systemPrompt = systemPrompt, speaker = profile.speaker, model = profile.model, enablePhoneDtmf = enablePhoneDtmf, protocol = profile.protocol, languageTag = languageTag)
     }
 
     override fun validate(profile: CallVoiceProfile, systemPrompt: String, enablePhoneDtmf: Boolean) {
@@ -59,7 +61,8 @@ class ProfileRealtimeProvider : CallRealtimeProvider {
         credentials: VolcRealtimeCredentials,
         systemPrompt: String,
         enablePhoneDtmf: Boolean,
+        languageTag: String?,
     ): CallRealtimeSession {
-        return VolcRealtimeClient(endpoint = profile.endpoint).connect(credentials, config(profile, systemPrompt, enablePhoneDtmf))
+        return VolcRealtimeClient(endpoint = profile.endpoint).connect(credentials, config(profile, systemPrompt, enablePhoneDtmf, languageTag))
     }
 }

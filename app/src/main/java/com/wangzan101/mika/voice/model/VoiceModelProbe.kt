@@ -40,6 +40,8 @@ class VoiceModelProbe(
         return environment.accountResolver.configurationFingerprint(service, model)
     }
 
+    fun openSttSession(ref: VoiceModelRef): SpeechSession = startStt(ref)
+
     fun verifyStt(ref: VoiceModelRef): Flow<VoiceProbeState> = flow {
         val session = try {
             startStt(ref)
@@ -71,7 +73,7 @@ class VoiceModelProbe(
     }
 }
 
-private fun SpeechFailure.toError(): VoiceModelError = when (this) {
+internal fun SpeechFailure.toError(): VoiceModelError = when (this) {
     is SpeechFailure.Provider -> VoiceModelError.from(error)
     SpeechFailure.NoPermission -> VoiceModelError.Protocol(
         VoiceErrorCategory.SYSTEM_UNAVAILABLE, "Microphone permission is missing",

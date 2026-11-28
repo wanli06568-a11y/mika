@@ -19,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.wangzan101.mika.R
@@ -40,12 +39,12 @@ import com.wangzan101.mika.core.frontdesk.LlmBrain
 import com.wangzan101.mika.core.frontdesk.opening
 import com.wangzan101.mika.frontdesk.DeskRegistry
 import com.wangzan101.mika.i18n.tr
-import com.wangzan101.mika.browser.ui.findActivity
 import com.wangzan101.mika.voice.cascade.CallUse
 import com.wangzan101.mika.voice.cascade.CascadeEngine
 import com.wangzan101.mika.voice.model.CallEngine
 import com.wangzan101.mika.voice.model.VoiceModelEnvironment
 import com.wangzan101.mika.voice.model.VoiceModelError
+import com.wangzan101.mika.voice.ui.MicDenial
 import com.wangzan101.mika.voicecall.AndroidVoiceCallAudio
 import com.wangzan101.mika.voicecall.EndReason
 import com.wangzan101.mika.voicecall.VoiceCallAudioRoute
@@ -309,6 +308,7 @@ class VoiceCallController(
                             language = null,
                             prior = deps.turns(conversation),
                             background = deps.desks.background(conversation),
+                            meter = deps.meter(conversation),
                         ).also { currentRealtime = it }
                     } catch (e: VoiceModelError) {
                         throw VolcRealtimeException(VolcRealtimeException.Kind.AUTH)
@@ -449,6 +449,8 @@ class VoiceCallDeps(
     val screens: StateFlow<Set<String>> = MutableStateFlow(emptySet()),
     /** 这件任务(会话编号)那块屏的实时画面;没有在跑的为 null。 */
     val frames: (String) -> StateFlow<Bitmap?>? = { null },
+    /** 对话用量计量器;标准模式通话记入这条对话。 */
+    val meter: (String) -> com.wangzan101.mika.core.model.usage.ConversationMeter? = { null },
 )
 
 /** 通话的控制器:宿主([VoiceCallHost])和通话页([VoiceCallScreen])共用这一个,放在导航外面。 */
@@ -462,15 +464,10 @@ fun rememberVoiceCallController(deps: VoiceCallDeps): VoiceCallController {
                 context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
             },
             micPermanentlyDenied = {
-                val activity = context.findActivity()
                 context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED &&
-                    context.getSharedPreferences("voice_call", 0).getBoolean("mic_denied", false) &&
-                    activity != null &&
-                    !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO)
+                    MicDenial.Call.blocked(context)
             },
-            markMicDenied = {
-                context.getSharedPreferences("voice_call", 0).edit().putBoolean("mic_denied", true).apply()
-            },
+            markMicDenied = { MicDenial.Call.record(context, denied = true) },
         )
     }
 }

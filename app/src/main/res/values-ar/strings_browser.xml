@@ -36,7 +36,6 @@
     <string name="browser_download_running">جارٍ التنزيل…</string>
     <string name="browser_download_done">تم التنزيل</string>
     <string name="browser_download_failed">فشل التنزيل</string>
-    <string name="browser_download_open">فتح</string>
     <string name="browser_download_cancel">إلغاء التنزيل</string>
     <string name="browser_download_delete">حذف</string>
     <string name="browser_download_delete_q">حذف هذا التنزيل؟</string>
@@ -48,7 +47,6 @@
     <string name="browser_permission_location">الموقع</string>
     <string name="browser_permission_allow">السماح</string>
     <string name="browser_permission_block">الحظر</string>
-    <string name="browser_no_download">لا يمكن للمتصفح تنزيل الملفات بعد.</string>
     <string name="browser_crashed">واجهت الصفحة مشكلة وأُغلقت. يمكنك فتحها مجددًا.</string>
     <string name="browser_logged_in">تم تسجيل الدخول — يمكن لـMika استخدامه للمهام أيضًا.</string>
     <string name="browser_desktop">سطح المكتب</string>

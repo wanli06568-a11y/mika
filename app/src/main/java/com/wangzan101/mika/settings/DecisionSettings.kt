@@ -10,6 +10,7 @@ import com.wangzan101.mika.core.model.decision.SystemOneDecisionModel
 import com.wangzan101.mika.core.model.usage.UsagePurpose
 import com.wangzan101.mika.core.model.usage.UsageSink
 import com.wangzan101.mika.core.model.usage.UsageSource
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,8 +21,6 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /** Independent, opt-in decision service. Its key never enters the public state or the provider store. */
 class DecisionSettings(
@@ -66,8 +65,7 @@ class DecisionSettings(
         dir.mkdirs()
         val tmp = File(dir, file.name + ".tmp")
         try {
-            tmp.writeBytes(cipher.encrypt(bytes))
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            AtomicFiles.write(file, cipher.encrypt(bytes), durable = false, temp = tmp)
             mutable.value = next
         } finally { bytes.fill(0); tmp.delete() }
     }

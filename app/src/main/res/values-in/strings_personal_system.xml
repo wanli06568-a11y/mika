@@ -5,10 +5,6 @@
     <string name="personal_system_reply_failed">Gagal membalas. Silakan coba lagi nanti.</string>
     <string name="personal_system_task_start_failed">Gagal memulai tugas</string>
     <string name="personal_system_task_cancelled">Tugas dibatalkan</string>
-    <string name="personal_system_task_completed">Tugas selesai</string>
-    <string name="personal_system_task_failed">Tugas gagal</string>
-    <string name="personal_system_task_running">Tugas sedang berlangsung</string>
-    <string name="personal_system_task_queued">Tugas dalam antrean</string>
     <string name="personal_system_no_model">Pilih model utama di Pengaturan terlebih dahulu, lalu kembali untuk melanjutkan percakapan.</string>
     <string name="personal_system_context_long">Pesan ini melebihi batas konteks model saat ini. Kirim dalam beberapa bagian.</string>
     <string name="personal_system_empty_reply">Model tidak memberikan balasan yang dapat ditampilkan. Silakan coba lagi.</string>

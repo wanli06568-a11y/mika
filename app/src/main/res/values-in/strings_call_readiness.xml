@@ -2,20 +2,7 @@
 <resources>
     <string name="calls_device_allow_notifications">Izinkan notifikasi</string>
     <string name="calls_device_allow_phone">Izinkan akses telepon</string>
-    <string name="calls_device_helper">Asisten bawaan</string>
-    <string name="calls_device_helper_connected">Terhubung</string>
-    <string name="calls_device_notifications">Notifikasi panggilan</string>
-    <string name="calls_device_notifications_app_off">Notifikasi aplikasi dinonaktifkan</string>
-    <string name="calls_device_notifications_calls_off">Kanal panggilan AI dinonaktifkan</string>
-    <string name="calls_device_notifications_permission_missing">Izin notifikasi belum diberikan</string>
-    <string name="calls_device_notifications_standby_off">Kanal siaga latar belakang dinonaktifkan</string>
-    <string name="calls_device_notifications_unknown">Status notifikasi tidak dapat diperiksa</string>
     <string name="calls_device_open_app_settings">Buka pengaturan izin aplikasi</string>
-    <string name="calls_device_pair_helper">Hubungkan asisten</string>
-    <string name="calls_device_permission_granted">Diizinkan</string>
-    <string name="calls_device_phone_permissions">Izin telepon</string>
-    <string name="calls_device_phone_permissions_note">Izinkan pemeriksaan status dan panggilan keluar</string>
-    <string name="calls_device_ready_to_test">Siap untuk uji audio manual</string>
     <string name="calls_device_system_settings_failed">Tidak dapat membuka pengaturan sistem. Buka halaman info aplikasi di Setelan Android.</string>
     <string name="calls_background_auto_off">Jawab otomatis dinonaktifkan</string>
     <string name="calls_background_battery">Baterai dan aktivitas latar belakang</string>

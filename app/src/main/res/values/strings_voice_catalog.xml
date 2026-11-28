@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">Speech models</string>
-    <string name="models_voice_catalog_sub">Manage speech-to-text, text-to-speech and live call models in one place</string>
     <string name="voice_catalog_title">Speech models</string>
     <string name="voice_catalog_sub">Manage speech-to-text, text-to-speech and live call models in one place. Capabilities and protocols are declared here; voice input, read-aloud and call settings only choose and use preferences.</string>
     <string name="voice_catalog_add">Add model</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">Unverified</string>
     <string name="voice_catalog_testing">Testing…</string>
     <string name="voice_catalog_listening">Listening, say something…</string>
+    <string name="voice_catalog_no_speech">No speech detected</string>
     <string name="voice_catalog_incomplete">Fill in the required account details.</string>
     <string name="voice_catalog_protocol_stt_android_system">Android system</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">Audio transcriptions</string>

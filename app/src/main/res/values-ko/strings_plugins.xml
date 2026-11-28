@@ -6,7 +6,6 @@
     <string name="plugins_empty">아직 플러그인이 없습니다</string>
     <string name="plugins_empty_sub">플러그인 zip을 설치하면 Mika가 읽을 수 있는 스킬이 추가됩니다. 플러그인은 앱 설정을 바꾸거나 다른 데이터를 읽을 수 없습니다.</string>
     <string name="plugins_enabled">사용 중</string>
-    <string name="plugins_disabled">사용 안 함</string>
     <string name="plugins_skills">스킬</string>
     <string name="plugins_no_skills">스킬 없음</string>
     <string name="plugins_permissions">권한</string>

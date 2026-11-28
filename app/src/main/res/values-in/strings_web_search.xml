@@ -12,7 +12,6 @@
     <string name="web_search_missing_key">%1$s memerlukan kunci API agar bisa digunakan.</string>
     <string name="web_search_get_key">Dapatkan kunci API</string>
     <string name="web_search_privacy">Kunci disimpan terenkripsi di ponsel ini. Hasil pencarian diperlakukan sebagai konten yang tidak tepercaya.</string>
-    <string name="web_search_row_sub">Layanan pencarian opsional; pencarian browser selalu tersedia</string>
     <string name="web_search_enabled">Aktifkan pencarian web</string>
     <string name="web_search_api_key">Kunci API (opsional)</string>
     <string name="web_search_invalid_endpoint">Masukkan URL HTTP atau HTTPS tanpa parameter kueri.</string>

@@ -1,7 +1,6 @@
 <resources>
     <string name="device_browser_title">手機檔案</string>
     <string name="device_browser_roots">已授權的資料夾</string>
-    <string name="device_browser_back">返回</string>
     <string name="device_browser_retry">無法讀取檔案，點擊重試</string>
     <string name="device_browser_empty">沒有檔案或已授權的資料夾</string>
     <string name="device_browser_more">載入更多</string>

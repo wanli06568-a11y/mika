@@ -6,7 +6,6 @@
     <string name="plugins_empty">还没有插件</string>
     <string name="plugins_empty_sub">安装插件 zip 可以给 Mika 增加它能读的技能。插件不能改 App 设置，也不能读你的其他数据。</string>
     <string name="plugins_enabled">已启用</string>
-    <string name="plugins_disabled">已停用</string>
     <string name="plugins_skills">技能</string>
     <string name="plugins_no_skills">没有技能</string>
     <string name="plugins_permissions">权限</string>

@@ -11,6 +11,7 @@ import com.wangzan101.mika.core.remote.RemoteHost
 import com.wangzan101.mika.core.remote.RemoteEndpoints
 import com.wangzan101.mika.core.remote.RelayClient
 import com.wangzan101.mika.core.remote.RelayGateway
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.settings.RelaySettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -204,12 +205,7 @@ class McpRuntime(
             onAction = McpModes.ACTION_USB_ON, offAction = McpModes.ACTION_USB_OFF, port = settings.port,
         )
         if (runCatching { f.readText() }.getOrNull() == text) return
-        val tmp = File(dir, f.name + ".tmp")
-        tmp.writeText(text)
-        if (!tmp.renameTo(f)) {
-            f.delete()
-            check(tmp.renameTo(f)) { "rename failed" }
-        }
+        check(AtomicFiles.write(f, text, durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.DeleteAndRetry)) { "rename failed" }
     }
 
     /** 电脑上要跑的那条命令(设置页显示的就是它)。 */

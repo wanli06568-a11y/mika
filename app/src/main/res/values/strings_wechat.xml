@@ -4,7 +4,6 @@
     <string name="wechat_notif_body">Private messages can start Mika tasks</string>
     <string name="wechat_turn_off">Turn off</string>
     <string name="wechat_title">WeChat</string>
-    <string name="wechat_settings_sub">Assign Mika tasks in WeChat</string>
     <string name="wechat_status_disconnected">Not connected</string>
     <string name="wechat_status_connecting">Connecting</string>
     <string name="wechat_status_connected">Connected</string>
@@ -32,7 +31,6 @@
     <string name="wechat_qr_help">Scan in WeChat and confirm authorization. Then open the bot’s private chat and send text or images. This QR code is only for this binding; don’t forward it.</string>
     <string name="wechat_connection">Connection</string>
     <string name="wechat_receive">Receive WeChat tasks</string>
-    <string name="wechat_receive_sub">When off, Mika stops reading new messages</string>
     <string name="wechat_allow_unlock">Allow WeChat tasks to wake and unlock</string>
     <string name="wechat_allow_unlock_sub">Only tasks from your own linked WeChat private chat can try to wake and unlock this phone.</string>
     <string name="wechat_allow_unlock_foot">Off by default; rebinding turns it off. First enable “%3$s” in “%1$s › %2$s” and save your lock-screen PIN or password there, if you use one. This switch does not change that permission or use credentials sent through WeChat.</string>
@@ -49,7 +47,6 @@
     <string name="wechat_capability_text">Private text, images and real tasks</string>
     <string name="wechat_capability_replies">Mika questions, results &amp; notices</string>
     <string name="wechat_capability_phone">Payment confirmations &amp; phone takeover</string>
-    <string name="wechat_capability_phone_sub">Still completed on this phone</string>
     <string name="wechat_capability_later">Voice, files, groups &amp; multiple accounts</string>
     <string name="wechat_supported">Supported</string>
     <string name="wechat_phone_only">Phone</string>

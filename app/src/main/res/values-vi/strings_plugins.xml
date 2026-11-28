@@ -6,7 +6,6 @@
     <string name="plugins_empty">Chưa có plugin nào</string>
     <string name="plugins_empty_sub">Cài đặt tệp zip plugin để thêm kỹ năng Mika có thể đọc. Plugin không thể thay đổi cài đặt ứng dụng hoặc đọc dữ liệu khác của bạn.</string>
     <string name="plugins_enabled">Đã bật</string>
-    <string name="plugins_disabled">Đã tắt</string>
     <string name="plugins_skills">Kỹ năng</string>
     <string name="plugins_no_skills">Không có kỹ năng</string>
     <string name="plugins_permissions">Quyền</string>

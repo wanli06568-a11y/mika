@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="selfcheck_title">互換性セルフチェック</string>
-    <string name="selfcheck_row_sub">このスマホで何が動くかを確認して報告</string>
     <string name="selfcheck_intro">約 1 分かかります。ほかのアプリには触れず、設定も変更せず、ネットワークも使いません。実行中は、このページから離れないでください。</string>
     <string name="selfcheck_start">開始</string>
     <string name="selfcheck_again">もう一度実行</string>

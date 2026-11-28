@@ -32,7 +32,6 @@
     <string name="memory_tasks">Ingat tugas sebelumnya</string>
     <string name="memory_tasks_sub">Simpan ringkasan singkat setiap tugas selesai untuk diingat lain kali</string>
     <string name="memory_tasks_title">Tugas sebelumnya</string>
-    <string name="memory_clear_sub">Hapus semua memori dan keterampilan yang dipelajari</string>
     <string name="edit_it">Ubah</string>
     <string name="unpin">Lepas sematan</string>
     <string name="pin">Sematkan</string>
@@ -87,7 +86,6 @@
     <string name="skills_get">Dapatkan keterampilan</string>
     <string name="skills_share">Bagikan keterampilan</string>
     <string name="skills_import">Impor keterampilan</string>
-    <string name="skills_import_sub">Tempel keterampilan yang dibagikan orang lain</string>
     <string name="skills_import_hint">Masuk ke “Perlu ditinjau” dulu dan baru dipakai setelah kamu baca dan terima.</string>
     <string name="skills_import_confirm">Impor</string>
     <string name="skill_imported">Sudah diimpor. Tinjau di “Perlu ditinjau”.</string>
@@ -95,7 +93,6 @@
     <string name="skill_builtin_name">Sudah ada keterampilan bawaan dengan nama ini. Ganti namanya lalu coba lagi.</string>
     <string name="skill_draft_pending">Draf dengan nama ini masih menunggu ditinjau. Selesaikan yang itu dulu.</string>
     <string name="market_title">Pasar keterampilan</string>
-    <string name="market_sub">Jelajahi keterampilan yang dibagikan di GitHub</string>
     <string name="market_source">Sumber keterampilan</string>
     <string name="market_add">Tambahkan untuk ditinjau</string>
     <string name="market_network_error">Gagal mengunduh. Periksa repositori dan jaringan, lalu coba lagi.</string>

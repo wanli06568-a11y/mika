@@ -6,7 +6,6 @@
     <string name="plugins_empty">プラグインはまだありません</string>
     <string name="plugins_empty_sub">プラグインの zip をインストールすると、Mika が読めるスキルを追加できます。プラグインはアプリの設定を変更したり、他のデータを読んだりできません。</string>
     <string name="plugins_enabled">有効</string>
-    <string name="plugins_disabled">無効</string>
     <string name="plugins_skills">スキル</string>
     <string name="plugins_no_skills">スキルなし</string>
     <string name="plugins_permissions">権限</string>

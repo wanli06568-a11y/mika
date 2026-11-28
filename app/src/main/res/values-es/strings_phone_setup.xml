@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">Cambiar</string>
     <string name="calls_disable_sub">Las llamadas entrantes y salientes vuelven a la app de teléfono del sistema</string>
     <string name="calls_how_to_talk">Al contestar</string>
-    <string name="calls_greeting_empty">Vacío · espera a que hable quien llama</string>
-    <string name="calls_talk_settings_sub">Instrucciones y cuánto puede hablar la IA como máximo</string>
     <string name="calls_stage_listen">Escucha</string>
     <string name="calls_stage_think">Piensa</string>
     <string name="calls_stage_speak">Habla</string>

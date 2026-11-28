@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="models_voice_catalog">音声モデル</string>
-    <string name="models_voice_catalog_sub">音声認識・音声合成・リアルタイム通話のモデルを一か所で管理</string>
     <string name="voice_catalog_title">音声モデル</string>
     <string name="voice_catalog_sub">音声認識・音声合成・リアルタイム通話のモデルを一か所で管理します。能力とプロトコルはここで宣言し、音声入力・読み上げ・通話の設定ページでは選択と利用の好みだけを扱います。</string>
     <string name="voice_catalog_add">モデルを追加</string>
@@ -43,6 +42,7 @@
     <string name="voice_catalog_unverified">未検証</string>
     <string name="voice_catalog_testing">テスト中…</string>
     <string name="voice_catalog_listening">聞き取り中です。話しかけてください…</string>
+    <string name="voice_catalog_no_speech">音声が検出されませんでした</string>
     <string name="voice_catalog_incomplete">先にアカウント情報を入力してください</string>
     <string name="voice_catalog_protocol_stt_android_system">Android システム</string>
     <string name="voice_catalog_protocol_stt_audio_transcriptions">音声文字起こし</string>

@@ -1,6 +1,6 @@
 package com.wangzan101.mika.core.proactive
 
-import com.wangzan101.mika.core.agent.TokenEstimate
+import com.wangzan101.mika.core.model.TokenEstimate
 import com.wangzan101.mika.core.screen.observation.Untrusted
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -186,6 +186,6 @@ class ObservedContextTest {
         val text = ObservedContext.render(many, emptyList(), emptyList(), emptyList(), lastWeek = ObservedContext.Earlier(mon, mon + 6, listOf("上周的事")))!!
         assertTrue("Last week" in text && "上周的事" in text)
         assertTrue("这是今天第 1 件事" in text)
-        assertTrue(com.wangzan101.mika.core.agent.TokenEstimate.of(text) <= ObservedContext.MAX_TOKENS)
+        assertTrue(com.wangzan101.mika.core.model.TokenEstimate.of(text) <= ObservedContext.MAX_TOKENS)
     }
 }

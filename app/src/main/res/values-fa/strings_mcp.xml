@@ -31,7 +31,6 @@
     <string name="mcp_last_request">آخرین درخواست: %1$s</string>
     <string name="mcp_advanced">تنظیمات پیشرفته</string>
     <string name="mcp_advanced_hide">پنهان کردن تنظیمات پیشرفته</string>
-    <string name="mcp_advanced_sub">گزینه‌های دسترسی، توکن‌ها و روشن کردن صفحه از راه دور</string>
     <string name="mcp_port_detail">پورت %1$d. دسترسی USB پس از راه‌اندازی مجدد گوشی خاموش می‌شود.</string>
     <string name="mcp_network_scope">اجازهٔ دسترسی در Wi-Fi و شبکه‌های خصوصی. هر درخواست به توکن نیاز دارد.</string>
     <string name="mcp_cli_install">۱. رایانهٔ خود را آماده کنید</string>

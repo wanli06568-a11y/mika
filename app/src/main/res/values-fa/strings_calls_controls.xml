@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">وضعیت تماس</string>
-    <string name="calls_dtmf_open">صفحه‌کلید</string>
     <string name="calls_dtmf_title">صفحه‌کلید تماس</string>
     <string name="calls_dtmf_close">بستن</string>
     <string name="calls_dtmf_batch">ورود دنباله</string>

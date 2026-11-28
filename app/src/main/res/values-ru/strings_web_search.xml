@@ -12,7 +12,6 @@
     <string name="web_search_missing_key">Для работы %1$s нужен ключ API.</string>
     <string name="web_search_get_key">Получить ключ API</string>
     <string name="web_search_privacy">Ключ хранится на этом телефоне в зашифрованном виде. Результаты поиска считаются ненадёжным содержимым.</string>
-    <string name="web_search_row_sub">Необязательная поисковая служба; поиск в браузере доступен всегда</string>
     <string name="web_search_enabled">Включить поиск в интернете</string>
     <string name="web_search_api_key">Ключ API (необязательно)</string>
     <string name="web_search_invalid_endpoint">Введите URL HTTP или HTTPS без параметров запроса.</string>

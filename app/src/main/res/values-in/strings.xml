@@ -34,7 +34,6 @@
     <string name="ok_got_it">Mengerti</string>
     <string name="cancel">Batal</string>
     <string name="model_reasoning_title">Tingkat berpikir · %1$s</string>
-    <string name="model_reasoning_value">Tingkat berpikir: %1$s</string>
     <string name="model_reasoning_note">Tingkat yang lebih tinggi bisa membantu pada tugas sulit, tetapi mungkin lebih lama dan memakai lebih banyak token. Default berarti penyedia yang menentukan.</string>
     <string name="model_reasoning_unknown">Penyedia ini belum mencantumkan tingkat yang tersedia. Pilihan yang tidak didukung bisa membuat tugas gagal; pilih Default jika itu terjadi.</string>
     <string name="model_reasoning_unavailable">Penyedia tidak lagi mencantumkan tingkat yang tersimpan. Pilih Default atau tingkat lain.</string>

@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import com.wangzan101.mika.R
+import com.wangzan101.mika.enterForeground
 import com.wangzan101.mika.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,13 +60,11 @@ class VoiceCallService : Service() {
             if (session == null) stopSelf(startId)
             return START_NOT_STICKY
         }
-        val promoted = runCatching {
-            if (Build.VERSION.SDK_INT >= 30) {
-                startForeground(NOTIFICATION_ID, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
-            } else {
-                startForeground(NOTIFICATION_ID, notification())
-            }
-        }.isSuccess
+        val promoted = enterForeground(
+            NOTIFICATION_ID,
+            type = ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
+            typeSince = Build.VERSION_CODES.R,
+        ) { notification() }
         if (!promoted) {
             // 提不前台就没资格保活:把会话还给调用方的生命周期(前台时通话照常,退后台由系统静音路径兜出 MicSilent)
             synchronized(companionLock) { if (activeSession === call) activeSession = null }

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="persona_title">페르소나</string>
-    <string name="persona_sub">Mika가 말하는 방식을 선택하세요</string>
     <string name="persona_default">기본</string>
     <string name="persona_default_sub">Mika의 평소 말투</string>
     <string name="persona_empty">아직 페르소나가 없습니다</string>

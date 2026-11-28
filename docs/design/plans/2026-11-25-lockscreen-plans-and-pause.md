@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Commit order is #856 → #852 → #853 → #804; later tasks must not weaken earlier credential or pause invariants. Across plans, Tasks 1–3 follow voice and precede conversation/model Tasks 4–5; Task 4 follows those model tasks (Spec §3).
+- Commit order is #856 → #852 → #853 → #804; later tasks must not weaken earlier credential or pause invariants. Across plans, Tasks 1–3 follow voice and precede conversation/model Task 4; Task 4 follows those model tasks (Spec §3).
 - Public Android APIs and capability detection only; no brand-specific keyguard or private implementation.
 - Use only test PIN/password/canaries. Pattern, SIM PIN and unknown credential screens always return control to the user.
 - Web/sandbox may run locked; phone still requires authorization, valid credentials where applicable and bounded unlock attempts.

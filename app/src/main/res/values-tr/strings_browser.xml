@@ -32,7 +32,6 @@
     <string name="browser_download_running">İndiriliyor…</string>
     <string name="browser_download_done">İndirildi</string>
     <string name="browser_download_failed">İndirme başarısız</string>
-    <string name="browser_download_open">Aç</string>
     <string name="browser_download_cancel">İndirmeyi iptal et</string>
     <string name="browser_download_delete">Sil</string>
     <string name="browser_download_delete_q">Bu indirme silinsin mi?</string>
@@ -44,7 +43,6 @@
     <string name="browser_permission_location">Konum</string>
     <string name="browser_permission_allow">İzin ver</string>
     <string name="browser_permission_block">Engelle</string>
-    <string name="browser_no_download">Tarayıcı henüz dosya indiremiyor.</string>
     <string name="browser_crashed">Sayfa bir sorunla karşılaştı ve kapatıldı. Tekrar açabilirsiniz.</string>
     <string name="browser_logged_in">Oturum açıldı — Mika onu görevler için de kullanabilir.</string>
     <string name="browser_desktop">Masaüstü</string>

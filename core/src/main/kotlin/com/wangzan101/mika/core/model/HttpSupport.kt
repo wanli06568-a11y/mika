@@ -118,27 +118,21 @@ internal object HttpSupport {
                                 return
                             }
                             val source = it.body?.source() ?: throw ModelError.BadResponse("流式响应没有内容")
-                            val data = mutableListOf<String>()
+                            val framer = SseFramer()
                             var events = 0
                             /** 派发一个事件;返回 true 表示协议层已到终态(如 [DONE]),读循环就此收尾,不再等连接关闭。 */
-                            fun dispatch(): Boolean {
-                                if (data.isEmpty()) return false
+                            fun dispatch(event: String?): Boolean {
+                                if (event == null) return false
                                 events++
-                                val event = data.joinToString("\n")
                                 attempt?.packet(event)
-                                val terminal = onEvent(event)
-                                data.clear()
-                                return terminal
+                                return onEvent(event)
                             }
                             while (cont.isActive) {
                                 val line = source.readUtf8Line() ?: break
-                                when {
-                                    line.isEmpty() -> if (dispatch()) break
-                                    line.startsWith("data:") -> data += line.removePrefix("data:").removePrefix(" ")
-                                }
+                                if (dispatch(framer.feed(line))) break
                             }
                             if (cont.isActive) {
-                                dispatch()
+                                dispatch(framer.flush())
                                 val eventStream = it.header("Content-Type")?.contains("event-stream", ignoreCase = true) == true
                                 if (events == 0 && !eventStream) throw ModelError.BadResponse("返回的不是流式内容(Content-Type: ${it.header("Content-Type").orEmpty()})")
                                 cont.resume(RawResponse(it.code, it.header("retry-after"), ""))

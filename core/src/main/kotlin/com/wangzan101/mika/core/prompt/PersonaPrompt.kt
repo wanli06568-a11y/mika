@@ -1,6 +1,6 @@
 package com.wangzan101.mika.core.prompt
 
-import com.wangzan101.mika.core.agent.TokenEstimate
+import com.wangzan101.mika.core.model.TokenEstimate
 
 /**
  * 人格提示词层:界面选项对应的固定句子([PersonaStyle])加用户写的一段正文,拼在身份、准则、通用规则之后,各能力说明之前。

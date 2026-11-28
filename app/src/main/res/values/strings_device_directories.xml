@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">Access denied</string>
     <string name="device_dirs_unknown">Status unavailable</string>
     <string name="device_dirs_entry">Folder hints</string>
-    <string name="device_dirs_entry_sub">Help Mika find downloaded files</string>
     <string name="device_dirs_source_preset">Preset</string>
     <string name="device_dirs_source_user">Edited by you</string>
     <string name="device_dirs_source_mika">Edited by Mika</string>

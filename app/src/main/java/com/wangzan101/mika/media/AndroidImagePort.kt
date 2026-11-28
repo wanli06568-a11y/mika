@@ -8,7 +8,7 @@ import com.wangzan101.mika.cap.sandbox.SandboxDirs
 import com.wangzan101.mika.core.cap.image.ImagePort
 import com.wangzan101.mika.core.cap.image.SavedImage
 import com.wangzan101.mika.core.cap.image.StoredImage
-import com.wangzan101.mika.core.chat.GeneratedPhoto
+import com.wangzan101.mika.core.agent.GeneratedPhoto
 import com.wangzan101.mika.core.model.GeneratedImage
 import com.wangzan101.mika.core.model.ImageCapabilities
 import com.wangzan101.mika.core.model.ImageError

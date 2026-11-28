@@ -5,8 +5,6 @@
     <string name="teach_goal_label">ما تريد تعليمه</string>
     <string name="teach_goal_hint">مثلًا: تسجيل الحضور كل صباح في تطبيق الدوام</string>
     <string name="teach_disclosure">تبقى الخطوات على هذا الهاتف وفقط بعد الضغط على بدء العرض. إذا كان هناك نموذج مضبوط، فإن إنشاء المهارة يرسل ملخصا منزوع الحساسية للهدف والخطوات إلى ذلك النموذج. كلمات السر والرموز وبيانات الدفع لا تُرسل. إذا لم يوجد نموذج، يُكتب المسودة على الهاتف ولا يُرفع شيء. لا تُستخدم قبل أن تقبلها، ولم يُثبت نجاح تجربة تشغيل.</string>
-    <string name="teach_continue">متابعة</string>
-    <string name="teach_ready_body">Mika تشاهد فقط ولا تشغّل الهاتف. يمكنك الإيقاف المؤقت أو الإنهاء أو التجاهل. لا يُسجل شيء قبل الضغط على بدء العرض.</string>
     <string name="teach_start">بدء العرض</string>
     <string name="teach_learning">تتعلم الآن</string>
     <string name="teach_paused">متوقف مؤقتا</string>
@@ -14,7 +12,6 @@
     <string name="teach_resume">متابعة العرض</string>
     <string name="teach_end">إنهاء العرض</string>
     <string name="teach_discard">تجاهل</string>
-    <string name="teach_discard_body">تجاهل هذا العرض وحذف الخطوات المحفوظة؟</string>
     <string name="teach_busy">هناك مهمة قيد التشغيل. انتظر حتى تنتهي قبل التعليم.</string>
     <string name="teach_need_a11y">فعّل إمكانية الوصول قبل العرض. بدونها لا ترى Mika اللمسات.</string>
     <string name="teach_interrupted">توقف العرض لأن التطبيق أعيد تشغيله أو أُغلقت إمكانية الوصول. لا يُسجل شيء حتى تتابع.</string>

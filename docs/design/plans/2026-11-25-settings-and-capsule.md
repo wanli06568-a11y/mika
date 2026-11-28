@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Commit order is #827 → #830 → #854 → #859; do not combine their resources or tests. In the cross-plan sequence, execute this plan after conversation/model Task 3 and before voice, lockscreen and conversation/model Tasks 4–5 (Spec §3).
+- Commit order is #827 → #830 → #854 → #859; do not combine their resources or tests. In the cross-plan sequence, execute this plan after conversation/model Task 3 and before voice, lockscreen and conversation/model Task 4 (Spec §3).
 - Standard public Android APIs only; no device-brand branches or private platform behavior.
 - Existing `MikaButton` defaults, `PageScrolls`, navigation routes and component package names remain compatible.
 - Add strings to the default resources and every existing localized directory, explicitly including Vietnamese.

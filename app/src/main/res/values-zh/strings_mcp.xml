@@ -31,7 +31,6 @@
     <string name="mcp_last_request">上次请求 %1$s</string>
     <string name="mcp_advanced">高级设置</string>
     <string name="mcp_advanced_hide">收起高级设置</string>
-    <string name="mcp_advanced_sub">访问开关、令牌与远程唤醒</string>
     <string name="mcp_port_detail">端口 %1$d。手机重启后 USB 访问会关闭。</string>
     <string name="mcp_port_title">监听端口</string>
     <string name="mcp_port_dialog_sub">默认端口被手机上其他服务占用时换一个。改完立即生效，电脑按新端口重新连接。</string>

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calls_dtmf_status_label">通话状态</string>
-    <string name="calls_dtmf_open">按键</string>
     <string name="calls_dtmf_title">通话按键</string>
     <string name="calls_dtmf_close">关闭</string>
     <string name="calls_dtmf_batch">连续输入</string>

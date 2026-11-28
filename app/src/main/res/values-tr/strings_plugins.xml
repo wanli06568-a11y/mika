@@ -6,7 +6,6 @@
     <string name="plugins_empty">Henüz eklenti yok</string>
     <string name="plugins_empty_sub">Mika\'nın okuyabileceği beceriler eklemek için bir eklenti zip\'i yükleyin. Bir eklenti, uygulama ayarlarını değiştiremez veya diğer verilerinizi okuyamaz.</string>
     <string name="plugins_enabled">Etkin</string>
-    <string name="plugins_disabled">Devre dışı</string>
     <string name="plugins_skills">Beceriler</string>
     <string name="plugins_no_skills">Beceri yok</string>
     <string name="plugins_permissions">İzinler</string>

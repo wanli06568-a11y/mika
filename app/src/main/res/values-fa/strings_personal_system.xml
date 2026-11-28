@@ -5,10 +5,6 @@
     <string name="personal_system_reply_failed">ارسال پاسخ ناموفق بود. لطفاً بعداً دوباره تلاش کنید.</string>
     <string name="personal_system_task_start_failed">شروع کار ناموفق بود</string>
     <string name="personal_system_task_cancelled">کار لغو شد</string>
-    <string name="personal_system_task_completed">کار تکمیل شد</string>
-    <string name="personal_system_task_failed">کار ناموفق بود</string>
-    <string name="personal_system_task_running">کار در حال انجام است</string>
-    <string name="personal_system_task_queued">کار در صف انتظار است</string>
     <string name="personal_system_no_model">ابتدا مدل اصلی را در تنظیمات انتخاب کنید، سپس برای ادامه گفتگو برگردید.</string>
     <string name="personal_system_context_long">این پیام از محدودیت زمینه مدل فعلی فراتر است. لطفاً آن را در چند بخش ارسال کنید.</string>
     <string name="personal_system_empty_reply">مدل پاسخی قابل نمایش برنگرداند. لطفاً دوباره تلاش کنید.</string>

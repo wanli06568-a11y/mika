@@ -1,7 +1,6 @@
 <resources>
     <string name="device_browser_title">Device files</string>
     <string name="device_browser_roots">Authorized folders</string>
-    <string name="device_browser_back">Back</string>
     <string name="device_browser_retry">Could not load files. Tap to retry.</string>
     <string name="device_browser_empty">No files or authorized folders</string>
     <string name="device_browser_more">Load more</string>

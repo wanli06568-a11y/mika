@@ -62,7 +62,6 @@
         <item quantity="other">%1$d단계</item>
     </plurals>
     <string name="timeline_criteria">완료 기준</string>
-    <string name="timeline_outcome">결과</string>
     <string name="timeline_check">점검</string>
     <string name="timeline_duration">소요 시간</string>
     <string name="timeline_more">자세히 보기</string>
@@ -81,8 +80,6 @@
         <item quantity="other">%1$d회 확인함</item>
     </plurals>
     <string name="effect_small_change">조금 바뀜</string>
-    <string name="timeline_hide_screen">화면 숨기기</string>
-    <string name="timeline_show_screen">당시 화면 보기</string>
     <string name="timeline_step_screen">%1$d단계의 화면</string>
     <string name="timeline_export">사용 기록 내보내기</string>
     <string name="timeline_export_hint">모델 응답마다의 토큰 사용량과 컨텍스트 압축 이벤트를 JSONL로 저장해요.</string>

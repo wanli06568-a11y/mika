@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">Perlu diganti</string>
     <string name="calls_disable_sub">Panggilan masuk dan keluar kembali ke telepon sistem</string>
     <string name="calls_how_to_talk">Saat menjawab</string>
-    <string name="calls_greeting_empty">Kosong · tunggu penelepon bicara dulu</string>
-    <string name="calls_talk_settings_sub">Instruksi dan durasi maksimal AI berbicara</string>
     <string name="calls_stage_listen">Dengar</string>
     <string name="calls_stage_think">Pikir</string>
     <string name="calls_stage_speak">Bicara</string>

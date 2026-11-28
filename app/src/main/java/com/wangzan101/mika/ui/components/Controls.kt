@@ -198,10 +198,11 @@ fun SegmentedControl(
                     )
                     .clip(SegmentInner)
                     .selectable(on, role = Role.Tab) { onSelect(i) }
+                    .padding(horizontal = 4.dp)
                     .then(if (tags != null) Modifier.testTag(tags[i]) else Modifier),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, style = SegmentText, color = if (on) c.ink else c.ink2, maxLines = 1)
+                Text(label, style = SegmentText, color = if (on) c.ink else c.ink2, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

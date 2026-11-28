@@ -8,7 +8,6 @@
     <string name="voice_hub_services_sub">%1$d 個可用</string>
     <string name="voice_hub_footer">為每件事選一個來做。語音服務是這些選項的來源帳號。</string>
     <string name="voice_hub_setup">去設定</string>
-    <string name="voice_hub_ready">可用</string>
     <string name="voice_hub_off">已關閉</string>
     <string name="voice_hub_none">未選擇</string>
     <string name="voice_source_device">本機 · 免費</string>
@@ -51,7 +50,6 @@
     <string name="voice_services_footer">刪除聊天帳號前，會先告訴你影響哪些語音用途。</string>
     <string name="voice_add_advanced">進階</string>
     <string name="voice_add_custom">自訂</string>
-    <string name="voice_add_custom_sub">自己填模型 ID、協定和位址</string>
     <string name="voice_preset_compat">OpenAI 相容服務</string>
     <string name="voice_preset_compat_sub">語音輸入 · 朗讀 · 即時語音 · 位址 + 金鑰</string>
     <string name="voice_preset_selfhosted">自建辨識</string>
@@ -78,9 +76,6 @@
     <string name="voice_use_for_realtime">用於語音通話</string>
     <string name="voice_result_in_use">使用中</string>
     <string name="voice_result_done">完成</string>
-    <string name="calls_who_speaks">用誰來說</string>
-    <string name="calls_what_to_say">電話裡說什麼</string>
-    <string name="calls_profile_summary">開場白、指示和通話時長</string>
     <string name="calls_voice_title">通話語音</string>
     <string name="calls_voice_shared_note">這個音色和聊天裡的語音通話共用。</string>
     <string name="calls_audio_title">手機通話音訊</string>

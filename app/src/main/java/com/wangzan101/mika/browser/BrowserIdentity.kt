@@ -1,5 +1,6 @@
 package com.wangzan101.mika.browser
 
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -64,12 +65,7 @@ class UserSiteModes(dir: File) {
     private fun save() {
         runCatching {
             file.parentFile?.mkdirs()
-            val tmp = File(file.path + ".tmp")
-            tmp.writeText(JsonArray(desktop.map(::JsonPrimitive)).toString())
-            if (!tmp.renameTo(file)) {
-                file.writeText(tmp.readText())
-                tmp.delete()
-            }
+            AtomicFiles.write(file, JsonArray(desktop.map(::JsonPrimitive)).toString(), durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.WriteDirect)
         }
     }
 

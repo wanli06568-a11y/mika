@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">Akses ditolak</string>
     <string name="device_dirs_unknown">Status tidak tersedia</string>
     <string name="device_dirs_entry">Petunjuk folder</string>
-    <string name="device_dirs_entry_sub">Bantu Mika menemukan file yang diunduh</string>
     <string name="device_dirs_source_preset">Bawaan</string>
     <string name="device_dirs_source_user">Diedit oleh Anda</string>
     <string name="device_dirs_source_mika">Diedit oleh Mika</string>

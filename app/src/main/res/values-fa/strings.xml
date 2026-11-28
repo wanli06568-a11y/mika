@@ -35,7 +35,6 @@
     <string name="ok_got_it">متوجه شدم</string>
     <string name="cancel">انصراف</string>
     <string name="model_reasoning_title">میزان تفکر · %1$s</string>
-    <string name="model_reasoning_value">میزان تفکر: %1$s</string>
     <string name="model_reasoning_note">تفکر بیشتر ممکن است به انجام کارهای دشوار کمک کند، اما زمان و توکن بیشتری مصرف کند. در حالت پیش‌فرض، ارائه‌دهنده تصمیم می‌گیرد.</string>
     <string name="model_reasoning_unknown">این ارائه‌دهنده سطح‌های موجود را اعلام نکرده است. انتخاب سطح پشتیبانی‌نشده ممکن است باعث شکست کارها شود؛ در این صورت «پیش‌فرض» را انتخاب کنید.</string>
     <string name="model_reasoning_unavailable">ارائه‌دهنده دیگر سطح ذخیره‌شده را اعلام نمی‌کند. «پیش‌فرض» یا سطح دیگری انتخاب کنید.</string>

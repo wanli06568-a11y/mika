@@ -6,7 +6,6 @@
     <string name="plugins_empty">Плагинов пока нет</string>
     <string name="plugins_empty_sub">Установите zip плагина, чтобы добавить навыки, которые Mika сможет читать. Плагин не может менять настройки приложения или читать другие ваши данные.</string>
     <string name="plugins_enabled">Включён</string>
-    <string name="plugins_disabled">Отключён</string>
     <string name="plugins_skills">Навыки</string>
     <string name="plugins_no_skills">Нет навыков</string>
     <string name="plugins_permissions">Разрешения</string>

@@ -32,7 +32,6 @@
     <string name="memory_tasks">تذكّر المهام السابقة</string>
     <string name="memory_tasks_sub">احتفظ بملخص قصير لكل مهمة منتهية لاسترجاعها لاحقًا</string>
     <string name="memory_tasks_title">المهام السابقة</string>
-    <string name="memory_clear_sub">حذف كل الذاكرة والمهارات المتعلّمة</string>
     <string name="edit_it">تعديل</string>
     <string name="unpin">إلغاء التثبيت</string>
     <string name="pin">تثبيت</string>
@@ -87,7 +86,6 @@
     <string name="skills_get">الحصول على المهارات</string>
     <string name="skills_share">مشاركة المهارة</string>
     <string name="skills_import">استيراد مهارة</string>
-    <string name="skills_import_sub">الصق النص الكامل لمهارة شاركها شخص آخر</string>
     <string name="skills_import_hint">ستنتقل أولًا إلى «للمراجعة»، ولن تُستخدم حتى تقرأها وتقبلها.</string>
     <string name="skills_import_confirm">استيراد</string>
     <string name="skill_imported">تم الاستيراد. راجعها في قسم «للمراجعة» قبل قبولها.</string>
@@ -95,7 +93,6 @@
     <string name="skill_builtin_name">توجد مهارة مدمجة بهذا الاسم بالفعل. غيّر الاسم وحاول مجددًا.</string>
     <string name="skill_draft_pending">توجد مسودة بهذا الاسم بانتظار المراجعة بالفعل. تعامل معها أولًا.</string>
     <string name="market_title">سوق المهارات</string>
-    <string name="market_sub">تصفح المهارات المشتركة على GitHub</string>
     <string name="market_source">مصدر المهارات</string>
     <string name="market_add">إضافة للمراجعة</string>
     <string name="market_network_error">تعذر التنزيل. تحقق من المستودع والاتصال ثم حاول مجدداً.</string>

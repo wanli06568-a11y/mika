@@ -4,10 +4,10 @@ import android.graphics.Bitmap
 import com.wangzan101.mika.cap.phone.display.PipInput
 import com.wangzan101.mika.chat.SharedFile
 import com.wangzan101.mika.core.agent.TaskState
-import com.wangzan101.mika.core.chat.GeneratedAudio
-import com.wangzan101.mika.core.chat.GeneratedPhoto
+import com.wangzan101.mika.core.agent.GeneratedAudio
+import com.wangzan101.mika.core.agent.GeneratedPhoto
 import com.wangzan101.mika.core.cap.image.SavedImage
-import com.wangzan101.mika.core.chat.GeneratedVideo
+import com.wangzan101.mika.core.agent.GeneratedVideo
 import com.wangzan101.mika.core.model.SavedAudio
 import com.wangzan101.mika.core.run.record.RunEvent
 import com.wangzan101.mika.takeover.Takeover

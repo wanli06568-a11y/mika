@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">تم رفض الوصول</string>
     <string name="device_dirs_unknown">الحالة غير متاحة</string>
     <string name="device_dirs_entry">تلميحات المجلدات</string>
-    <string name="device_dirs_entry_sub">ساعد Mika في العثور على الملفات التي تم تنزيلها</string>
     <string name="device_dirs_source_preset">إعداد مسبق</string>
     <string name="device_dirs_source_user">عدّلته أنت</string>
     <string name="device_dirs_source_mika">عدّلته Mika</string>

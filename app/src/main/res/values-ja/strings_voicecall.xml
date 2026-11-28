@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="voicecall_see_task_page">対応が必要です — タスクページを開いてください</string>
-    <string name="voicecall_task_paused">一時停止中</string>
     <string name="voicecall_task_running">処理中</string>
     <string name="voicecall_task_done">完了</string>
     <string name="voicecall_task_open">実行の流れを見る</string>
@@ -63,7 +62,6 @@
     <string name="voicecall_log_end_idle">通話終了 · %1$s · 無言が続いたため</string>
     <string name="voicecall_log_silent">音声通話 · %1$s · 発言なし</string>
     <string name="voicecall_log_live">通話中</string>
-    <string name="voicecall_more">その他</string>
     <string name="voicecall_records">通話履歴</string>
     <string name="voicecall_records_hint">タップするとチャットのその部分を表示します</string>
     <string name="voicecall_records_empty">この会話の通話履歴はまだありません</string>

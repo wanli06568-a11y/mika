@@ -24,7 +24,6 @@
     <string name="device_dirs_denied">Acesso negado</string>
     <string name="device_dirs_unknown">Status indisponível</string>
     <string name="device_dirs_entry">Dicas de pasta</string>
-    <string name="device_dirs_entry_sub">Ajude o Mika a encontrar arquivos baixados</string>
     <string name="device_dirs_source_preset">Predefinida</string>
     <string name="device_dirs_source_user">Editada por você</string>
     <string name="device_dirs_source_mika">Editada pelo Mika</string>

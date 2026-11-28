@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -146,7 +147,10 @@ class ChatViewModelTest {
 
     private fun TestScope.vm(store: ConversationStore = ConversationStore(tmp.newFolder())) =
         ChatViewModel(backgroundScope, state, stage, actions, store, appLabel = { if (it == "com.chat") "聊天" else it },
-            activities = acts, steers = steerFlow, followUps = followUpFlow).also { runCurrent() }
+            activities = acts, steers = steerFlow, followUps = followUpFlow, io = testIo()).also { runCurrent() }
+
+    /** 存盘变化后在后台读对话:测试里让它跟着测试调度器走,runCurrent 之后就读完了。 */
+    private fun TestScope.testIo() = UnconfinedTestDispatcher(testScheduler)
 
     /** 和 [vm] 一样,但能指定这块屏开没开。 */
     private fun TestScope.vmWithScreen(open: MutableStateFlow<Boolean>) =
@@ -170,7 +174,7 @@ class ChatViewModelTest {
         val store = ConversationStore(tmp.newFolder())
         store.append("talk", Turn("", "我从通知里挑出 1 条", "succeeded", runId = "notice:n1"))
         store.append("talk", Turn("帮我回一下", "已回复", "succeeded", runId = "run-1"))
-        val vm = ChatViewModel(backgroundScope, MutableStateFlow(TaskState.Idle), stage, actions, store, parallelFlag = { false }, sandboxReady = MutableStateFlow(true))
+        val vm = ChatViewModel(backgroundScope, MutableStateFlow(TaskState.Idle), stage, actions, store, parallelFlag = { false }, sandboxReady = MutableStateFlow(true), io = testIo())
         runCurrent()
         vm.openConversation("talk")
         runCurrent()
@@ -1814,7 +1818,7 @@ class ChatViewModelTest {
         val summarizing = MutableStateFlow<Set<String>>(emptySet())
         val store = ConversationStore(tmp.newFolder())
         val id = store.newConversation()
-        val vm = ChatViewModel(backgroundScope, state, stage, actions, store, endedRunId = endedRunId, summarizing = summarizing)
+        val vm = ChatViewModel(backgroundScope, state, stage, actions, store, endedRunId = endedRunId, summarizing = summarizing, io = testIo())
         runCurrent()
         vm.openConversation(id)
         vm.send("看四个设置页", ok)
@@ -2930,6 +2934,33 @@ class ChatViewModelTest {
     }
 
     // 别处跑完存进屏上这个对话的一轮:当场补上,只一条
+    @Test fun turnSavedElsewhereIsReadOnTheIoDispatcher() = runTest {
+        val store = ConversationStore(tmp.newFolder())
+        store.append("a", Turn("查天气", "晴", "succeeded", runId = "r1"))
+        val held = mutableListOf<Runnable>()
+        var holding = false
+        val base = UnconfinedTestDispatcher(testScheduler)
+        val io = object : kotlinx.coroutines.CoroutineDispatcher() {
+            override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+                if (holding) held += block else base.dispatch(context, block)
+            }
+        }
+        val vm = ChatViewModel(backgroundScope, state, stage, actions, store, appLabel = { it },
+            activities = acts, steers = steerFlow, followUps = followUpFlow, io = io).also { runCurrent() }
+        vm.openConversation("a")
+        runCurrent()
+        holding = true
+        store.append("a", Turn("订会议室", "订好了", "succeeded", runId = "r2"))
+        runCurrent()
+        // 读盘、解析在 io 上:io 没放行前屏上还是旧的
+        assertEquals(1, held.size)
+        assertEquals(listOf("查天气"), vm.ui.value.exchanges.map { it.goal })
+        holding = false
+        held.toList().also { held.clear() }.forEach { it.run() }
+        runCurrent()
+        assertEquals(listOf("查天气", "订会议室"), vm.ui.value.exchanges.map { it.goal })
+    }
+
     @Test fun turnSavedElsewhereAppearsOnce() = runTest {
         val store = ConversationStore(tmp.newFolder())
         store.append("a", Turn("查天气", "晴", "succeeded", runId = "r1"))

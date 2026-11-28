@@ -30,8 +30,6 @@
     <string name="calls_voice_needs_change">Trocar</string>
     <string name="calls_disable_sub">Chamadas recebidas e feitas voltam para o telefone do sistema</string>
     <string name="calls_how_to_talk">Ao atender</string>
-    <string name="calls_greeting_empty">Vazio · espera quem liga falar primeiro</string>
-    <string name="calls_talk_settings_sub">Instruções e quanto a IA pode falar no máximo</string>
     <string name="calls_stage_listen">Ouve</string>
     <string name="calls_stage_think">Pensa</string>
     <string name="calls_stage_speak">Fala</string>

@@ -3,7 +3,6 @@
     <string name="settings_self_operate">السماح لـ Mika بتشغيل شاشاته</string>
     <string name="settings_self_operate_sub">لا يزال يسأل قبل فتح الروابط في متصفحك.</string>
     <string name="settings_pip_operate">التحكم المباشر في العرض المصغّر</string>
-    <string name="settings_pip_operate_sub">انقر واسحب في النافذة الصغيرة للتحكم في الشاشة</string>
     <string name="settings_external_schedule">اسمح للسكربتات بإنشاء مهام مجدولة</string>
     <string name="settings_external_schedule_sub">يمكن للتطبيقات الأخرى إرسال المهام عبر البث، بحدود معدل وتُعلَّم كمُنشأة بسكربت.</string>
     <string name="self_notify_channel">إجراءات Mika</string>

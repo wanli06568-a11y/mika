@@ -34,7 +34,6 @@
     <string name="ok_got_it">知道了</string>
     <string name="cancel">取消</string>
     <string name="model_reasoning_title">思考強度 · %1$s</string>
-    <string name="model_reasoning_value">思考強度：%1$s</string>
     <string name="model_reasoning_note">提高思考強度有助於處理複雜任務，但可能需要更多等待時間並增加用量。「預設」由服務提供者決定。</string>
     <string name="model_reasoning_unknown">服務提供者未列出可用的等級。不支援的選擇可能導致任務失敗；如果發生這種情況，請改回「預設」。</string>
     <string name="model_reasoning_unavailable">服務提供者已不再列出已儲存的等級，請改回「預設」或選擇其他等級。</string>

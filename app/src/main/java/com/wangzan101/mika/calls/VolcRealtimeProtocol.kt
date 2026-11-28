@@ -24,6 +24,8 @@ data class VolcRealtimeConfig(
     val protocol: CallVoiceProtocol = CallVoiceProtocol.VOLC_DUPLEX,
     /** [agentTools] 时前台说明用的人格(称呼和人格层),和聊天里的前台同一套。 */
     val deskPersona: DeskPersona = DeskPersona(),
+    /** [enablePhoneDtmf] 时电话工具说明用的语言,跟通话提示同一种;null 按中文(见 [CallPolicy.isChineseLanguage])。 */
+    val languageTag: String? = null,
 ) {
     init {
         require(systemPrompt.length <= MAX_PROMPT_CHARS) { "Realtime system prompt is too long" }
@@ -115,34 +117,38 @@ internal object VolcRealtimeProtocol {
     fun enableTools(eventId: String, config: VolcRealtimeConfig): String = message("session.update", eventId) {
         putJsonObject("session") {
             put("tools", JsonArray(mutableListOf<kotlinx.serialization.json.JsonElement>().apply {
-                if (config.enablePhoneDtmf) addAll(phoneCallTools())
+                if (config.enablePhoneDtmf) addAll(phoneCallTools(config.languageTag))
                 if (config.agentTools) addAll(DeskTools.specs(DeskToolSet.User))
             }))
         }
     }
 
-    fun phoneTools() = JsonArray(listOf(buildJsonObject {
-        put("type", "function")
-        put("name", DTMF_FUNCTION)
-        put("description", "在电话语音菜单明确要求按键时，发送真正的电话DTMF按键；说出数字不能代替按键。仅按本次任务和听到的菜单选择，不猜测密码或验证码。等待工具结果，失败时不得声称按键成功。")
-        putJsonObject("parameters") {
-            put("type", "object")
-            putJsonObject("properties") {
-                putJsonObject("digits") {
-                    put("type", "string")
-                    put("pattern", "^[0-9*#]{1,32}$")
-                    put("minLength", 1)
-                    put("maxLength", MAX_DTMF_DIGITS)
-                    put("description", "按顺序发送的电话按键，只能含0-9、*、#，最多32个。")
+    /** 拨号键工具;说明跟这通电话的语言走:中文通话用中文,其他语言用英文。 */
+    fun phoneTools(languageTag: String? = null): JsonArray {
+        val chinese = CallPolicy.isChineseLanguage(languageTag)
+        return JsonArray(listOf(buildJsonObject {
+            put("type", "function")
+            put("name", DTMF_FUNCTION)
+            put("description", if (chinese) "在电话语音菜单明确要求按键时，发送真正的电话DTMF按键；说出数字不能代替按键。仅按本次任务和听到的菜单选择，不猜测密码或验证码。等待工具结果，失败时不得声称按键成功。" else "Send real telephone DTMF keypad tones when an automated phone menu explicitly asks for keypad input; speaking digits aloud cannot replace keypad tones. Only choose options matching the current task and heard menu, never guess passwords or verification codes, and wait for the tool result without claiming success on failure.")
+            putJsonObject("parameters") {
+                put("type", "object")
+                putJsonObject("properties") {
+                    putJsonObject("digits") {
+                        put("type", "string")
+                        put("pattern", "^[0-9*#]{1,32}$")
+                        put("minLength", 1)
+                        put("maxLength", MAX_DTMF_DIGITS)
+                        put("description", if (chinese) "按顺序发送的电话按键，只能含0-9、*、#，最多32个。" else "Sequential telephone keypad digits to send; only 0-9, *, and # are allowed, up to 32 characters.")
+                    }
                 }
+                put("required", JsonArray(listOf(JsonPrimitive("digits"))))
+                put("additionalProperties", false)
             }
-            put("required", JsonArray(listOf(JsonPrimitive("digits"))))
-            put("additionalProperties", false)
-        }
-    }))
+        }))
+    }
 
     /** 运营商电话里的整套工具:拨号键 + 电话前台(只有请示主人)。 */
-    fun phoneCallTools() = JsonArray(phoneTools() + DeskTools.specs(DeskToolSet.Phone))
+    fun phoneCallTools(languageTag: String? = null) = JsonArray(phoneTools(languageTag) + DeskTools.specs(DeskToolSet.Phone))
 
     fun toolResults(eventId: String, results: List<Pair<String, JsonObject>>): String =
         message("conversation.item.create", eventId) {

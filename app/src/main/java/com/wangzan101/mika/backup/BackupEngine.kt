@@ -1,5 +1,6 @@
 package com.wangzan101.mika.backup
 
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import com.wangzan101.mika.settings.KeyCipher
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -99,8 +100,8 @@ class BackupEngine(
         "sms-login-consent.txt" to "mika-sms-login-profiles",
     )
 
-    /** Directories under [filesDir] that are deliberately not backed up (large, regenerable). */
-    private val excludedDirs = listOf("sandbox", "library-attachments")
+    /** Directories under [filesDir] that are deliberately not backed up (large, regenerable; voice packs are re-downloaded after restore). */
+    private val excludedDirs = listOf("sandbox", "library-attachments", "voice-models")
 
     companion object {
         /** Largest backup the import will read into memory. */
@@ -343,11 +344,7 @@ class BackupEngine(
         file.parentFile?.mkdirs()
         val tmp = File(file.parentFile, "${file.name}.tmp")
         try {
-            tmp.writeBytes(bytes)
-            if (!tmp.renameTo(file)) {
-                file.delete()
-                check(tmp.renameTo(file)) { "cannot write ${file.name}" }
-            }
+            check(AtomicFiles.write(file, bytes, durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.DeleteAndRetry, temp = tmp)) { "cannot write ${file.name}" }
         } catch (e: Exception) {
             tmp.delete()
             throw BackupException("Could not write ${file.name}: ${e.message}")

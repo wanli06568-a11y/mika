@@ -3,6 +3,7 @@ package com.wangzan101.mika.settings
 import com.wangzan101.mika.core.device.CredentialKind
 import com.wangzan101.mika.core.device.DeviceAccessStore
 import com.wangzan101.mika.core.device.DeviceCredential
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
@@ -12,8 +13,6 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 data class DeviceAccessConfig(val enabled: Boolean = false, val localEnabled: Boolean = false,
@@ -120,8 +119,7 @@ class DeviceAccessSettings(private val dir: File, private val cipher: KeyCipher)
         dir.mkdirs()
         val tmp = File(dir, file.name + ".tmp")
         try {
-            tmp.writeBytes(cipher.encrypt(bytes))
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            AtomicFiles.write(file, cipher.encrypt(bytes), durable = false, temp = tmp)
             mutable.value = config
         } finally { bytes.fill(0); tmp.delete() }
     }

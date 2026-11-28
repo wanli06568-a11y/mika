@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Environment
 import android.webkit.URLUtil
 import com.wangzan101.mika.cap.web.WebTab
+import com.wangzan101.mika.core.workspace.AtomicFiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -166,12 +167,7 @@ internal class DownloadIds(private val file: File, private val limit: Int = 200)
         runCatching {
             file.parentFile?.mkdirs()
             // 先写临时文件再改名,写到一半被杀不会留下半个文件
-            val tmp = File(file.parentFile, file.name + ".tmp")
-            tmp.writeText(ids.joinToString("\n"))
-            if (!tmp.renameTo(file)) {
-                file.writeText(tmp.readText())
-                tmp.delete()
-            }
+            AtomicFiles.write(file, ids.joinToString("\n"), durable = false, move = AtomicFiles.Move.Rename, fallback = AtomicFiles.Fallback.WriteDirect)
         }
     }
 }

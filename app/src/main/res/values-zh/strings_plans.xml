@@ -21,7 +21,6 @@
     <string name="plans_run_now">立即执行</string>
     <string name="plans_edit_time">编辑</string>
     <string name="plans_edit_title">编辑定时任务</string>
-    <string name="plans_edit_label">首次执行：yyyy-MM-dd HH:mm</string>
     <string name="plans_preview">接下来的触发时间：</string>
     <string name="plans_need_future">请输入未来的有效时间</string>
     <string name="plans_create_title">新建定时任务</string>
@@ -33,7 +32,6 @@
     <string name="plans_repeat_interval">间隔</string>
     <string name="plans_repeat_weekly">每周</string>
     <string name="plans_interval_minutes">每隔多少分钟重复</string>
-    <string name="plans_clock">当地时刻（逗号分隔）</string>
     <string name="plans_pick_time">选择时刻</string>
     <string name="plans_add_time">添加时刻</string>
     <string name="plans_remove_time">删除这个时刻</string>
@@ -66,7 +64,6 @@
     <string name="plans_delete_title">删除这条定时任务？</string>
     <string name="plans_done">已完成</string>
     <string name="plans_checked">已检查</string>
-    <string name="plans_check_failed">检查失败</string>
     <string name="plans_result_pending">结果待确认</string>
     <string name="plans_every_day">每天</string>
     <plurals name="plans_every_minutes">

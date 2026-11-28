@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="jev_title">決策模型 · Jev</string>
-    <string name="jev_row_sub">可選的意圖判斷與路線選擇</string>
     <string name="jev_enabled">使用決策模型</string>
     <string name="jev_privacy">開啟後，你的請求、近期對話內容及候選路線會傳送給設定的服務商，用於判斷意圖和選擇路線。呼叫失敗時會改用原有模型。主模型、看圖模型和輕量模型仍獨立設定。</string>
     <string name="jev_provider">服務商</string>

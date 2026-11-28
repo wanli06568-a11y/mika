@@ -1,9 +1,10 @@
 package com.wangzan101.mika.voice.ui
 
 import androidx.compose.foundation.clickable
-import com.wangzan101.mika.ui.components.PickRow
-import com.wangzan101.mika.ui.components.MikaDialog
-import androidx.compose.material3.TextButton
+import com.wangzan101.mika.ui.components.ActionSheet
+import com.wangzan101.mika.ui.components.ListRow
+import com.wangzan101.mika.ui.components.RowValue
+import com.wangzan101.mika.ui.components.SheetAction
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -35,6 +36,7 @@ import com.wangzan101.mika.ui.components.RowChevron
 import com.wangzan101.mika.ui.components.SegmentedControl
 import com.wangzan101.mika.ui.components.SelectChip
 import com.wangzan101.mika.ui.components.StatusPill
+import com.wangzan101.mika.ui.theme.MikaIcons
 import com.wangzan101.mika.ui.theme.MikaShapes
 import com.wangzan101.mika.ui.theme.MikaTheme
 import com.wangzan101.mika.ui.theme.MikaType
@@ -148,20 +150,19 @@ private fun LanguagePicker(selected: AsrLanguage, onSelect: (AsrLanguage) -> Uni
 internal fun AsrLanguageRow(selected: AsrLanguage, onSelect: (AsrLanguage) -> Unit) {
     var picking by remember { mutableStateOf(false) }
     val title = tr(R.string.speech_asr_language)
-    PickRow(title, asrLanguageName(selected), onClick = { picking = true }, modifier = Modifier.testTag("asr-language-row"))
-    if (picking) MikaDialog(
-        onDismissRequest = { picking = false },
-        title = { Text(title) },
-        text = {
-            Column {
-                AsrLanguage.entries.forEachIndexed { i, l ->
-                    RadioRow(asrLanguageName(l), selected = l == selected, onClick = { onSelect(l); picking = false }, first = i == 0)
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = { picking = false }) { Text(tr(R.string.cancel)) } },
-    )
+    ListRow(null, title, onClick = { picking = true }, modifier = Modifier.testTag("asr-language-row")) {
+        RowValue(asrLanguageName(selected))
+        RowChevron()
+    }
+    if (picking) {
+        ActionSheet(
+            title = title,
+            actions = AsrLanguage.entries.map { l ->
+                SheetAction(asrLanguageName(l), icon = if (l == selected) MikaIcons.Check else null) { onSelect(l) }
+            },
+            onDismiss = { picking = false },
+        )
+    }
 }
 
 /**

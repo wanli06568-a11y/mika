@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="jev_title">Modelo de decisão · Jev</string>
-    <string name="jev_row_sub">Identificação de intenção e seleção de rotas opcionais</string>
     <string name="jev_enabled">Usar o modelo de decisão</string>
     <string name="jev_privacy">Ao ativar, sua solicitação, o contexto recente da conversa e as rotas candidatas são enviados ao provedor configurado para identificar a intenção e escolher rotas. Se falhar, o Mika usa o modelo habitual. Os modelos principal, de visão e leve continuam com configurações separadas.</string>
     <string name="jev_provider">Provedor</string>

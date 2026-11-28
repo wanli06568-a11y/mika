@@ -10,8 +10,6 @@
     <string name="file_library_loading">Dosyalar yükleniyor…</string>
     <string name="file_library_empty">Dosya bulunamadı</string>
     <string name="file_library_missing">Kullanılamıyor</string>
-    <string name="file_library_available">Kullanılabilir</string>
-    <string name="file_library_open">Aç</string>
     <string name="file_library_share">Paylaş</string>
     <string name="file_library_add">Taslağa ekle</string>
     <string name="file_library_choose">Bir konuşma seçin</string>

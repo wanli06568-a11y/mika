@@ -6,7 +6,6 @@
     <string name="plugins_empty">لا توجد مكوّنات إضافية بعد</string>
     <string name="plugins_empty_sub">ثبّت ملف zip لمكوّن إضافي لإضافة مهارات يمكن لـ Mika قراءتها. لا يمكن للمكوّن الإضافي تغيير إعدادات التطبيق أو قراءة بياناتك الأخرى.</string>
     <string name="plugins_enabled">مفعّل</string>
-    <string name="plugins_disabled">معطّل</string>
     <string name="plugins_skills">المهارات</string>
     <string name="plugins_no_skills">لا مهارات</string>
     <string name="plugins_permissions">الأذونات</string>

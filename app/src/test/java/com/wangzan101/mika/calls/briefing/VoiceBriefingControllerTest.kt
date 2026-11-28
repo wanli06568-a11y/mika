@@ -25,7 +25,7 @@ class VoiceBriefingControllerTest {
         var closed = false
         val allowClose = CompletableDeferred<Unit>()
         override fun send(bytes: ByteArray) = !closeStarted
-        override fun greet() = true
+        override fun greet(text: String) = true
         override suspend fun closeAndAwait() {
             closeStarted = true
             allowClose.await()

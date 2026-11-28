@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="jev_title">Decision model</string>
-    <string name="jev_row_sub">Optional intent and route selection</string>
     <string name="jev_enabled">Use the decision model</string>
     <string name="jev_privacy">When enabled, your request, recent conversation context and candidate routes are sent to the configured provider to judge intent and choose routes. If it fails, Mika uses the existing model. Main, vision and light model settings stay separate.</string>
     <string name="jev_provider">Provider</string>

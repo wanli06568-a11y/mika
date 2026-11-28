@@ -7,26 +7,19 @@
     <string name="language_prompt_confirm">Xác nhận</string>
     <string name="language_prompt_dismiss">Để sau</string>
     <string name="language_system">Theo hệ thống</string>
-    <string name="language_system_detail">Dùng ngôn ngữ hệ thống của bạn khi Mika có, nếu không thì dùng tiếng Anh</string>
     <string name="settings_language_appearance">Ngôn ngữ &amp; giao diện</string>
     <string name="settings_personal_start">Mở Trợ lý cá nhân khi khởi động</string>
-    <string name="settings_personal_start_sub">Dùng Trợ lý cá nhân làm màn hình đầu tiên của bạn</string>
     <string name="settings_model">Mô hình</string>
-    <string name="settings_model_sub">Mô hình, nhà cung cấp &amp; mức dùng Token</string>
     <string name="settings_not_set">Chưa đặt</string>
     <string name="settings_phone_ops">Điều khiển điện thoại</string>
     <string name="settings_during_work">Tác vụ đang chạy</string>
-    <string name="settings_during_work_sub">Chế độ tự động, nhịp độ, giới hạn bước &amp; âm thanh</string>
-    <string name="settings_notif_sub">Khi chúng hiện lên, thay đổi trong cài đặt hệ thống</string>
     <string name="settings_memory_data">Bộ nhớ &amp; dữ liệu</string>
-    <string name="settings_memory_sub">Ký ức, kỹ năng, tuyến đường đã lưu &amp; thông tin đăng nhập trang web</string>
     <string name="settings_saved_data">Dữ liệu đã lưu</string>
     <string name="settings_web_logins">Thông tin đăng nhập trang web</string>
     <plurals name="settings_count_sites">
         <item quantity="other">%1$d trang web</item>
     </plurals>
     <string name="settings_advanced">Nâng cao</string>
-    <string name="settings_advanced_sub">Tiện ích mở rộng, mạng, môi trường chạy &amp; bảo trì</string>
     <string name="settings_maintenance">Bảo trì</string>
     <string name="settings_sandbox">Tệp &amp; môi trường tính toán</string>
     <string name="settings_routes">Tuyến đường đã lưu</string>
@@ -43,24 +36,18 @@
     <string name="sandbox_ready">Sẵn sàng</string>
     <string name="sandbox_preparing">Đang chuẩn bị</string>
     <string name="sandbox_not_prepared">Chưa thiết lập</string>
-    <string name="settings_all_ready_detail">Đã thiết lập mô hình · Điều khiển điện thoại sẵn sàng</string>
     <string name="settings_status">Trạng thái</string>
     <string name="settings_a11y">Dịch vụ trợ năng</string>
-    <string name="settings_a11y_sub">Đọc và điều khiển màn hình ảo của Mika</string>
-    <string name="settings_notif_progress_sub">Tiến trình và cảnh báo “Cần bạn”</string>
     <string name="settings_system_version">Phiên bản hệ thống</string>
     <string name="settings_android_focus">Android %1$s · Trên Android 12–13, công việc nền có thể lấy mất tiêu điểm khỏi màn hình của bạn; nên dùng Android 14 trở lên</string>
     <string name="settings_android">Android %1$s</string>
-    <string name="settings_meets">Được hỗ trợ</string>
     <string name="settings_notif_master">Mọi thông báo</string>
     <string name="settings_allowed">Đã cho phép</string>
     <string name="settings_task_notifs">Thông báo tác vụ</string>
     <string name="settings_live_task_updates">Cập nhật tác vụ trực tiếp</string>
     <string name="settings_live_task_updates_detail">Chọn có hiện các tác vụ đang chạy của bạn trên thanh trạng thái hay không</string>
     <string name="settings_keep_on">Giữ màn hình bật</string>
-    <string name="settings_keep_on_sub">Màn hình vẫn bật trong khi tác vụ chạy (vẫn có thể mờ đi khi bạn không dùng), rồi trở lại bình thường</string>
     <string name="settings_mute">Tắt tiếng ứng dụng đang dùng</string>
-    <string name="settings_mute_sub">Các ứng dụng Mika đang dùng sẽ im lặng; âm thanh trở lại khi bạn tiếp quản</string>
     <string name="settings_pace">Nhịp độ thao tác</string>
     <string name="settings_pace_fast">Nhanh</string>
     <string name="settings_pace_fast_detail">Không tạm dừng giữa các bước; văn bản được điền cùng lúc</string>
@@ -110,7 +97,6 @@
     <string name="routes_clear_title">Xóa mọi tuyến đường đã lưu?</string>
     <string name="routes_clear_body">Sau khi xóa, Mika sẽ lại tự tìm cách từng bước vào lần sau. Các cài đặt khác không bị ảnh hưởng.</string>
     <string name="clear">Xóa</string>
-    <string name="sandbox_proxy_off">%1$s · dùng khi quyền truy cập mạng được bật</string>
     <string name="net_proxy">Proxy mạng</string>
     <string name="net_proxy_row_sub">Cho yêu cầu mô hình, cập nhật, trình duyệt trong ứng dụng và lệnh</string>
     <string name="net_proxy_hint">Dùng cho các yêu cầu mô hình của Mika (trò chuyện, danh sách mô hình, đăng nhập tài khoản), tải xuống cập nhật trong ứng dụng, trình duyệt trong ứng dụng, và các lệnh trong Tệp &amp; môi trường tính toán khi quyền truy cập mạng được bật ở đó. Địa chỉ trên điện thoại này hoặc mạng cục bộ của bạn (localhost, 192.168.x.x, 10.x.x.x, tên kết thúc bằng .local) luôn kết nối trực tiếp, nên mô hình cục bộ vẫn hoạt động. Nó có thể bao gồm user:password@, được lưu mã hóa trên điện thoại này. Để trống để kết nối trực tiếp.</string>
@@ -122,8 +108,6 @@
     <string name="net_proxy_browser_socks_auth">Trình duyệt trong ứng dụng không thể dùng proxy SOCKS cần tên người dùng và mật khẩu, nên nó kết nối trực tiếp.</string>
     <string name="net_proxy_unreachable">Không thể tới proxy mạng, hoặc nó không chuyển tiếp yêu cầu. Kiểm tra proxy đang chạy và địa chỉ trong Cài đặt › Proxy mạng là đúng.</string>
     <string name="net_proxy_auth_failed">Proxy mạng đã từ chối tên người dùng hoặc mật khẩu. Kiểm tra chúng trong Cài đặt › Proxy mạng.</string>
-    <string name="sandbox_proxy_sub">Chưa đặt: các lệnh kết nối trực tiếp. Thay đổi trong Cài đặt › Proxy mạng</string>
-    <string name="sandbox_proxy_on">%1$s · thay đổi trong Cài đặt › Proxy mạng</string>
     <string name="sandbox_usage">Dung lượng đã dùng</string>
     <string name="sandbox_usage_total">Tổng</string>
     <string name="sandbox_usage_runtime">Môi trường chạy</string>
@@ -177,7 +161,6 @@
     <string name="mcp_servers_empty">Chưa thêm máy chủ MCP</string>
     <string name="mcp_servers_empty_sub">Thêm máy chủ MCP bên ngoài để cung cấp công cụ của nó cho Mika.</string>
     <string name="mcp_servers_add">Thêm máy chủ</string>
-    <string name="mcp_servers_edit">Sửa máy chủ</string>
     <string name="mcp_servers_name">Tên</string>
     <string name="mcp_servers_url">URL máy chủ</string>
     <string name="mcp_servers_token">Token truy cập (tùy chọn)</string>
@@ -195,7 +178,6 @@
     <string name="mcp_servers_transport_stdio">Tiến trình cục bộ</string>
     <string name="mcp_servers_command">Lệnh (tệp thực thi và đối số)</string>
     <string name="mcp_servers_stdio_help">Chạy bên trong sandbox Linux. Cài đặt máy chủ ở đó trước.</string>
-    <string name="mcp_servers_legacy_sse">Dùng truyền tải HTTP+SSE cũ (2024-11-05)</string>
     <string name="mcp_servers_use_oauth">Dùng đăng nhập OAuth 2.1</string>
     <string name="mcp_servers_sign_in">Đăng nhập</string>
     <string name="mcp_servers_signing_in">Đang chờ đăng nhập bằng trình duyệt…</string>
@@ -259,7 +241,6 @@
     <string name="mcp_custom_preview">Độ dài xem trước kết quả</string>
     <string name="mcp_custom_budget">Ngân sách chi phí mỗi tác vụ</string>
     <string name="settings_show_task_cost">Hiện chi phí tác vụ</string>
-    <string name="settings_show_task_cost_sub">Ước tính phí API DeepSeek bằng nhân dân tệ Trung Quốc cho các tác vụ mới.</string>
     <string name="quit_title">Thoát Mika hoàn toàn</string>
     <string name="quit_row_sub">Dừng các tác vụ nền và ẩn viên nang nổi</string>
     <string name="quit_confirm_body">Các tác vụ đang chạy sẽ dừng, và viên nang nổi cùng thông báo sẽ biến mất. Mở Mika lại và mọi thứ trở lại.</string>
@@ -271,13 +252,11 @@
     <string name="settings_token_budget_apply">Dùng</string>
     <string name="settings_token_budget_invalid">Nhập một số nguyên từ %1$s đến %2$s.</string>
     <string name="settings_auto_archive">Tự động lưu trữ cuộc trò chuyện</string>
-    <string name="settings_auto_archive_sub">Cuộc trò chuyện không có tin nhắn mới trong một thời gian sẽ chuyển vào kho lưu trữ</string>
     <string name="settings_auto_archive_hint">Cuộc trò chuyện không có tin nhắn mới trong thời gian đã chọn sẽ được chuyển vào kho lưu trữ.</string>
     <plurals name="settings_auto_archive_days">
         <item quantity="other">%1$d ngày</item>
     </plurals>
     <string name="settings_scheduled_quiet">Giờ yên lặng cho tác vụ đã lên lịch</string>
-    <string name="settings_scheduled_quiet_detail">Kết quả đã lên lịch và nhắc nhở hiện âm thầm trong ngăn thông báo.</string>
     <string name="settings_scheduled_quiet_start">Thời gian bắt đầu</string>
     <string name="settings_scheduled_quiet_end">Thời gian kết thúc</string>
     <string name="settings_scheduled_quiet_equal">Chọn thời gian bắt đầu và kết thúc khác nhau để tắt tiếng thông báo.</string>

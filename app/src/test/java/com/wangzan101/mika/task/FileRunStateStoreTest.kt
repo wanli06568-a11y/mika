@@ -6,10 +6,25 @@ import com.wangzan101.mika.core.run.RunPhase
 import com.wangzan101.mika.core.run.StoredRun
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.file.Files
 
 class FileRunStateStoreTest {
+    @Test fun failedWriteLeavesMemoryAsOnDisk() {
+        val dir = Files.createTempDirectory("mika-run-store").toFile()
+        try {
+            // 账本路径被一个非空目录占着:改名落盘必然失败
+            val file = dir.resolve("runs.json").apply { mkdirs(); resolve("x").writeText("x") }
+            val store = FileRunStateStore(file)
+            val failed = runCatching { store.save(StoredRun(RunId("run-1"), "thread-1", "任务原话", RunPhase.Running)) }
+            assertTrue(failed.isFailure)
+            assertEquals(null, store.get(RunId("run-1")))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     @Test fun savedReplyAndUnfinishedMarkerSurviveReopen() {
         val dir = Files.createTempDirectory("mika-run-store").toFile()
         try {

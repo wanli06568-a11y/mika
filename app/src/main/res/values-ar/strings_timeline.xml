@@ -67,7 +67,6 @@
         <item quantity="other">%1$d خطوة</item>
     </plurals>
     <string name="timeline_criteria">ما الذي يُعدّ إنجازًا</string>
-    <string name="timeline_outcome">النتيجة</string>
     <string name="timeline_check">التحقق</string>
     <string name="timeline_duration">الوقت المستغرق</string>
     <string name="timeline_step_limit">الخطوات</string>
@@ -103,8 +102,6 @@
         <item quantity="other">تمت المشاهدة %1$d مرة</item>
     </plurals>
     <string name="effect_small_change">تغيير طفيف</string>
-    <string name="timeline_hide_screen">إخفاء الشاشة</string>
-    <string name="timeline_show_screen">عرض الشاشة في ذلك الوقت</string>
     <string name="timeline_step_screen">الشاشة عند الخطوة %1$d</string>
     <string name="timeline_export">تصدير سجلات الاستخدام</string>
     <string name="timeline_export_hint">حفظ استخدام الرموز لكل رد من النموذج وأحداث ضغط السياق بصيغة JSONL.</string>

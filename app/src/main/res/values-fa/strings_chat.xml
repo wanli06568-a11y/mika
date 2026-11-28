@@ -37,7 +37,6 @@
     <string name="drawer_personal">دستیار شخصی</string>
     <string name="chat_new">گفتگوی جدید</string>
     <string name="chat_expand_steps">نمایش مراحل</string>
-    <string name="chat_collapse_steps">پنهان کردن مراحل</string>
     <string name="chat_view_process">مشاهدهٔ روند کار</string>
     <string name="chat_unlock_body">گوشی شما قفل است. پس از باز کردن قفل، میکا ادامه می‌دهد.</string>
     <string name="chat_input_body">%1$s\nیک گزینه را انتخاب کنید یا در زیر بنویسید. %2$s</string>
@@ -50,9 +49,7 @@
     <string name="chat_restart_task">شروع دوباره</string>
     <string name="chat_resume_request">از نقطهٔ توقف ادامه بده: %1$s</string>
     <string name="chat_restart_request">از ابتدا دوباره شروع کن: %1$s</string>
-    <string name="chat_view_source">مشاهدهٔ منبع</string>
     <string name="chat_open">باز کردن</string>
-    <string name="chat_attach_rejected">افزودن ممکن نشد: %1$s (حجم هر فایل باید کمتر از ۲۰۰ مگابایت باشد)</string>
     <string name="chat_stop">توقف</string>
     <string name="chat_send">ارسال</string>
     <string name="chat_scroll_to_bottom">رفتن به پایین</string>
@@ -135,10 +132,6 @@
     <string name="steer_interrupted_reply">با پیام شما قطع شد</string>
     <string name="steer_next">کار فعلی پایان یافته است؛ به‌عنوان کار بعدی در صف قرار گرفت</string>
     <string name="steer_cancelled">لغو شد</string>
-    <plurals name="chat_steps_done">
-        <item quantity="one">%1$d مرحله</item>
-        <item quantity="other">%1$d مرحله</item>
-    </plurals>
     <string name="step_viewed">%1$s مشاهده شد</string>
     <string name="step_viewed_part">%2$s در %1$s مشاهده شد</string>
     <string name="step_failed">ناموفق بود</string>
@@ -153,7 +146,6 @@
         <item quantity="other">%1$d عکس صفحه</item>
     </plurals>
     <string name="attach_add">افزودن پیوست</string>
-    <string name="attach_close">بستن بخش پیوست‌ها</string>
     <string name="attach_blocked_running">هنگام اجرای کار نمی‌توان پیوست اضافه کرد — ابتدا به حالت صف بروید</string>
     <string name="attach_camera">دوربین</string>
     <string name="attach_album">عکس‌ها</string>
@@ -196,9 +188,6 @@
     <string name="zoom_in">بزرگ‌نمایی</string>
     <string name="chat_message_actions">گزینه‌های پیام</string>
     <string name="chat_copy">کپی</string>
-    <string name="share_card_question">پرسش</string>
-    <string name="share_card_answer">پاسخ</string>
-    <string name="share_card_made_by">توسط Mika انجام شد</string>
     <string name="chat_quote">نقل‌قول</string>
     <string name="chat_select_text">انتخاب متن</string>
     <string name="chat_copied">کپی شد</string>
@@ -229,9 +218,6 @@
     <string name="chat_usage_view_details">مشاهده مصرف توکن</string>
     <string name="follow_up_steer">هدایت کار</string>
     <string name="follow_up_queue">قرار دادن در صف</string>
-    <string name="follow_up_steer_hint">مرحلهٔ بعد کار فعلی را بر اساس پیام شما تنظیم می‌کند</string>
-    <string name="follow_up_steer_hint_paused">کار موقتاً متوقف است؛ این پیام هنگام ادامه اعمال می‌شود</string>
-    <string name="follow_up_steer_hint_queued">این پیام هنگام شروع کار اعمال می‌شود</string>
     <string name="follow_up_queue_hint">پس از پایان کار فعلی شروع می‌شود</string>
     <string name="follow_up_count">در صف · %1$d</string>
     <string name="follow_up_edit">ویرایش</string>
@@ -240,7 +226,6 @@
     <string name="follow_up_idle_hint">با شروع کار، آن‌ها یکی‌یکی اجرا می‌شوند</string>
     <string name="follow_up_already_started">این مورد قبلاً شروع شده است؛ در صورت نیاز مستقیماً آن را متوقف کنید</string>
     <string name="chat_placeholder_queue">کار بعدی را بنویسید…</string>
-    <string name="voice_placeholder_queue">کار بعدی را بگویید…</string>
     <string name="steer_received_paused">متوجه شدم؛ هنگام ادامهٔ کار اعمال می‌شود</string>
     <string name="chat_example_github_star">نشانی https://github.com/wangzan101/mika را باز کن و به پروژه ستاره بده.</string>
     <string name="drawer_search_clear">پاک کردن جست‌وجو</string>
@@ -263,7 +248,6 @@
     <string name="recommendations_reset">پاک کردن و شروع دوباره</string>
     <string name="recommendations_reset_body">فایل غیرقابل‌خواندن با یک فهرست خالی جایگزین می‌شود.</string>
     <string name="recommendations_save_failed">ذخیره ممکن نشد. دوباره تلاش کنید.</string>
-    <string name="recommendations_sub">مدیریت کارها و متن‌های صفحهٔ اصلی</string>
     <string name="recommendations_title">کارهای ذخیره‌شده</string>
     <string name="recommendations_drag">برای تغییر ترتیب بکشید</string>
     <string name="recommendations_drag_hint">دستگیره را بکشید تا ترتیب نمایش تغییر کند.</string>
@@ -275,7 +259,6 @@
     <string name="recommendations_too_many">می‌توانید حداکثر %1$d کار پیشنهادی ذخیره کنید</string>
     <string name="recommendations_unreadable">کارهای پیشنهادی ذخیره‌شده خوانده نشدند، بنابراین فعلاً قابل تغییر نیستند.</string>
     <string name="share_draft_replace_body">این محتوای به‌اشتراک‌گذاشته‌شده جایگزین پیش‌نویس فعلی شما می‌شود.</string>
-    <string name="chat_attach_unavailable">افزودن ممکن نشد: %1$s. بررسی کنید فایل‌ها در دسترس و در محدودهٔ حجم باشند.</string>
     <string name="chat_attach_too_large">%1$s: از محدودیت %2$s بیشتر است</string>
     <string name="chat_attach_low_device_space">%1$s: فضای ذخیره‌سازی گوشی کافی نیست؛ فضا را آزاد کنید و دوباره تلاش کنید</string>
     <string name="chat_attach_workspace_limit">%1$s: فضای ذخیره‌سازی محیط کار به سقف رسیده است؛ فایل‌های محیط کار را پاک کنید و دوباره تلاش کنید</string>
@@ -310,20 +293,11 @@
     <string name="task_field_insert">درج</string>
     <string name="task_fields_too_many">حداکثر %1$d فیلد متفاوت استفاده کنید.</string>
     <string name="task_fill_apply">پر کردن کادر ورودی</string>
-    <string name="chat_read_aloud">Read aloud</string>
-    <string name="chat_stop_speaking">Stop speaking</string>
     <string name="chat_audio">Audio</string>
     <string name="chat_audio_play">Play</string>
     <string name="chat_audio_stop">Stop</string>
-    <string name="plus_sub_album">از عکس‌ها انتخاب کن، چندتا هم می‌شود</string>
-    <string name="plus_sub_files">سند، PDF، آرشیو</string>
-    <string name="plus_sub_device">پوشه‌های این گوشی را بگرد</string>
     <string name="plus_clipboard">تخته‌شمار</string>
-    <string name="plus_sub_clipboard">آنچه تازه کپی کردی را بچسبان</string>
     <string name="plus_sub_teach">یک بار نشان بده تا Mika یاد بگیرد</string>
-    <string name="plus_sub_skills">یک مهارت برای این نوبت انتخاب کن</string>
-    <string name="plus_sub_tasks">کار ذخیره‌شده را در کادر ورودی پر کن</string>
-    <string name="plus_sub_browser">مرورگر داخلی</string>
     <string name="plus_skills_empty">هنوز مهارت شخصی نداری. مهارت‌هایی که Mika از کارهای انجام‌شده یاد می‌گیرد اینجا نمایش داده می‌شوند.</string>
     <string name="plus_clipboard_empty">متنی برای چسباندن از تخته‌شمار نیست</string>
     <string name="plus_skill_directive">از مهارت «%1$s» استفاده کن: </string>

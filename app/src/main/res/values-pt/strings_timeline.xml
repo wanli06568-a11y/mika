@@ -64,7 +64,6 @@
         <item quantity="other">%1$d passos</item>
     </plurals>
     <string name="timeline_criteria">O que conta como concluído</string>
-    <string name="timeline_outcome">Resultado</string>
     <string name="timeline_check">Verificação</string>
     <string name="timeline_duration">Tempo gasto</string>
     <string name="timeline_more">Mais detalhes</string>
@@ -89,8 +88,6 @@
         <item quantity="other">Visto %1$d vezes</item>
     </plurals>
     <string name="effect_small_change">Mudou um pouco</string>
-    <string name="timeline_hide_screen">Ocultar tela</string>
-    <string name="timeline_show_screen">Ver a tela na hora</string>
     <string name="timeline_step_screen">Tela no passo %1$d</string>
     <string name="timeline_export">Exportar registros de uso</string>
     <string name="timeline_export_hint">Salve em JSONL o uso de tokens de cada resposta do modelo e os eventos de compactação de contexto.</string>

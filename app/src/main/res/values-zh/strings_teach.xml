@@ -5,8 +5,6 @@
     <string name="teach_goal_label">要学的事</string>
     <string name="teach_goal_hint">比如：每天早上在考勤 App 里打卡</string>
     <string name="teach_disclosure">点「开始示范」之后，步骤只留在这台手机上。如果已经配置了模型，生成技能时会把目标和步骤的脱敏摘要发给当前模型，不含密码、验证码和支付内容。没有配置模型时，草稿只在手机上按步骤整理，不会上传。草稿在收下之前不会被调用，也还没有试跑成功。</string>
-    <string name="teach_continue">继续</string>
-    <string name="teach_ready_body">Mika 只会看，不会操作手机。可以暂停、结束或放弃。点「开始示范」之前不会记录。</string>
     <string name="teach_start">开始示范</string>
     <string name="teach_learning">正在学习</string>
     <string name="teach_paused">已暂停</string>
@@ -14,7 +12,6 @@
     <string name="teach_resume">继续示范</string>
     <string name="teach_end">结束示范</string>
     <string name="teach_discard">放弃</string>
-    <string name="teach_discard_body">放弃这次示范，并删除已经留下的步骤？</string>
     <string name="teach_busy">有任务在进行。等它结束再教。</string>
     <string name="teach_need_a11y">先打开无障碍，否则 Mika 看不到你的操作。</string>
     <string name="teach_interrupted">示范已停下（应用重启或无障碍已关）。点「继续示范」之前不会记录。</string>
